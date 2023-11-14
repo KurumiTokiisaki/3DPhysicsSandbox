@@ -1,4 +1,4 @@
-import panda3d
+import copy
 from panda3d.core import WindowProperties
 from panda3d.core import AmbientLight, DirectionalLight
 from direct.showbase.ShowBase import ShowBase
@@ -6,7 +6,7 @@ from direct.actor.Actor import Actor
 from panda3d.core import Vec3, Vec4
 from panda3d.core import MeshDrawer2D
 from direct.showbase.ShowBaseGlobal import globalClock
-
+import math
 
 class Main(ShowBase):
     def __init__(self):
@@ -18,12 +18,18 @@ class Main(ShowBase):
         self.windowProperties.setSize(self.windowSize)
         self.win.requestProperties(self.windowProperties)
 
-        # add the physics function to the task manager
+        # time since last frame
+        self.dt = globalClock.getDt()
+
+        # add the main function to the task manager
         self.taskMgr.add(self.main, 'update')
+
         self.pause = False
 
         # border size (x, y, z)
         self.worldBorder = Vec3(100, 100, 100)
+
+        # sprite lists
         self.points = []
         self.collisionRects = []
 
@@ -39,10 +45,16 @@ class Main(ShowBase):
 
     # run physics on all points
     def physics(self):
+        # print(self.points[0].cords)
+        # input(self.points[0].oldCords)
         for p in range(len(self.points)):
             self.points[p].move()
 
+    def detectDrag(self):
+        
+
     def main(self, task):
+        self.dt = globalClock.getDt()
         if not self.pause:
             self.physics()
 
@@ -58,17 +70,17 @@ class Point:
         self.collisionRadius = radius
         self.cords = cords
         self.oldCords = oldCords
-        self.n = False
+        self.velocity = Vec3(0, 0, 0)
 
     def move(self):
-        # cause the point to "vibrate" back and forth 1 unit each frame
-        if self.n:
-            self.cords += Vec3(1, 0, 0)
-            self.n = False
-        else:
-            self.cords -= Vec3(1, 0, 0)
-            self.n = True
+        # Verlet integration
+        self.velocity = self.cords - self.oldCords
 
+        # make previous frame's cords a copy of current frame's cords
+        self.oldCords = copy.deepcopy(self.cords)
+
+        # move the point
+        self.cords += self.velocity
         self.sphere.setPos(self.cords)
 
     def updateSize(self):
@@ -77,7 +89,8 @@ class Point:
 
 game = Main()
 
-game.createPoint(1, Vec3(-30, 100, 0), Vec3(0, 100, 0))
+game.createPoint(1, Vec3(-30, 100, 0), Vec3(-30 - 1 / 144, 100, 0))
+game.createPoint(2, Vec3(-33, 100, 0), Vec3(-33, 100, 0))
 
 game.loadActors()
 game.run()
