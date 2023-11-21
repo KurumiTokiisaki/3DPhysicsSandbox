@@ -1,4 +1,6 @@
 import copy
+
+import panda3d.core
 from panda3d.core import WindowProperties
 from panda3d.core import AmbientLight, DirectionalLight
 from direct.showbase.ShowBase import ShowBase

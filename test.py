@@ -13,7 +13,7 @@ import copy
 
 # controller mode
 mode = 'k'
-fullscreen = True
+fullscreen = False
 
 # Vizard window initialization
 viz.setMultiSample(4)  # FSAA (Full Screen Anti-Alaiasing)
@@ -73,10 +73,10 @@ def midpoint(pOne, pTwo):
 
 
 # returns the angle [pitch, yaw, roll] between 2 points
-def getAngle(pOne, pTwo):
+def getAngle(cordOne, cordTwo):
     diff = [0, 0, 0]
     for d in range(3):
-        diff[d] = pOne.cords[d] - pTwo.cords[d]
+        diff[d] = cordOne[d] - cordTwo[d]
     
     if diff[2] != 0:
         pitch = math.degrees(math.atan(diff[0] / diff[2]))  # angle from x to z
@@ -96,11 +96,18 @@ def getAngle(pOne, pTwo):
     return [pitch, yaw, roll]
 
 
+def getTwoDAngle(cordOne, cordTwo):
+    diff = [0, 0]
+    for d in range(2):
+        diff[d] = cordOne[d] - cordTwo[d]
+    return math.atan(diff[0] / diff[1])
+
+
 # Main class for main.py
 class Main:
     def __init__(self):
         vizshape.addGrid()
-        self.gridFloor = 0  # y-coordinate of test collision axis
+        self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
         self.collisionRect = []  # list of collision rectangles
@@ -185,6 +192,7 @@ class Point:
         self.oldCords = [0, 0, 0]  # coordinates from last frame
         self.velocity = [0, 0, 0]
         self.force = [0, 0, 0]
+        self.normalForce = [0, 0, 0]
         self.acc = [0, 0, 0]
         self.density = density
         self.volume = 4/3 * math.pi * self.radius**3
@@ -197,6 +205,8 @@ class Point:
         self.friction = [0, 0, 0]
         self.constrainForce = [0, 0, 0]
         self.collision = ''
+        self.lastCollision = ''
+        self.vertexState = ''
         
     
     def setRadiusDensity(self, radius, density):
@@ -229,67 +239,141 @@ class Point:
         for axis in range(3):
             # add physics here
             
-            self.force[axis] = self.gasDrag[axis] + self.liquidDrag[axis] + self.gasUpthrust[axis] + self.liquidUpthrust[axis] + self.friction[axis] + self.constrainForce[axis]
-            if axis == 1:
-                self.force[1] -= self.weight
+            self.force[axis] = self.gasDrag[axis] + self.liquidDrag[axis] + self.gasUpthrust[axis] + self.liquidUpthrust[axis] + self.friction[axis] + self.constrainForce[axis] + self.normalForce[axis]
+            if axis == 2:
+                self.force[axis] -= self.weight
             self.acc[axis] = self.force[axis] / self.mass
             self.velocity[axis] += self.acc[axis] / (refreshRate**2)
     
     
+    # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
     def boxCollision(self):
         for b in game.collisionRect:
+            self.vertexState = ''
+            
+            # fix repitition below, possibly using a for loop
+            if ((self.cords[1] + self.radius) > b.plane['bottom']) and ((self.cords[1] - self.radius) < b.plane['top']):
+                if ((self.cords[2] - self.radius) < b.plane['front']) and ((self.cords[2] + self.radius) > b.plane['back']):
+                    if (self.cords[0] - self.radius) > b.plane['right']:
+                        self.lastCollision = 'right'
+                    elif (self.cords[0] + self.radius) < b.plane['left']:
+                        self.lastCollision = 'left'
+                elif ((self.cords[0] + self.radius) > b.plane['left']) and ((self.cords[0] - self.radius) < b.plane['right']):
+                    if (self.cords[2] + self.radius) > b.plane['front']:
+                        self.lastCollision = 'front'
+                    elif (self.cords[2] - self.radius) < b.plane['back']:
+                        self.lastCollision = 'back'
+            elif ((self.cords[0] + self.radius) > b.plane['left']) and ((self.cords[0] - self.radius) < b.plane['right']) and ((self.cords[2] - self.radius) < b.plane['front']) and ((self.cords[2] + self.radius) > b.plane['back']):
+                if (self.cords[1] + self.radius) > b.plane['top']:
+                    self.lastCollision = 'top'
+                elif (self.cords[1] - self.radius) < b.plane['bottom']:
+                    self.lastCollision = 'bottom'
+            
             if (self.cords[1] > b.plane['bottom']) and (self.cords[1] < b.plane['top']):
                 if (self.cords[2] < b.plane['front']) and (self.cords[2] > b.plane['back']):
                     if self.cords[0] > b.plane['right']:
                         self.collision = 'right'
                     elif self.cords[0] < b.plane['left']:
                         self.collision = 'left'
+                    else:
+                        self.collision = ''
                 elif (self.cords[0] > b.plane['left']) and (self.cords[0] < b.plane['right']):
                     if self.cords[2] > b.plane['front']:
                         self.collision = 'front'
                     elif self.cords[2] < b.plane['back']:
                         self.collision = 'back'
+                    else:
+                        self.collision = ''
+                else:
+                    self.collision = ''
             elif (self.cords[0] > b.plane['left']) and (self.cords[0] < b.plane['right']) and (self.cords[2] < b.plane['front']) and (self.cords[2] > b.plane['back']):
                 if self.cords[1] > b.plane['top']:
                     self.collision = 'top'
                 elif self.cords[1] < b.plane['bottom']:
                     self.collision = 'bottom'
+                else:
+                    self.collision = ''
+            else:
+                self.collision = ''
+            
+            if ((self.cords[0] > b.plane['right']) or (self.cords[0] < b.plane['left'])) and ((self.cords[2] < b.plane['front']) and (self.cords[2] > b.plane['back'])) and ((self.cords[1] > b.plane['top']) or (self.cords[1] < b.plane['bottom'])):
+                self.vertexState = 'z'
+            elif ((self.cords[2] > b.plane['front']) or (self.cords[2] < b.plane['back'])) and ((self.cords[1] > b.plane['bottom']) and (self.cords[1] < b.plane['top'])) and ((self.cords[0] > b.plane['right']) or (self.cords[0] < b.plane['left'])):
+                self.vertexState = 'y'
+            elif ((self.cords[0] < b.plane['right']) and (self.cords[0] > b.plane['left'])) and ((self.cords[2] > b.plane['front']) or (self.cords[2] < b.plane['back'])) and ((self.cords[1] > b.plane['top']) or (self.cords[1] < b.plane['bottom'])):
+                self.vertexState = 'x'
+            
+            # print(self.lastCollision, self.vertexState)
             
             vertexDist = []
+            vertexIdx = [0, 0]
+            relativeDist = [0, 0, 0]
             for v in b.vertex:
                 vertexDist.append(distance(self.cords, v))
-            tempList = copy.deepcopy(vertexDist)
-            minDist = [vertexDist[0], vertexDist[0]]
-            for i in range(2):
-                for ve in range(len(vertexDist)):
-                    if i == 0:
-                        if vertexDist[ve] < minDist[0]:
-                            minDist[0] = vertexDist[ve]
-                            tempIdx = ve
-                    if i == 1:
-                        if vertexDist[ve] < minDist[1]:#(vertexDist[ve] >= minDist[0]) and (vertexDist[ve] < minDist[1]):
-                            minDist[1] = vertexDist[ve]
-                if i == 0:
-                    try:
-                        vertexDist.pop(tempIdx)
-                    except UnboundLocalError:
-                        pass
-                    # get max 2 values in list
-            print(minDist)
-            # minDist[0] += self.radius
-            # minDist[1] += self.radius
-            minDist[0] = math.sqrt(minDist[0]**2 - self.radius**2)
-            minDist[1] = math.sqrt(minDist[1]**2 - self.radius**2)
-            print(tempList)
-            print(minDist)
-            if (minDist[0] + minDist[1]) <= 2:
-                print('vertex collision!')
-                self.cords = self.oldCords
-            #elif ((self.cords[0] + self.radius) > b.plane['left']) and ((self.cords[0] - self.radius) < b.plane['right']) and ((self.cords[1] + self.radius) > b.plane['bottom']) and ((self.cords[1] - self.radius) < b.plane['top']) and ((self.cords[2] - self.radius) < b.plane['front']) and ((self.cords[2] + self.radius) > b.plane['back']):
-            #    self.cords = self.oldCords
-            else:
-                print(self.collision)
+            minDist = [float('inf'), float('inf')]
+            tempDist = copy.deepcopy(vertexDist)
+            for ve in range(len(vertexDist)):
+                if vertexDist[ve] < minDist[0]:
+                    minDist[1] = minDist[0]
+                    minDist[0] = vertexDist[ve]
+                    vertexIdx[1] = vertexIdx[0]
+                    vertexIdx[0] = ve
+                elif vertexDist[ve] < minDist[1]:
+                    minDist[1] = vertexDist[ve]
+                    vertexIdx[1] = ve
+            if (self.radius < minDist[0]) and (self.radius < minDist[1]):
+                minDist[0] = math.sqrt(minDist[0]**2 - self.radius**2)
+                minDist[1] = math.sqrt(minDist[1]**2 - self.radius**2)
+                
+                for a in range(3):
+                    relativeDist[a] = minDist[0]
             
+            # if this if statement is not the first, points will clip through collision rects at their boundaries
+            if (self.collision != '') and ((self.cords[0] + self.radius) >= b.plane['left']) and ((self.cords[0] - self.radius) <= b.plane['right']) and ((self.cords[1] + self.radius) >= b.plane['bottom']) and ((self.cords[1] - self.radius) <= b.plane['top']) and ((self.cords[2] - self.radius) <= b.plane['front']) and ((self.cords[2] + self.radius) >= b.plane['back']):
+                if (self.collision == 'left') or (self.collision == 'right'):
+                    self.cords[0] = self.oldCords[0]
+                elif (self.collision == 'top') or (self.collision == 'bottom'):
+                    self.cords[1] = self.oldCords[1]
+                elif (self.collision == 'front') or (self.collision == 'back'):
+                    self.cords[2] = self.oldCords[2]
+            
+            elif distance(b.vertex[vertexIdx[0]], self.cords) <= self.radius:
+                print('vertex collision!')
+                angle = getAngle(b.vertex[vertexIdx[0]], self.cords)
+                print(angle)
+            
+            elif (minDist[0] + minDist[1]) <= distance(b.vertex[vertexIdx[0]], b.vertex[vertexIdx[1]]):
+                # print('edge collision!')
+                if self.vertexState == 'x':
+                    if (self.lastCollision == 'top') or (self.lastCollision == 'bottom'):
+                        self.cords[1] = self.oldCords[1]
+                    elif (self.lastCollision == 'front') or (self.lastCollision == 'back'):
+                        self.cords[2] = self.oldCords[2]
+                    angle = getTwoDAngle([self.cords[1], self.cords[2]], [b.vertex[vertexIdx[0]][1], b.vertex[vertexIdx[0]][2]])
+                    self.normalForce[1] = -self.force[2] * math.cos(angle) * math.sin(angle)
+                    self.normalForce[2] = -self.force[1] * math.cos(angle) * math.sin(angle)
+                elif self.vertexState == 'y':
+                    if (self.lastCollision == 'left') or (self.lastCollision == 'right'):
+                        self.cords[0] = self.oldCords[0]
+                    elif (self.lastCollision == 'front') or (self.lastCollision == 'back'):
+                        self.cords[2] = self.oldCords[2]
+                    angle = getTwoDAngle([self.cords[0], self.cords[2]], [b.vertex[vertexIdx[0]][0], b.vertex[vertexIdx[0]][2]])
+                    self.normalForce[0] = -self.force[2] * math.cos(angle) * math.sin(angle)
+                    self.normalForce[2] = -self.force[0] * math.cos(angle) * math.sin(angle)
+                elif self.vertexState == 'z':
+                    if (self.lastCollision == 'left') or (self.lastCollision == 'right'):
+                        self.cords[0] = self.oldCords[0]
+                    elif (self.lastCollision == 'top') or (self.lastCollision == 'bottom'):
+                        self.cords[1] = self.oldCords[1]
+                    angle = getTwoDAngle([self.cords[0], self.cords[1]], [b.vertex[vertexIdx[0]][0], b.vertex[vertexIdx[0]][1]])
+                    self.normalForce[0] = -self.force[1] * math.cos(angle) * math.sin(angle)
+                    self.normalForce[1] = -self.force[0] * math.cos(angle) * math.sin(angle)
+                print(self.force)
+                # print(self.normalForce)
+            
+            else:
+                self.normalForce = [0, 0, 0]
+            print(self.collision)
 
 
 
@@ -339,10 +423,10 @@ class Joint:
             self.cylinder = vizshape.addCylinder(self.height, jointRadius, slices=jointResolution)
             if self.theForceJoint:
                 self.cords = midpoint(controls.hand[self.cIdx], game.points[self.pTwo])
-                self.cylinder.setEuler(getAngle(controls.hand[self.cIdx], game.points[self.pTwo]))
+                self.cylinder.setEuler(getAngle(controls.hand[self.cIdx].cords, game.points[self.pTwo].cords))
             else:
                 self.cords = midpoint(game.points[self.pOne], game.points[self.pTwo])
-                self.cylinder.setEuler(getAngle(game.points[self.pOne], game.points[self.pTwo]))
+                self.cylinder.setEuler(getAngle(game.points[self.pOne].cords, game.points[self.pTwo].cords))
             
             self.cylinder.setPosition(self.cords)
         
@@ -369,7 +453,7 @@ class CollisionRect:
         self.rect = vizshape.addBox(self.size)
         self.cords = cords
         self.angle = angle
-        self.vertex = []
+        self.vertex = []  # [x, y, x] -> [['right', 'top', 'front'], ['left', 'top', 'front'], ['right', 'bottom', 'front'], ['left', 'bottom', 'front'], ['right', 'top', 'back'], ['left', 'top', 'back'], ['right', 'bottom', 'back'], ['left', 'bottom', 'back']]
         self.plane = {
         'front': [0, 0, 0],
         'back': [0, 0, 0],
@@ -388,21 +472,45 @@ class CollisionRect:
         self.rect.setEuler(self.angle)
         sizeMultiplier = [0.5, 0.5, 0.5]
         for v in range(8):
-            if (v == 1) or (v == 5):
+            if v == 1:
                 sizeMultiplier[0] = -sizeMultiplier[0]
-            elif (v == 2) or (v == 6):
-                sizeMultiplier[0] = -sizeMultiplier[0]
+            elif v == 2:
                 sizeMultiplier[1] = -sizeMultiplier[1]
-            elif (v == 3) or (v == 7):
-                sizeMultiplier[0] = -sizeMultiplier[0]
+            elif v == 3:
+                sizeMultiplier[2] = -sizeMultiplier[2]
             elif v == 4:
-                sizeMultiplier[0] = -sizeMultiplier[0]
                 sizeMultiplier[1] = -sizeMultiplier[1]
+            elif v == 5:
+                sizeMultiplier[0] = -sizeMultiplier[0]
+            elif v == 6:
+                sizeMultiplier[1] = -sizeMultiplier[1]
+            elif v == 7:
                 sizeMultiplier[2] = -sizeMultiplier[2]
             tempVertex = [0, 0, 0]
             for i in range(3):
                 tempVertex[i] = self.cords[i] + (self.size[i] * sizeMultiplier[i])
             self.vertex.append(tempVertex)
+        print(self.vertex)
+        #tempVertex = []
+        #for x in range(len(self.vertex)):
+        #    tempVertex.append([])
+        #    for y in range(len(self.vertex[x])):
+        #        if y == 0:
+        #            if self.vertex[x][y] == 1:
+        #                tempVertex[x].append('right')
+        #            elif self.vertex[x][y] == -1:
+        #                tempVertex[x].append('left')
+        #        elif y == 1:
+        #            if self.vertex[x][y] == 1:
+        #                tempVertex[x].append('top')
+        #            elif self.vertex[x][y] == -1:
+        #                tempVertex[x].append('bottom')
+        #        elif y == 2:
+        #            if self.vertex[x][y] == 1:
+        #                tempVertex[x].append('front')
+        #            elif self.vertex[x][y] == -1:
+        #                tempVertex[x].append('back')
+        #print(tempVertex)
         self.plane['front'] = self.cords[2] + (self.size[2] / 2)
         self.plane['back'] = self.cords[2] - (self.size[2] / 2)
         self.plane['left'] = self.cords[0] - (self.size[0] / 2)
@@ -443,9 +551,9 @@ game = Main()
 #        if (j != jo) and (jo >= j):
 #            game.joints.append(Joint(True, '', 0.4, j, jo))
 
-game.points.append(Point(1, 1))
+game.points.append(Point(0.2, 1))
 
-game.collisionRect.append(CollisionRect((2, 2, 2), [0, 2, -10], [0, 0, 0]))
+game.collisionRect.append(CollisionRect((2, 2, 2), [0, 3, 3], [0, 0, 0]))
 
 vizact.ontimer(1 / refreshRate, game.main)  # run game.main refreshRate times each second
 # add framerate here
