@@ -1,15 +1,12 @@
-﻿import viz
+﻿# base Vizard libraries
+import viz
 import vizfx
 import vizconnect
 import vizshape
-import math
-import time
+import vizact
 
-# viz init functions
-viz.setMultiSample(4)
-viz.fov(90)
-viz.go()
-viz.window.setFullscreen()
+# used for trig functions
+import math
 
 # disable built-in mouse commands
 viz.mouse.setOverride()
@@ -28,52 +25,59 @@ scrollSpeed = 0.0001
 viz.mouse.setCursor(0)
 
 
-class Main():
+# main class for keyboard & mouse
+class Main:
 	def __init__(self):
-		self.frameTime = 0
+		# add test object for reference
 		self.testAvatar = viz.addAvatar('vcc_male2.cfg').setPosition([0, 0, 5])
 		self.camCords = viz.MainView.getPosition()
 		self.camAngle = viz.MainView.getEuler()
 		self.camVelocity = [0, 0, 0]
-		self.hand = vizshape.addSphere(0.1)
-		self.handCords = [0, 0, 0]
+		
+		# add the hand object
+		self.radius = 0.1
+		self.hand = [Point()]
 		# how far hand is from camera initially
 		self.handDepth = 1
+		self.handAngle = [[0, 0, 0]]
+		
 		# camera speed (local)
-		self.minCamSpeed = minCamSpeed
-		self.maxCamSpeed = maxCamSpeed
-		self.camSpeed = self.minCamSpeed
+		self.camSpeed = minCamSpeed
 
 
 	def main(self):
-		print(viz.window.getFrameRate())
 		# call updateView when mouse is moved
 		viz.callback(viz.MOUSE_MOVE_EVENT, self.updateView)
 		
+		# update hand position with new facing angle
 		self.updateHandPos()
 		
 		# call keypressed when keyboard is pressed
 		if viz.key.anyDown(['w', 'a', 's', 'd', ' ', viz.KEY_SHIFT_L, 'q']):
 			self.camCords = viz.MainView.getPosition()
+			# move camera based on button pressed
 			self.moveCam()
 
 
 		viz.MainView.setPosition(self.camCords)
 		viz.MainView.setEuler(self.camAngle)
-		self.hand.setPosition(self.handCords)
+		self.hand[0].sphere.setPosition(self.hand[0].cords)
+		self.hand[0].sphere.setEuler(self.handAngle[0])
 
 
 	def updateView(self, cords):
+		# camAngle = [pitch, yaw, tilt]
 		self.camAngle = viz.MainView.getEuler()
-		# update facing angle based on change in mouse position
+		# update facing angle based on CHANGE in mouse position
 		self.camAngle = [self.camAngle[0] + (cords.dx * sensitivity), self.camAngle[1] - (cords.dy * sensitivity), 0]  # self.camAngle[2]]
+		# tilt is always 0 to prevent camera from going upside down
 	
 	def updateHandPos(self):
 		vizact.onwheelup(self.addHand)
 		vizact.onwheeldown(self.subHand)
-		self.handCords[0] = self.camCords[0] + self.handDepth * math.sin(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
-		self.handCords[1] = self.camCords[1] - self.handDepth * math.sin(math.radians(self.camAngle[1]))
-		self.handCords[2] = self.camCords[2] + self.handDepth * math.cos(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
+		self.hand[0].cords[0] = self.camCords[0] + self.handDepth * math.sin(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
+		self.hand[0].cords[1] = self.camCords[1] - self.handDepth * math.sin(math.radians(self.camAngle[1]))
+		self.hand[0].cords[2] = self.camCords[2] + self.handDepth * math.cos(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
 	
 	def subHand(self):
 		self.handDepth -= scrollSpeed
@@ -88,22 +92,27 @@ class Main():
 			return [self.camSpeed * forwardBackward * math.cos(-math.radians(self.camAngle[0])), self.camVelocity[1], self.camSpeed * leftRight * math.sin(-math.radians(self.camAngle[0]))]
 
 	def moveCam(self):
+		# forward & backward
 		if viz.key.isDown('w'):
 			f = 1
 		else:
 			f = 0
-		if viz.key.isDown('a'):
-			l = -1
-		else:
-			l = 0
 		if viz.key.isDown('s'):
 			b = -1
 		else:
 			b = 0
+		
+		# left & right
+		if viz.key.isDown('a'):
+			l = -1
+		else:
+			l = 0
 		if viz.key.isDown('d'):
 			r = 1
 		else:
 			r = 0
+		
+		# up & down
 		if viz.key.isDown(' '):
 			u = 1
 		else:
@@ -113,10 +122,11 @@ class Main():
 		else:
 			d = 0
 
+		# speed up
 		if viz.key.isDown('q'):
-			self.camSpeed = self.maxCamSpeed
+			self.camSpeed = maxCamSpeed
 		else:
-			self.camSpeed = self.minCamSpeed
+			self.camSpeed = minCamSpeed
 
 		# change movement based on facing angle
 		if viz.key.isDown('w'):
@@ -129,12 +139,14 @@ class Main():
 			self.camVelocity = self.getCamVelocity(l + r, l + r, 'cos')  # [camSpeed * (l + r) * math.cos(-math.radians(self.camAngle[0])), camSpeed * (u + d), camSpeed * (l + r) * math.sin(-math.radians(self.camAngle[0]))]
 		else:
 			self.camVelocity = [0, self.camVelocity[1], 0]
-		# x and z velocities must be 0 when there is no lateral camera movement or else other values will be affected
+			# x and z velocities must be 0 when there is no lateral camera movement or else verical movement will be affected
 		self.camVelocity[1] = self.camSpeed * (u + d)
 		
 		# add camera speed to camera cords
 		self.camCords = [self.camCords[0] + self.camVelocity[0], self.camCords[1] + self.camVelocity[1], self.camCords[2] + self.camVelocity[2]]
 
-game = Main()
-# call main 165 times each second
-vizact.ontimer(1 / 165, game.main)
+class Point:
+	def __init__(self):
+		self.radius = 0.1
+		self.sphere = vizshape.addSphere(self.radius)
+		self.cords = [0, 0, 0]

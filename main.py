@@ -8,6 +8,7 @@ from panda3d.core import MeshDrawer2D
 from direct.showbase.ShowBaseGlobal import globalClock
 import math
 
+
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
@@ -41,7 +42,7 @@ class Main(ShowBase):
     def loadActors(self):
         # render points
         for p in self.points:
-            p.sphere.reparentTo(self.render)
+            p.reparentTo(self.render)
 
     # run physics on all points
     def physics(self):
@@ -49,9 +50,6 @@ class Main(ShowBase):
         # input(self.points[0].oldCords)
         for p in range(len(self.points)):
             self.points[p].move()
-
-    def detectDrag(self):
-        
 
     def main(self, task):
         self.dt = globalClock.getDt()
@@ -61,9 +59,9 @@ class Main(ShowBase):
         return task.cont
 
 
-class Point:
+class Point(Actor):
     def __init__(self, radius, cords, oldCords):
-        self.sphere = Actor("sphere.glb")
+        Actor.__init__(self, "sphere.glb")
         self.physics = True
         self.radius = radius
         self.updateSize()
@@ -81,10 +79,10 @@ class Point:
 
         # move the point
         self.cords += self.velocity
-        self.sphere.setPos(self.cords)
+        self.setPos(self.cords)
 
     def updateSize(self):
-        self.sphere.set_scale(self.radius)
+        self.set_scale(self.radius)
 
 
 game = Main()
