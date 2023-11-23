@@ -109,6 +109,19 @@ def getSign(value):
     elif value < 0:
         return -1
 
+def edgeBounce(cIdx, oldCords, velocity, angle, trig):
+    if trig == 'cos':
+        if angle < 0:
+            return oldCords[cIdx[0]] + (velocity[cIdx[1]] * math.cos(angle)) - (velocity[cIdx[0]] * math.sin(angle)), oldCords[cIdx[1]] - (velocity[cIdx[0]] * math.cos(angle)) + (velocity[cIdx[1]] * math.cos(angle))
+        elif angle > 0:
+            return oldCords[cIdx[0]] - (velocity[cIdx[1]] * math.cos(angle)) + (velocity[cIdx[0]] * math.sin(angle)), oldCords[cIdx[1]] + (velocity[cIdx[0]] * math.cos(-angle)) + (velocity[cIdx[1]] * math.cos(-angle))
+    elif trig == 'sin':
+        if angle < 0:
+            return oldCords[cIdx[0]] + (velocity[cIdx[1]] * math.sin(angle)) - (velocity[cIdx[0]] * math.sin(angle)), oldCords[cIdx[1]] - (velocity[cIdx[0]] * math.sin(angle)) + (velocity[cIdx[1]] * math.cos(angle))
+        elif angle > 0:
+            return oldCords[cIdx[0]] - (velocity[cIdx[1]] * math.sin(-angle)) - (velocity[cIdx[0]] * math.sin(-angle)), oldCords[cIdx[1]] - (velocity[cIdx[0]] * math.sin(angle)) + (velocity[cIdx[1]] * math.cos(angle))
+
+
 
 # Main class for main.py
 class Main:
@@ -408,57 +421,28 @@ class Point:
                 if self.vertexState == 'x':
                     angle = getTwoDAngle([self.cords[1], self.cords[2]], [b.vertex[vertexIdx[0]][1], b.vertex[vertexIdx[0]][2]])
                     if (self.lastCollision == 'top') or (self.lastCollision == 'bottom'):
-                        if angle < 0:
-                            self.cords[2] = self.oldCords[2] + (self.velocity[1] * math.cos(angle)) - (self.velocity[2] * math.sin(angle))
-                            self.cords[1] = self.oldCords[1] - (self.velocity[2] * math.cos(angle)) + (self.velocity[1] * math.cos(angle))
-                        elif angle > 0:
-                            self.cords[2] = self.oldCords[2] - (self.velocity[1] * math.cos(angle)) + (self.velocity[2] * math.sin(angle))
-                            self.cords[1] = self.oldCords[1] + (self.velocity[2] * math.cos(-angle)) + (self.velocity[1] * math.cos(-angle))
+                        self.cords[2], self.cords[1] = edgeBounce([2, 1], self.oldCords, self.velocity, angle, 'cos')
                     elif (self.lastCollision == 'front') or (self.lastCollision == 'back'):
-                        if angle < 0:
-                            self.cords[2] = self.oldCords[2] + (self.velocity[1] * math.sin(angle)) - (self.velocity[2] * math.sin(angle))
-                            self.cords[1] = self.oldCords[1] - (self.velocity[2] * math.sin(angle)) + (self.velocity[1] * math.cos(angle))
-                        elif angle > 0:
-                            self.cords[2] = self.oldCords[2] - (self.velocity[1] * math.sin(-angle)) - (self.velocity[2] * math.sin(-angle))
-                            self.cords[1] = self.oldCords[1] - (self.velocity[2] * math.sin(angle)) + (self.velocity[1] * math.cos(angle))
+                        self.cords[2], self.cords[1] = edgeBounce([2, 1], self.oldCords, self.velocity, angle, 'sin')
                     self.normalForce[1] = -self.force[2] * math.cos(angle) * math.sin(angle)
                     self.normalForce[2] = -self.force[1] * math.cos(angle) * math.sin(angle)
                 
                 elif self.vertexState == 'y':
                     angle = getTwoDAngle([self.cords[0], self.cords[2]], [b.vertex[vertexIdx[0]][0], b.vertex[vertexIdx[0]][2]])
                     if (self.lastCollision == 'left') or (self.lastCollision == 'right'):
-                        if angle < 0:
-                            self.cords[2] = self.oldCords[2] + (self.velocity[0] * math.cos(angle)) - (self.velocity[2] * math.sin(angle))
-                            self.cords[0] = self.oldCords[0] - (self.velocity[2] * math.cos(angle)) + (self.velocity[0] * math.cos(angle))
-                        elif angle > 0:
-                            self.cords[2] = self.oldCords[2] - (self.velocity[0] * math.cos(angle)) + (self.velocity[2] * math.sin(angle))
-                            self.cords[0] = self.oldCords[0] + (self.velocity[2] * math.cos(-angle)) + (self.velocity[0] * math.cos(-angle))
+                        self.cords[2], self.cords[0] = edgeBounce([2, 0], self.oldCords, self.velocity, angle, 'cos')
                     elif (self.lastCollision == 'front') or (self.lastCollision == 'back'):
-                        if angle < 0:
-                            self.cords[2] = self.oldCords[2] + (self.velocity[0] * math.sin(angle)) - (self.velocity[2] * math.sin(angle))
-                            self.cords[0] = self.oldCords[0] - (self.velocity[2] * math.sin(angle)) + (self.velocity[0] * math.cos(angle))
-                        elif angle > 0:
-                            self.cords[2] = self.oldCords[2] - (self.velocity[0] * math.sin(-angle)) - (self.velocity[2] * math.sin(-angle))
-                            self.cords[0] = self.oldCords[0] - (self.velocity[2] * math.sin(angle)) + (self.velocity[0] * math.cos(angle))
+                        self.cords[2], self.cords[0] = edgeBounce([2, 0], self.oldCords, self.velocity, angle, 'sin')
                     self.normalForce[0] = -self.force[2] * math.cos(angle) * math.sin(angle)
                     self.normalForce[2] = -self.force[0] * math.cos(angle) * math.sin(angle)
                 
                 elif self.vertexState == 'z':
                     angle = getTwoDAngle([self.cords[0], self.cords[1]], [b.vertex[vertexIdx[0]][0], b.vertex[vertexIdx[0]][1]])
                     if (self.lastCollision == 'left') or (self.lastCollision == 'right'):
-                        if angle < 0:
-                            self.cords[1] = self.oldCords[1] + (self.velocity[0] * math.cos(angle)) - (self.velocity[1] * math.sin(angle))
-                            self.cords[0] = self.oldCords[0] - (self.velocity[1] * math.cos(angle)) + (self.velocity[0] * math.cos(angle))
-                        elif angle > 0:
-                            self.cords[1] = self.oldCords[1] - (self.velocity[0] * math.cos(angle)) + (self.velocity[1] * math.sin(angle))
-                            self.cords[0] = self.oldCords[0] + (self.velocity[1] * math.cos(-angle)) + (self.velocity[0] * math.cos(-angle))
+                        self.cords[1], self.cords[0] = edgeBounce([1, 0], self.oldCords, self.velocity, angle, 'cos')
                     elif (self.lastCollision == 'top') or (self.lastCollision == 'bottom'):
-                        if angle < 0:
-                            self.cords[1] = self.oldCords[1] + (self.velocity[0] * math.sin(angle)) - (self.velocity[1] * math.sin(angle))
-                            self.cords[0] = self.oldCords[0] - (self.velocity[1] * math.sin(angle)) + (self.velocity[0] * math.cos(angle))
-                        elif angle > 0:
-                            self.cords[1] = self.oldCords[1] - (self.velocity[0] * math.sin(-angle)) - (self.velocity[1] * math.sin(-angle))
-                            self.cords[0] = self.oldCords[0] - (self.velocity[1] * math.sin(angle)) + (self.velocity[0] * math.cos(angle))
+                        self.cords[1], self.cords[0] = edgeBounce([1, 0], self.oldCords, self.velocity, angle, 'sin')
+                                            
                     self.normalForce[0] = -self.force[1] * math.cos(angle) * math.sin(angle)
                     self.normalForce[1] = -self.force[0] * math.cos(angle) * math.sin(angle)
                 else:
