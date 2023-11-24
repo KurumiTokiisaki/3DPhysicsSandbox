@@ -28,7 +28,7 @@ hmd = hmdConfig.getSensor()
 class Main:
 	def __init__(self):
 		# test object for reference
-		self.testAvatar = viz.addAvatar('vcc_male2.cfg').setPosition([0, 0, 5])
+		# self.testAvatar = viz.addAvatar('vcc_male2.cfg').setPosition([0, 0, 5])
 		# max speed of camera
 		self.camSpeed = minCamSpeed
 		# camera variables

@@ -29,7 +29,7 @@ viz.mouse.setCursor(0)
 class Main:
 	def __init__(self):
 		# add test object for reference
-		self.testAvatar = viz.addAvatar('vcc_male2.cfg').setPosition([0, 0, 5])
+		# self.testAvatar = viz.addAvatar('vcc_male2.cfg').setPosition([0, 0, 5])
 		self.camCords = viz.MainView.getPosition()
 		self.camAngle = viz.MainView.getEuler()
 		self.camVelocity = [0, 0, 0]

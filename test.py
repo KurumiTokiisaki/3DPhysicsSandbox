@@ -360,58 +360,60 @@ class Point:
                     self.cords[2] = self.oldCords[2]
             
             elif (minDist[0] + minDist[1]) <= distance(b.vertex[vertexIdx[0]], b.vertex[vertexIdx[1]]):
-                # print('edge collision!')
                 if self.vertexState == 'x':
+                    resultF = math.sqrt(self.force[2]**2 + self.force[1]**2)
                     angle = getTwoDAngle([self.cords[1], self.cords[2]], [b.vertex[vertexIdx[0]][1], b.vertex[vertexIdx[0]][2]])
                     if (self.lastCollision == 'top') or (self.lastCollision == 'bottom'):
                         self.cords[2], self.cords[1] = edgeBounce([2, 1], self.oldCords, self.velocity, angle, 'cos', self.e, self.sf)
                     elif (self.lastCollision == 'front') or (self.lastCollision == 'back'):
                         self.cords[2], self.cords[1] = edgeBounce([2, 1], self.oldCords, self.velocity, angle, 'sin', self.e, self.sf)
-                    self.normalForce[1] = -self.force[2] * math.cos(angle) * math.sin(angle)
-                    self.normalForce[2] = -self.force[1] * math.cos(angle) * math.sin(angle)
+                    # self.normalForce[1] = -self.force[2] * math.cos(angle) * math.sin(angle)
+                    self.normalForce[2] = resultF * math.cos(angle) * getSign(angle)
                 
                 elif self.vertexState == 'y':
+                    resultF = math.sqrt(self.force[2]**2 + self.force[0]**2)
                     angle = getTwoDAngle([self.cords[0], self.cords[2]], [b.vertex[vertexIdx[0]][0], b.vertex[vertexIdx[0]][2]])
                     if (self.lastCollision == 'left') or (self.lastCollision == 'right'):
                         self.cords[2], self.cords[0] = edgeBounce([2, 0], self.oldCords, self.velocity, angle, 'cos', self.e, self.sf)
                     elif (self.lastCollision == 'front') or (self.lastCollision == 'back'):
                         self.cords[2], self.cords[0] = edgeBounce([2, 0], self.oldCords, self.velocity, angle, 'sin', self.e, self.sf)
-                    self.normalForce[0] = -self.force[2] * math.cos(angle) * math.sin(angle)
-                    self.normalForce[2] = -self.force[0] * math.cos(angle) * math.sin(angle)
+                    # self.normalForce[0] = -self.force[2] * math.cos(angle) * math.sin(angle)
+                    self.normalForce[2] = resultF * math.cos(angle) * getSign(angle)
                 
                 elif self.vertexState == 'z':
+                    resultF = math.sqrt(self.force[1]**2 + self.force[0]**2)
                     angle = getTwoDAngle([self.cords[0], self.cords[1]], [b.vertex[vertexIdx[0]][0], b.vertex[vertexIdx[0]][1]])
                     if (self.lastCollision == 'left') or (self.lastCollision == 'right'):
                         self.cords[1], self.cords[0] = edgeBounce([1, 0], self.oldCords, self.velocity, angle, 'cos', self.e, self.sf)
                     elif (self.lastCollision == 'top') or (self.lastCollision == 'bottom'):
                         self.cords[1], self.cords[0] = edgeBounce([1, 0], self.oldCords, self.velocity, angle, 'sin', self.e, self.sf)
                                             
-                    self.normalForce[0] = -self.force[1] * math.cos(angle) * math.sin(angle)
-                    self.normalForce[1] = -self.force[0] * math.cos(angle) * math.sin(angle)
+                    # self.normalForce[0] = -self.force[1] * math.cos(angle) * math.sin(angle)
+                    self.normalForce[1] = resultF * math.cos(angle) * getSign(angle)
                 else:
                     self.normalForce = [0, 0, 0]
-                print(angle, self.lastCollision, self.vertexState, self.velocity)
+                # print(angle, self.lastCollision, self.vertexState, self.velocity)
             
             elif distance(b.vertex[vertexIdx[0]], self.cords) <= self.radius:
                 angle = getAngle(b.vertex[vertexIdx[0]], self.cords)
-                print(angle, self.lastCollision)
+                # print(angle, self.lastCollision)
                 resultF = math.sqrt(self.force[0]**2 + self.force[1]**2 + self.force[2]**2)
                 resultV = math.sqrt(self.velocity[0]**2 + self.velocity[1]**2 + self.velocity[2]**2)
                 
                 if self.lastCollision == 'top':
                     self.cords[2] = self.oldCords[2] - ((resultV * math.cos(math.radians(angle[1])) * math.cos(math.radians(angle[0]))) * -getSign(angle[1]))
-                    self.cords[1] = self.oldCords[1] + abs(resultV * math.sin(math.radians(angle[1]))) # if sf = 0, result = -1. if sf = 1, result = 1. this allows for points to slide off while retaining their vertical velocity if they are slippery, and vice versa if rough.
+                    self.cords[1] = self.oldCords[1] - abs(resultV * math.sin(math.radians(angle[1]))) # if sf = 0, result = -1. if sf = 1, result = 1. this allows for points to slide off while retaining their vertical velocity if they are slippery, and vice versa if rough.
                     self.cords[0] = self.oldCords[0] - ((resultV * math.cos(math.radians(angle[1])) * math.sin(math.radians(angle[0]))) * -getSign(angle[1]))
                     
-                    self.normalForce[1] = abs(resultF * math.sin(math.radians(angle[0])))
+                    # self.normalForce[1] = abs(resultF * math.sin(math.radians(angle[0])))
                     self.normalForce[0] = resultF * math.cos(math.radians(angle[1])) * math.sin(math.radians(angle[0])) * getSign(angle[1])
                     self.normalForce[2] = resultF * math.cos(math.radians(angle[1])) * math.cos(math.radians(angle[0])) * getSign(angle[1])
                 elif self.lastCollision == 'bottom':
                     self.cords[2] = self.oldCords[2] + ((resultV * math.cos(math.radians(angle[1])) * math.cos(math.radians(angle[0]))) * -getSign(angle[1]))
-                    self.cords[1] = self.oldCords[1] - abs(resultV * math.sin(math.radians(angle[1])))
+                    self.cords[1] = self.oldCords[1] + abs(resultV * math.sin(math.radians(angle[1])))
                     self.cords[0] = self.oldCords[0] + ((resultV * math.cos(math.radians(angle[1])) * math.sin(math.radians(angle[0]))) * -getSign(angle[1]))
                     
-                    self.normalForce[1] = -abs(resultF * math.sin(math.radians(angle[0])))
+                    # self.normalForce[1] = -abs(resultF * math.sin(math.radians(angle[0])))
                     self.normalForce[0] = resultF * math.cos(math.radians(angle[1])) * math.sin(math.radians(angle[0])) * -getSign(angle[1])
                     self.normalForce[2] = resultF * math.cos(math.radians(angle[1])) * math.cos(math.radians(angle[0])) * -getSign(angle[1])
                 
@@ -420,7 +422,7 @@ class Point:
                     self.cords[0] = self.oldCords[0] + abs(resultV * math.sin(math.radians(angle[0])))
                     self.cords[2] = self.oldCords[2] - ((resultV * math.cos(math.radians(angle[0])) * math.sin(math.radians(angle[1]))))
                     
-                    self.normalForce[0] = abs(resultF * math.sin(math.radians(angle[0])))
+                    # self.normalForce[0] = abs(resultF * math.sin(math.radians(angle[0])))
                     self.normalForce[1] = -resultF * math.cos(math.radians(angle[0])) * math.cos(math.radians(angle[1]))
                     self.normalForce[2] = -resultF * math.cos(math.radians(angle[0])) * math.sin(math.radians(angle[1]))
                 elif self.lastCollision == 'left':
@@ -428,7 +430,7 @@ class Point:
                     self.cords[0] = self.oldCords[0] - abs(resultV * math.sin(math.radians(angle[0])))
                     self.cords[2] = self.oldCords[2] - ((resultV * math.cos(math.radians(angle[0])) * math.sin(math.radians(angle[1]))))
                     
-                    self.normalForce[0] = -abs(resultF * math.sin(math.radians(angle[0])))
+                    # self.normalForce[0] = -abs(resultF * math.sin(math.radians(angle[0])))
                     self.normalForce[1] = -resultF * math.cos(math.radians(angle[0])) * math.cos(math.radians(angle[1]))
                     self.normalForce[2] = -resultF * math.cos(math.radians(angle[0])) * math.sin(math.radians(angle[1]))
                 
@@ -441,7 +443,7 @@ class Point:
                     self.cords[0] = self.oldCords[0] - resultV * math.sin(math.radians(angle[0])) * math.sin(math.radians(angle[1]))
                     self.cords[1] = self.oldCords[1] + resultV * math.sin(math.radians(angle[0])) * math.cos(math.radians(angle[1])) * tempSign
                     
-                    self.normalForce[2] = abs(resultF * math.cos(math.radians(angle[0])))
+                    # self.normalForce[2] = abs(resultF * math.cos(math.radians(angle[0])))
                     self.normalForce[0] = -resultF * math.sin(math.radians(angle[0])) * math.sin(math.radians(angle[1]))
                     self.normalForce[1] = resultF * math.sin(math.radians(angle[0])) * math.cos(math.radians(angle[1])) * tempSign
                 elif self.lastCollision == 'back':
@@ -453,7 +455,7 @@ class Point:
                     self.cords[0] = self.oldCords[0] - resultV * math.sin(math.radians(angle[0])) * math.sin(math.radians(angle[1]))
                     self.cords[1] = self.oldCords[1] + resultV * math.sin(math.radians(angle[0])) * math.cos(math.radians(angle[1])) * tempSign
                     
-                    self.normalForce[2] = -abs(resultF * math.cos(math.radians(angle[0])))
+                    # self.normalForce[2] = -abs(resultF * math.cos(math.radians(angle[0])))
                     self.normalForce[0] = -resultF * math.sin(math.radians(angle[0])) * math.sin(math.radians(angle[1]))
                     self.normalForce[1] = resultF * math.sin(math.radians(angle[0])) * math.cos(math.radians(angle[1])) * tempSign
             
