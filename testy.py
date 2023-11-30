@@ -1,3 +1,2 @@
-testList = [69, 21]
-print(testList[-1])
-print(testList[-2])
+infinity = float('inf')
+print(1 / infinity)
