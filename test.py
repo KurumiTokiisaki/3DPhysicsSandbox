@@ -40,7 +40,7 @@ elif mode == 'k':
     if fullscreen:
         viz.window.setFullscreen()
 
-refreshRate = 144  # display refresh rate
+refreshRate = 165  # display refresh rate
 gConst = 9.81  # gravitational field constant
 gasDensity = 1.293  # density of all gas
 jointRadius = 0.01  # radius of joints
@@ -162,8 +162,8 @@ def vertexBounce(resultV, angle, e):
         return resultV * math.sin(angle[1] * 2) * math.sin(angle[0]) * e, resultV * math.cos(angle[1] * 2), resultV * math.sin(angle[1] * 2) * math.cos(angle[0]) * e
 
 
-k = 100  # global spring constant
-bounce = 0.05  # global damping (<=0.4)
+k = 1000  # global spring constant
+bounce = 0.05  # global damping constant (<=0.4). this should increase as k increases for realism.
 
 
 # Main class for main.py
@@ -282,7 +282,7 @@ class Point:
         self.e = 0  # elasticity
         self.sf = 0  # surface friction coefficient
         self.multiplier = 1
-        self.damping = 0  # k * 10
+        self.damping = 1  # k * 10
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
         self.cloth = ''
@@ -309,7 +309,6 @@ class Point:
         if not game.pause:
             for v in range(3):
                 self.cords[v] += self.velocity[v]  # change coordinates based on velocity
-                self.momentum[v] = self.mass * self.velocity[v]
 
         self.sphere.setPosition(self.cords)
 
@@ -319,6 +318,7 @@ class Point:
         for axis in range(3):
             # add physics here
             self.gasDrag[axis] = 0.5 * gasDensity * -getSign(self.velocity[axis]) * (self.velocity[axis] ** 2) * 2 * math.pi * (self.radius ** 2)
+            self.gasUpthrust[axis] = (4 / 3) * math.pi * (self.radius ** 3) * gasDensity
 
             self.force[axis] = self.gasDrag[axis] + self.liquidDrag[axis] + self.gasUpthrust[axis] + self.liquidUpthrust[axis] + self.friction[axis] + self.normalForce[axis]
             for cf in range(len(self.constrainForce)):
@@ -327,12 +327,11 @@ class Point:
                 self.force[axis] -= self.weight
             tempAcc[axis] = tempForce[axis] / self.mass
             self.constrainVelocity[axis] = tempAcc[axis] / (refreshRate ** 2)
-            self.force[axis] -= self.mass * getSign(self.velocity[axis]) * abs(self.constrainVelocity[axis]) * self.damping
 
             self.acc[axis] = self.force[axis] / self.mass
-            self.velocity[axis] += self.acc[axis] / (refreshRate ** 2)
-            self.velocity[axis] += tempAcc[axis] / (refreshRate ** 2)
-        self.constrainForce = []
+            self.force[axis] -= tempForce[axis] * self.damping  # constraining force added here to prevent points from floating
+            self.velocity[axis] += (self.acc[axis] / (refreshRate ** 2)) + self.constrainVelocity[axis]
+        self.constrainForce = []  # reset constrainForce
 
     # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
     def boxCollision(self):
@@ -523,16 +522,8 @@ class Point:
                             self.cords[xyz] = self.oldCords[xyz] - self.oldVelocity[xyz] * self.e  # bounce away from colliding plane with velocity from PREVIOUS frame. link to why:
                         else:
                             resultV = math.sqrt(self.oldVelocity[0] ** 2 + self.oldVelocity[1] ** 2)
-                            resultF = math.sqrt((self.force[0] ** 2) + (self.force[1] ** 2))
+                            resultF = abs(self.force[0] * math.sin(b.angle[2])) + (self.force[1] * math.cos(b.angle[2]))
                             if self.collision == 'top':
-                                if self.normalForce == [0, 0, 0]:
-                                    cordDiff = self.cords[1] - (collisionPlane['top'] + (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e))
-                                    for p in game.points:
-                                        if (p != self) and (p.cloth == self.cloth):
-                                            if p.velocity[0] > 0:
-                                                p.cords[1] = p.oldCords[1]  # if running up the ramp
-                                            else:
-                                                p.cords[1] -= cordDiff  # if running down the ramp
                                 self.cords[1] = collisionPlane['top'] + (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e)
                                 self.cords[0] -= resultV * math.cos(b.angle[2]) * self.e
                                 self.normalForce[0] = -resultF * math.sin(b.angle[2])
