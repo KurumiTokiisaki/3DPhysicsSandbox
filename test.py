@@ -277,8 +277,8 @@ class Point:
         self.collision = ''
         self.lastCollision = ''
         self.vertexState = ''  # closest vertex plane
-        self.e = 0  # elasticity
-        self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
+        self.e = 0  # elasticity (should be 0 when part of a cloth)
+        self.sf = 0.2  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = 1
         self.damping = 1  # k * 10
         self.constrainVelocity = [0, 0, 0]
@@ -335,7 +335,7 @@ class Point:
                     if self.force[1] < 0:
                         resultF += abs(self.force[1] * math.cos(b.angle[2]))
                     self.normalForce[0] = -resultF * math.sin(b.angle[2])
-                    # self.normalForce[1] = resultF * math.cos(b.angle[2]) * 0.99  # * 0.99 used here to compensate for floating point error
+                    self.normalForce[1] = resultF * math.cos(b.angle[2]) * 0.99  # * 0.99 used here to compensate for floating point error
                     if abs(self.velocity[0]) != 0:
                         self.friction[0] = -resultF * math.cos(b.angle[2]) * self.sf * getSign(self.velocity[0])
                         # self.friction[1] = resultF * math.sin(b.angle[2]) * self.sf * getSign(self.velocity[0]) * 0.99
@@ -589,6 +589,28 @@ class Point:
                     else:
                         if b.angle == [0, 0, 0]:
                             self.cords[xyz] = self.oldCords[xyz] - self.oldVelocity[xyz] * self.e  # bounce away from colliding plane with velocity from PREVIOUS frame. link to why:
+                            # apply flat surface friction
+                            if self.sf > 0:
+                                if (self.collision == 'right') or (self.collision == 'top') or (self.collision == 'front'):
+                                    posNeg = 1  # since angle is changed by pi radians when colliding plane is flipped, this coefficient must be used for friction
+                                elif (self.collision == 'left') or (self.collision == 'bottom') or (self.collision == 'back'):
+                                    posNeg = -1  # since angle is changed by pi radians when colliding plane is flipped, this coefficient must be used for friction
+                                if b.angle == [0, 0, 0]:
+                                    friction = self.sf * self.force[xyz] * posNeg
+                                    if self.velocity[xyzFriction[1]] != 0:
+                                        movingAngle = math.atan(self.velocity[xyzFriction[0]] / self.velocity[xyzFriction[1]])
+                                    else:
+                                        movingAngle = math.pi / 2
+                                    if abs(self.velocity[xyzFriction[0]]) > (
+                                            10 ** -4):  # here, there is a small tolerance due to floating point error as well as force (acceleration) not directly affecting displacement (rather, being the rate of change of its rate of change)
+                                        self.friction[xyzFriction[0]] = friction * math.sin(movingAngle) * getSign(self.velocity[xyzFriction[0]]) * getSign(movingAngle)  # getSign was put here through testing
+                                    else:
+                                        self.cords[xyzFriction[0]] = self.oldCords[xyzFriction[0]]
+                                    if abs(self.velocity[xyzFriction[1]]) > (
+                                            10 ** -4):  # here, there is a small tolerance due to floating point error as well as force (acceleration) not directly affecting displacement (rather, being the rate of change of its rate of change)
+                                        self.friction[xyzFriction[1]] = friction * math.cos(movingAngle) * getSign(self.velocity[xyzFriction[1]])
+                                    else:
+                                        self.cords[xyzFriction[1]] = self.oldCords[xyzFriction[1]]
                         else:
                             resultV = 0
                             if self.collision == 'top':
@@ -596,47 +618,35 @@ class Point:
                                     resultV += abs(self.oldVelocity[1] * math.cos(b.angle[2]))
                                 if self.oldVelocity[0] > 0:
                                     resultV += abs(self.oldVelocity[0] * math.sin(b.angle[2]))
-                                if (self.normalForce == [0, 0, 0]) and (self.velocity[0] > 0):
-                                    m = (self.cords[1] - self.oldCords[1]) / (self.cords[0] - self.oldCords[0])
-                                    c = self.cords[1] - (m * self.cords[0])
-                                    x = ((c - collisionPlane['top']['c']) / (collisionPlane['top']['m'] - m)) - (self.radius * math.sin(b.angle[2]))
-                                    self.oldCords[0] = x - self.velocity[0] * math.cos(b.angle[2])
-                                    self.cords[0] = x  # + self.velocity[0] * math.cos(b.angle[2])
-                                    collisionPlane = self.collisionPlane(b)
+                                # check out this link to see why I need the logic below:
+                                if self.normalForce == [0, 0, 0]:
+                                    if self.velocity[0] > 0:  # going up the ramp
+                                        if self.cords[0] == self.oldCords[0]:
+                                            m = float('inf')  # Python does an excellent job with infinity since n/inf = 0. I'm also assuming that n/0 = inf.
+                                        else:
+                                            m = (self.cords[1] - self.oldCords[1]) / (self.cords[0] - self.oldCords[0])
+                                        c = self.cords[1] - (m * self.cords[0])
+                                        x = ((c - collisionPlane['top']['c'] - (self.radius / math.cos(b.angle[2]))) / (collisionPlane['top']['m'] - m))  # radius is used here to increase the collision box of the sphere
+                                        self.cords[0] = x
+                                        self.oldCords[0] = x - self.velocity[0] * math.cos(b.angle[2]) ** 2 - self.velocity[1] * math.cos(b.angle[2]) ** 2  # cos²/sin² used here as not all horizontal/vertical velocity is conserved IRL. Also fixes a major bug.
+                                        collisionPlane = self.collisionPlane(b)  # explicitly reassign collisionPlane after changing cords value to allow sphere to stay on the ramp's surface
+                                    else:  # going down the ramp
+                                        self.cords[0] += self.velocity[1] * math.cos(b.angle[2]) ** 2
+                                        collisionPlane = self.collisionPlane(b)
                                 self.cords[1] = collisionPlane['top']['y'] + (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e)
                                 self.cords[0] -= resultV * math.cos(b.angle[2]) * self.e
+
                             elif self.collision == 'bottom':
                                 self.cords[1] = collisionPlane['bottom'] - (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e)
                                 self.cords[0] -= resultV * math.cos(b.angle[2]) * self.e
+
                             elif self.collision == 'right':
                                 self.cords[1] = collisionPlane['right'] + (self.radius / math.sin(b.angle[2])) + (math.sin(b.angle[2]) * resultV * self.e)
                                 self.cords[0] -= resultV * math.sin(b.angle[2]) * self.e
+
                             elif self.collision == 'left':
                                 self.cords[1] = collisionPlane['left'] - (self.radius / math.sin(b.angle[2])) + (math.sin(b.angle[2]) * resultV * self.e)
                                 self.cords[0] -= resultV * math.sin(b.angle[2]) * self.e
-
-                    # apply flat surface friction
-                    if self.sf > 0:
-                        if (self.collision == 'right') or (self.collision == 'top') or (self.collision == 'front'):
-                            posNeg = 1  # since angle is changed by pi radians when colliding plane is flipped, this coefficient must be used for friction
-                        elif (self.collision == 'left') or (self.collision == 'bottom') or (self.collision == 'back'):
-                            posNeg = -1  # since angle is changed by pi radians when colliding plane is flipped, this coefficient must be used for friction
-                        if b.angle == [0, 0, 0]:
-                            friction = self.sf * self.force[xyz] * posNeg
-                            if self.velocity[xyzFriction[1]] != 0:
-                                movingAngle = math.atan(self.velocity[xyzFriction[0]] / self.velocity[xyzFriction[1]])
-                            else:
-                                movingAngle = math.pi / 2
-                            if abs(self.velocity[xyzFriction[0]]) > (
-                                    10 ** -4):  # here, there is a small tolerance due to floating point error as well as force (acceleration) not directly affecting displacement (rather, being the rate of change of its rate of change)
-                                self.friction[xyzFriction[0]] = friction * math.sin(movingAngle) * getSign(self.velocity[xyzFriction[0]]) * getSign(movingAngle)  # getSign was put here through testing
-                            else:
-                                self.cords[xyzFriction[0]] = self.oldCords[xyzFriction[0]]
-                            if abs(self.velocity[xyzFriction[1]]) > (
-                                    10 ** -4):  # here, there is a small tolerance due to floating point error as well as force (acceleration) not directly affecting displacement (rather, being the rate of change of its rate of change)
-                                self.friction[xyzFriction[1]] = friction * math.cos(movingAngle) * getSign(self.velocity[xyzFriction[1]])
-                            else:
-                                self.cords[xyzFriction[1]] = self.oldCords[xyzFriction[1]]
                 bArray.append(b)
 
             # detect collisions between points and edges on a collision rect (cuboid)
