@@ -162,7 +162,7 @@ def vertexBounce(resultV, angle, e):
         return resultV * math.sin(angle[1] * 2) * math.sin(angle[0]) * e, resultV * math.cos(angle[1] * 2), resultV * math.sin(angle[1] * 2) * math.cos(angle[0]) * e
 
 
-k = 1000  # global spring constant
+k = -100  # global spring constant
 bounce = 0.05  # global damping constant
 
 
@@ -278,9 +278,9 @@ class Point:
         self.lastCollision = ''
         self.vertexState = ''  # closest vertex plane
         self.e = 0  # elasticity (should be 0 when part of a cloth)
-        self.sf = 0.2  # surface friction coefficient. set to 'sticky' for infinite value.
-        self.multiplier = 1
-        self.damping = 1  # k * 10
+        self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
+        self.multiplier = 1  # variable for movement calcs
+        self.damping = 1  # coefficient of force from springs local to this point
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
         self.cloth = ''
@@ -335,7 +335,7 @@ class Point:
                     if self.force[1] < 0:
                         resultF += abs(self.force[1] * math.cos(b.angle[2]))
                     self.normalForce[0] = -resultF * math.sin(b.angle[2])
-                    self.normalForce[1] = resultF * math.cos(b.angle[2]) * 0.99  # * 0.99 used here to compensate for floating point error
+                    # self.normalForce[1] = resultF * math.cos(b.angle[2]) * 0.99  # * 0.99 used here to compensate for floating point error
                     if abs(self.velocity[0]) != 0:
                         self.friction[0] = -resultF * math.cos(b.angle[2]) * self.sf * getSign(self.velocity[0])
                         # self.friction[1] = resultF * math.sin(b.angle[2]) * self.sf * getSign(self.velocity[0]) * 0.99
@@ -406,6 +406,11 @@ class Point:
             'right': (b.grad['y'] * self.cords[0]) + (b.vertex[0][1] - (b.grad['y'] * b.vertex[0][0])),
             'top': {'y': (b.grad['x'] * self.cords[0]) + (b.vertex[1][1] - (b.grad['x'] * b.vertex[1][0])), 'm': b.grad['x'], 'c': (b.vertex[1][1] - (b.grad['x'] * b.vertex[1][0]))},
             'bottom': (b.grad['x'] * self.cords[0]) + (b.vertex[2][1] - (b.grad['x'] * b.vertex[2][0]))
+        }
+
+    def xCollisionPlane(self, b):
+        return {
+            'top': {'x', 'm', 'c'}
         }
 
     # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
@@ -541,7 +546,7 @@ class Point:
                     for inc in range(8):
                         vIdx.append(inc)
 
-                if self.vertexState != '':  # edge collision detection: 
+                if self.vertexState != '':  # edge collision detection:
                     dist = []  # distance to each vertex as indicated by vIdx
                     for d in range(len(vIdx)):
                         dist.append([])
@@ -620,19 +625,20 @@ class Point:
                                     resultV += abs(self.oldVelocity[0] * math.sin(b.angle[2]))
                                 # check out this link to see why I need the logic below:
                                 if self.normalForce == [0, 0, 0]:
-                                    if self.velocity[0] > 0:  # going up the ramp
-                                        if self.cords[0] == self.oldCords[0]:
-                                            m = float('inf')  # Python does an excellent job with infinity since n/inf = 0. I'm also assuming that n/0 = inf.
-                                        else:
-                                            m = (self.cords[1] - self.oldCords[1]) / (self.cords[0] - self.oldCords[0])
-                                        c = self.cords[1] - (m * self.cords[0])
-                                        x = ((c - collisionPlane['top']['c'] - (self.radius / math.cos(b.angle[2]))) / (collisionPlane['top']['m'] - m))  # radius is used here to increase the collision box of the sphere
-                                        self.cords[0] = x
-                                        self.oldCords[0] = x - self.velocity[0] * math.cos(b.angle[2]) ** 2 - self.velocity[1] * math.cos(b.angle[2]) ** 2  # cos²/sin² used here as not all horizontal/vertical velocity is conserved IRL. Also fixes a major bug.
-                                        collisionPlane = self.collisionPlane(b)  # explicitly reassign collisionPlane after changing cords value to allow sphere to stay on the ramp's surface
-                                    else:  # going down the ramp
-                                        self.cords[0] += self.velocity[1] * math.cos(b.angle[2]) ** 2
-                                        collisionPlane = self.collisionPlane(b)
+                                    if self.cords[0] == self.oldCords[0]:
+                                        m = 0  # Python does an excellent job with infinity since n/inf = 0. I'm also assuming that n/0 = inf.
+                                    else:
+                                        m = (self.cords[1] - self.oldCords[1]) / (self.cords[0] - self.oldCords[0])
+                                    c = self.cords[1] - (m * self.cords[0])
+                                    x = ((c - collisionPlane['top']['c'] - (self.radius / math.cos(b.angle[2]))) / (collisionPlane['top']['m'] - m))  # radius is used here to increase the collision box of the sphere
+                                    angleX = math.cos(b.angle[2]) * math.sin(b.angle[2])
+                                    if self.velocity[1] >= 0:  # moving upwards
+                                        self.cords[0] = x  # unfortunately, x cannot be used here, delaying normal reaction forces from coming in. an upside to this loss of realism allows gravity in the x-direction.
+                                        self.oldCords[0] = x - self.velocity[1] * angleX - self.velocity[0] * angleX
+                                    else:  # moving downwards
+                                        self.oldCords[0] = x
+                                        self.cords[0] = x + self.velocity[1] * angleX + self.velocity[0] * angleX
+                                collisionPlane = self.collisionPlane(b)  # explicitly reassign collisionPlane after changing cords value to allow sphere to stay on the ramp's surface
                                 self.cords[1] = collisionPlane['top']['y'] + (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e)
                                 self.cords[0] -= resultV * math.cos(b.angle[2]) * self.e
 
@@ -961,7 +967,7 @@ class CollisionRect:
 game = Main()
 
 # makes a cube using points and joints
-cube = False
+cube = True
 if cube:
     cubeSize = 8
     for ve in range(cubeSize):
@@ -1001,7 +1007,7 @@ if sphere:
 elif not cube:
     game.points.append(Point(0.2, 1000))
 
-game.collisionRect.append(CollisionRect((100, 10, 100), [30, 10, 0], [0, 0, math.radians(89)]))  # CANNOT be negative angle
+game.collisionRect.append(CollisionRect((100, 10, 100), [30, 10, 0], [0, 0, math.radians(30)]))  # CANNOT be negative angle
 
 vizact.ontimer(1 / refreshRate, game.main)  # run game.main refreshRate times each second
 # add framerate here
