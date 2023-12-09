@@ -40,7 +40,7 @@ elif mode == 'k':
     if fullscreen:
         viz.window.setFullscreen()
 
-refreshRate = 165  # display refresh rate
+refreshRate = 144  # display refresh rate
 gConst = 9.81  # gravitational field constant
 gasDensity = 1.293  # density of all gas
 jointRadius = 0.01  # radius of joints
@@ -162,7 +162,7 @@ def vertexBounce(resultV, angle, e):
         return resultV * math.sin(angle[1] * 2) * math.sin(angle[0]) * e, resultV * math.cos(angle[1] * 2), resultV * math.sin(angle[1] * 2) * math.cos(angle[0]) * e
 
 
-k = -100  # global spring constant
+k = 1000  # global spring constant (make negative at higher angles)
 bounce = 0.05  # global damping constant
 
 
@@ -271,7 +271,7 @@ class Point:
         self.gasUpthrust = [0, 0, 0]
         self.liquidUpthrust = [0, 0, 0]
         self.friction = [0, 0, 0]
-        self.constrainForce = []
+        self.constrainForce = [0, 0, 0]
         self.solidCubeCollision = False
         self.liquidCubeCollision = False
         self.collision = ''
@@ -280,11 +280,12 @@ class Point:
         self.e = 0  # elasticity (should be 0 when part of a cloth)
         self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = 1  # variable for movement calcs
-        self.damping = 1  # coefficient of force from springs local to this point
+        self.damping = 1000  # coefficient of force from springs local to this point
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
         self.cloth = ''
         self.b = None  # current colliding solid
+        # self.temp = [0, 0, 0]
 
     def setRadiusDensity(self, radius, density):
         self.radius = radius
@@ -313,18 +314,15 @@ class Point:
         self.sphere.setPosition(self.cords)
 
     def physics(self):
-        tempForce = [0, 0, 0]
         for axis in range(3):
             # add physics here
             # self.gasDrag[axis] = 0.5 * gasDensity * -getSign(self.velocity[axis]) * (self.velocity[axis] ** 2) * 2 * math.pi * (self.radius ** 2)
             # self.gasUpthrust[axis] = (4 / 3) * math.pi * (self.radius ** 3) * gasDensity
 
             self.force[axis] = self.gasDrag[axis] + self.liquidDrag[axis] + self.gasUpthrust[axis] + self.liquidUpthrust[axis]
-            for cf in range(len(self.constrainForce)):
-                tempForce[axis] += self.constrainForce[cf][axis]
             if axis == 1:
                 self.force[axis] -= self.weight
-            self.force[axis] += tempForce[axis] * self.damping  # constraining force added here to prevent points from floating
+            self.force[axis] += self.constrainForce[axis]  # constraining force added here to prevent points from floating
         # calculate normal reaction force. the reason it's here and not in boxCollision is because resultant force must first be calculated above.
         if self.b:
             for b in self.b:
@@ -334,11 +332,11 @@ class Point:
                         resultF += abs(self.force[0] * math.sin(b.angle[2]))
                     if self.force[1] < 0:
                         resultF += abs(self.force[1] * math.cos(b.angle[2]))
-                    self.normalForce[0] = -resultF * math.sin(b.angle[2])
-                    # self.normalForce[1] = resultF * math.cos(b.angle[2]) * 0.99  # * 0.99 used here to compensate for floating point error
+                    self.normalForce[0] = -resultF * math.sin(b.angle[2]) * 0.99  # * 0.99 used here to compensate for floating point error
+                    self.normalForce[1] = resultF * math.cos(b.angle[2]) * 0.99
                     if abs(self.velocity[0]) != 0:
-                        self.friction[0] = -resultF * math.cos(b.angle[2]) * self.sf * getSign(self.velocity[0])
-                        # self.friction[1] = resultF * math.sin(b.angle[2]) * self.sf * getSign(self.velocity[0]) * 0.99
+                        self.friction[0] = -resultF * math.cos(b.angle[2]) * self.sf * getSign(self.velocity[0]) * 0.99
+                        self.friction[1] = resultF * math.sin(b.angle[2]) * self.sf * getSign(self.velocity[0]) * 0.99
                     else:
                         self.friction[0] = 0
                         # self.friction[1] = 0
@@ -356,7 +354,7 @@ class Point:
                     if self.force[1] < 0:
                         resultF += abs(self.force[1] * math.sin(b.angle[2]))
                     if self.cloth != '':
-                        self.normalForce[0] = resultF * math.cos(b.angle[2]) * getSign(k)  # getSign used here since spring constant can be negative
+                        self.normalForce[0] = resultF * math.cos(b.angle[2])  # getSign used here since spring constant can be negative
                     else:
                         self.normalForce[0] = resultF * math.cos(b.angle[2])
                     if abs(self.velocity[0]) != 0:
@@ -395,8 +393,8 @@ class Point:
             self.force[axis] += self.normalForce[axis] + self.friction[axis]
             self.acc[axis] = self.force[axis] / self.mass
             self.velocity[axis] += self.acc[axis] / (refreshRate ** 2)
-        print(self.force, self.collision)
-        self.constrainForce = []  # reset constrainForce
+        # print(self.force, self.collision)
+        self.constrainForce = [0, 0, 0]  # reset constrainForce
 
     def collisionPlane(self, b):
         return {
@@ -410,7 +408,7 @@ class Point:
 
     def xCollisionPlane(self, b):
         return {
-            'top': {'x', 'm', 'c'}
+            'top': {'x': - (b.grad['y'] * self.cords[1]) + (b.vertex[1][0] + (b.grad['y'] * b.vertex[1][1])), 'm': -b.grad['y'], 'c': b.vertex[1][0] + (b.grad['y'] * b.vertex[1][1])}
         }
 
     # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
@@ -474,6 +472,7 @@ class Point:
 
             else:
                 collisionPlane = self.collisionPlane(b)
+                xCollisionPlane = self.xCollisionPlane(b)
 
                 # check out the logic here: https://drive.google.com/file/d/1B-GqxPcpGkWAE_ogzMvYntTNmt8R99gT/view?usp=drive_link
                 self.vertexState = ''  # stores the facing axis of the nearest vertex
@@ -624,23 +623,42 @@ class Point:
                                 if self.oldVelocity[0] > 0:
                                     resultV += abs(self.oldVelocity[0] * math.sin(b.angle[2]))
                                 # check out this link to see why I need the logic below:
-                                if self.normalForce == [0, 0, 0]:
-                                    if self.cords[0] == self.oldCords[0]:
-                                        m = 0  # Python does an excellent job with infinity since n/inf = 0. I'm also assuming that n/0 = inf.
-                                    else:
-                                        m = (self.cords[1] - self.oldCords[1]) / (self.cords[0] - self.oldCords[0])
-                                    c = self.cords[1] - (m * self.cords[0])
-                                    x = ((c - collisionPlane['top']['c'] - (self.radius / math.cos(b.angle[2]))) / (collisionPlane['top']['m'] - m))  # radius is used here to increase the collision box of the sphere
-                                    angleX = math.cos(b.angle[2]) * math.sin(b.angle[2])
-                                    if self.velocity[1] >= 0:  # moving upwards
-                                        self.cords[0] = x  # unfortunately, x cannot be used here, delaying normal reaction forces from coming in. an upside to this loss of realism allows gravity in the x-direction.
-                                        self.oldCords[0] = x - self.velocity[1] * angleX - self.velocity[0] * angleX
-                                    else:  # moving downwards
-                                        self.oldCords[0] = x
-                                        self.cords[0] = x + self.velocity[1] * angleX + self.velocity[0] * angleX
-                                collisionPlane = self.collisionPlane(b)  # explicitly reassign collisionPlane after changing cords value to allow sphere to stay on the ramp's surface
-                                self.cords[1] = collisionPlane['top']['y'] + (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e)
-                                self.cords[0] -= resultV * math.cos(b.angle[2]) * self.e
+                                if math.degrees(b.angle[2]) <= 45:
+                                    if self.normalForce == [0, 0, 0]:
+                                        if self.cords[0] == self.oldCords[0]:
+                                            m = 0
+                                        else:
+                                            m = (self.cords[1] - self.oldCords[1]) / (self.cords[0] - self.oldCords[0])
+                                        c = self.cords[1] - (m * self.cords[0])
+                                        x = ((c - collisionPlane['top']['c'] - (self.radius / math.cos(b.angle[2]))) / (collisionPlane['top']['m'] - m))  # radius is used here to increase the collision box of the sphere
+                                        angle = math.cos(b.angle[2]) * math.sin(b.angle[2])
+                                        if self.velocity[1] >= 0:  # moving upwards
+                                            self.cords[0] = x  # unfortunately, x cannot be used here, delaying normal reaction forces from coming in. an upside to this loss of realism allows gravity in the x-direction.
+                                            self.oldCords[0] = x - self.velocity[1] * angle - self.velocity[0] * angle
+                                        else:  # moving downwards
+                                            self.cords[0] = x + self.velocity[1] * angle + self.velocity[0] * angle
+                                            self.oldCords[0] = x
+                                        collisionPlane = self.collisionPlane(b)  # explicitly reassign collisionPlane after changing cords value to allow sphere to stay on the ramp's surface
+                                    self.cords[1] = collisionPlane['top']['y'] + (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e)
+                                    self.cords[0] -= resultV * math.cos(b.angle[2]) * self.e
+                                else:
+                                    if self.normalForce == [0, 0, 0]:
+                                        if self.cords[1] == self.oldCords[1]:
+                                            m = 99999999999999
+                                        else:
+                                            m = (self.cords[0] - self.oldCords[0]) / (self.cords[1] - self.oldCords[1])
+                                        c = self.cords[0] - (m * self.cords[1])
+                                        y = ((c - xCollisionPlane['top']['c'] + (self.radius / math.sin(b.angle[2]))) / (xCollisionPlane['top']['m'] - m))
+                                        angle = math.cos(b.angle[2]) * math.sin(b.angle[2])
+                                        if self.velocity[0] >= 0:  # moving right
+                                            self.cords[1] = y
+                                            self.oldCords[1] = y - self.velocity[0] * angle - self.velocity[1] * angle
+                                        else:  # moving left
+                                            self.cords[1] = y + self.velocity[0] * angle + self.velocity[1] * angle
+                                            self.oldCords[1] = y
+                                        xCollisionPlane = self.xCollisionPlane(b)
+                                    self.cords[0] = xCollisionPlane['top']['x'] - (self.radius / math.sin(b.angle[2])) + (math.sin(b.angle[2]) * resultV * self.e)
+                                    self.cords[1] -= resultV * math.cos(b.angle[2]) * self.e
 
                             elif self.collision == 'bottom':
                                 self.cords[1] = collisionPlane['bottom'] - (self.radius / math.cos(b.angle[2])) + (math.cos(b.angle[2]) * resultV * self.e)
@@ -878,16 +896,16 @@ class Joint:
                 self._update[u] = self.bounciness * (self.diff[u] * ((self.maxLength / self.height) - 1))
                 self.constrainForce[u] = self.stiffness * (self.diff[u] * ((self.maxLength / self.height) - 1))
 
-        game.points[self.pOne].constrainForce.append([0, 0, 0])
-        game.points[self.pTwo].constrainForce.append([0, 0, 0])
         for i in range(3):
             if self.theForceJoint:
                 game.points[self.pTwo].cords[i] -= self._update[i]  # pull last dragged point regardless of its mass
             else:
                 game.points[self.pOne].cords[i] += self._update[i] / game.points[self.pTwo].mass  # pull each point depending on its mass
                 game.points[self.pTwo].cords[i] -= self._update[i] / game.points[self.pTwo].mass  # pull each point depending on its mass
-                game.points[self.pOne].constrainForce[-1][i] = self.constrainForce[i]
-                game.points[self.pTwo].constrainForce[-1][i] = -self.constrainForce[i]
+                # game.points[self.pOne].temp[i] += self._update[i] / game.points[self.pOne].mass
+                # game.points[self.pTwo].temp[i] -= self._update[i] / game.points[self.pTwo].mass
+                game.points[self.pOne].constrainForce[i] += self.constrainForce[i]
+                game.points[self.pTwo].constrainForce[i] -= self.constrainForce[i]
 
 
 class CollisionRect:
@@ -1007,7 +1025,7 @@ if sphere:
 elif not cube:
     game.points.append(Point(0.2, 1000))
 
-game.collisionRect.append(CollisionRect((100, 10, 100), [30, 10, 0], [0, 0, math.radians(30)]))  # CANNOT be negative angle
+game.collisionRect.append(CollisionRect((100, 10, 100), [35, 10, 0], [0, 0, math.radians(85)]))  # CANNOT be negative angle
 
 vizact.ontimer(1 / refreshRate, game.main)  # run game.main refreshRate times each second
 # add framerate here
