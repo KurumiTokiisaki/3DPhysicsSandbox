@@ -293,14 +293,16 @@ class Point:
         self.lastCollision = ''
         self.vertexState = ''  # closest vertex plane
         self.e = 0  # elasticity (should be 0 when part of a cloth)
-        self.sf = 0.2  # surface friction coefficient. set to 'sticky' for infinite value.
+        self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = 1  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
         self.cloth = ''
         self.b = None  # current colliding solid
-        self.movingAngle = [0, 0]  # direction of movement
+        self.movingAngle = [0, 0, 0]  # direction of movement
         self.collisionState = ''
+        self.bAngle = [0, 0, 0]  # stores angle of b.angle
+        self.oldAngle = [0, 0, 0]  # stores old angle of self.bAngle
 
     def setRadiusDensity(self, radius, density):
         self.radius = radius
@@ -336,57 +338,59 @@ class Point:
 
             self.force[axis] = self.gasDrag[axis] + self.liquidDrag[axis] + self.gasUpthrust[axis] + self.liquidUpthrust[axis] + self.weight[axis]
             self.force[axis] += self.constrainForce[axis]  # constraining force added here to prevent points from floating
+
         # calculate normal reaction force. the reason it's here and not in boxCollision is because resultant force must first be calculated above.
         if self.b:
             for b in self.b:
+                self.bAngle = b.angle
+
                 if (self.collision == 'top') or (self.collision == 'bottom'):
                     resultF = 0
                     if (self.force[0] * self.multiplier) > 0:
-                        resultF += abs(self.force[0] * math.sin(b.angle[2]))
+                        resultF += abs(self.force[0] * math.sin(self.bAngle[2]))
                     if (self.force[1] * self.multiplier) < 0:
-                        resultF += abs(self.force[1] * math.cos(b.angle[2]))
+                        resultF += abs(self.force[1] * math.cos(self.bAngle[2]))
 
                     if self.collisionState == 'y':
-                        self.normalForce[0] = -resultF * sin(b.angle[2]) * self.multiplier
-                        self.friction[0] = -resultF * cos(b.angle[2]) * self.sf * getSign(self.velocity[0])  # make ff magnitude always constant
+                        self.normalForce[0] = -resultF * sin(self.bAngle[2]) * cos(self.bAngle[0]) * self.multiplier
+                        self.normalForce[2] = -resultF * sin(self.bAngle[2]) * sin(self.bAngle[0]) * self.multiplier
+                        self.normalForceAfter[1] = resultF * cos(self.bAngle[2]) * self.multiplier
+                        self.friction[0] = -resultF * cos(self.bAngle[2]) * self.sf * getSign(self.velocity[0]) * sin(abs(self.movingAngle[1]))
+                        self.friction[2] = -resultF * cos(self.bAngle[2]) * self.sf * getSign(self.velocity[2]) * cos(abs(self.movingAngle[1]))
                     elif self.collisionState == 'x':
-                        self.normalForce[1] = resultF * cos(b.angle[2]) * self.multiplier
-                        self.friction[1] = -resultF * sin(b.angle[2]) * self.sf * getSign(self.velocity[1])
-                    self.friction[2] = -resultF * self.sf * getSign(self.velocity[2])
+                        self.normalForce[1] = resultF * cos(self.bAngle[2]) * sin(self.bAngle[0]) * self.multiplier
+                        self.normalForce[2] = resultF * sin(self.bAngle[0]) * sin(self.bAngle[2]) * self.multiplier
+                        self.normalForceAfter[0] = -resultF * sin(self.bAngle[2]) * self.multiplier
+                        self.friction[1] = -resultF * sin(self.bAngle[2]) * self.sf * getSign(self.velocity[1]) * cos(abs(self.movingAngle[2]))
+                        self.friction[2] = -resultF * sin(self.bAngle[2]) * self.sf * getSign(self.velocity[2]) * sin(abs(self.movingAngle[2]))
 
-                # test this
                 elif (self.collision == 'right') or (self.collision == 'left'):
                     resultF = 0
-                    if (self.force[0] * self.multiplier) > 0:
-                        resultF += abs(self.force[0] * math.cos(b.angle[2]))
-                    if (self.force[1] * self.multiplier) > 0:
-                        resultF += abs(self.force[1] * math.sin(b.angle[2]))
+                    if (self.force[0] * self.multiplier) < 0:
+                        resultF += abs(self.force[0] * math.cos(self.bAngle[2]))
+                    if (self.force[1] * self.multiplier) < 0:
+                        resultF += abs(self.force[1] * math.sin(self.bAngle[2]))
 
                     if self.collisionState == 'y':
-                        self.normalForce[0] = -resultF * sin(b.angle[2]) * self.multiplier
-                        self.normalForceAfter[1] = resultF * cos(b.angle[2]) * self.multiplier
-                        self.friction[0] = -resultF * cos(b.angle[2]) * self.sf * getSign(self.velocity[0])
+                        self.normalForce[0] = resultF * cos(self.bAngle[2]) * cos(self.bAngle[0]) * self.multiplier
+                        self.normalForce[2] = resultF * cos(self.bAngle[2]) * sin(self.bAngle[0]) * self.multiplier
+                        self.normalForceAfter[1] = resultF * sin(self.bAngle[2]) * self.multiplier
+                        self.friction[0] = -resultF * sin(self.bAngle[2]) * self.sf * getSign(self.velocity[0]) * sin(abs(self.movingAngle[1]))
+                        self.friction[2] = -resultF * sin(self.bAngle[2]) * self.sf * getSign(self.velocity[2]) * cos(abs(self.movingAngle[1]))
                     elif self.collisionState == 'x':
-                        self.normalForce[1] = resultF * cos(b.angle[2]) * self.multiplier
-                        self.normalForceAfter[0] = -resultF * sin(b.angle[2]) * self.multiplier
-                        self.friction[1] = -resultF * sin(b.angle[2]) * self.sf * getSign(self.velocity[1])
-                    self.friction[2] = -resultF * self.sf * getSign(self.velocity[2])
+                        self.normalForce[1] = resultF * sin(self.bAngle[2]) * cos(self.bAngle[0]) * self.multiplier
+                        self.normalForce[2] = -resultF * cos(self.bAngle[2]) * sin(self.bAngle[0]) * self.multiplier
+                        self.normalForceAfter[0] = resultF * cos(self.bAngle[2]) * self.multiplier
+                        self.friction[1] = -resultF * cos(self.bAngle[0]) * cos(self.bAngle[2]) * self.sf * getSign(self.velocity[1]) * cos(abs(self.movingAngle[2]))
+                        self.friction[2] = -resultF * cos(self.bAngle[0]) * cos(self.bAngle[2]) * self.sf * getSign(self.velocity[2]) * sin(abs(self.movingAngle[2]))
 
                 elif (self.collision == 'front') or (self.collision == 'back'):
                     resultF = 0
                     if (self.force[2] * self.multiplier) < 0:
                         resultF += abs(self.force[2])
-                    self.normalForce[2] = resultF * self.multiplier * 0.999
-                    if abs(self.velocity[0]) != 0:
-                        self.friction[0] = -resultF * self.sf * getSign(self.velocity[0]) * sin(abs(self.movingAngle[0]))
-                    else:
-                        self.velocity[0] = 0
-                        self.friction[0] = 0
-                    if abs(self.velocity[1]) != 0:
-                        self.friction[1] = -resultF * self.sf * getSign(self.velocity[1]) * cos(abs(self.movingAngle[0]))
-                    else:
-                        self.friction[1] = 0
-                        self.velocity[1] = 0
+                    self.normalForceAfter[2] = resultF * self.multiplier
+                    self.friction[0] = -resultF * self.sf * getSign(self.velocity[0]) * sin(abs(self.movingAngle[0]))
+                    self.friction[1] = -resultF * self.sf * getSign(self.velocity[1]) * cos(abs(self.movingAngle[0]))
 
         for axis in range(3):
             self.force[axis] += self.normalForce[axis] + self.friction[axis]
@@ -395,6 +399,19 @@ class Point:
             self.velocity[axis] += self.acc[axis] / (refreshRate ** 2)
         print(self.force, self.collision)
         self.constrainForce = [0, 0, 0]  # reset constrainForce
+
+        if self.velocity[1] != 0:
+            self.movingAngle[0] = math.atan(self.velocity[0] / self.velocity[1])
+        else:
+            self.movingAngle[0] = math.pi / 2
+        if self.velocity[2] != 0:
+            self.movingAngle[1] = math.atan(self.velocity[0] / self.velocity[2])
+        else:
+            self.movingAngle[1] = math.pi / 2
+        if self.velocity[1] != 0:
+            self.movingAngle[2] = math.atan(self.velocity[2] / self.velocity[1])
+        else:
+            self.movingAngle[2] = math.pi / 2
 
     def yCollisionPlane(self, b):
         return {
@@ -418,8 +435,9 @@ class Point:
     def boxCollision(self):
         bArray = []
         for b in game.collisionRect:
+            self.bAngle = b.angle
             # self.collision represents the surface of a collision cuboid that the point is CURRENTLY (hence making self.collision = '' in else cases) in front of, using only its center point as reference
-            if b.angle == [0, 0, 0]:
+            if self.bAngle == [0, 0, 0]:
                 # check out the logic here: https://drive.google.com/file/d/1B-GqxPcpGkWAE_ogzMvYntTNmt8R99gT/view?usp=drive_link
                 self.vertexState = ''  # stores the facing axis of the nearest vertex
                 if ((self.cords[0] > b.plane['right']) or (self.cords[0] < b.plane['left'])) and ((self.cords[2] < b.plane['front']) and (self.cords[2] > b.plane['back'])) and (
@@ -508,8 +526,8 @@ class Point:
                     elif self.cords[2] <= (b.plane['back'] + self.radius):
                         self.lastCollision = 'back'
 
-                self.solidCubeCollision = (self.cords[1] <= (yCollisionPlane['top']['y'] + self.radius / cos(b.angle[2]))) and (self.cords[1] >= (yCollisionPlane['bottom']['y'] - self.radius / cos(b.angle[2]))) and (
-                        self.cords[1] <= (yCollisionPlane['right']['y'] + self.radius / sin(b.angle[2]))) and (self.cords[1] >= (yCollisionPlane['left']['y'] - self.radius / sin(b.angle[2]))) and (
+                self.solidCubeCollision = (self.cords[1] <= (yCollisionPlane['top']['y'] + self.radius / cos(self.bAngle[2]))) and (self.cords[1] >= (yCollisionPlane['bottom']['y'] - self.radius / cos(self.bAngle[2]))) and (
+                        self.cords[1] <= (yCollisionPlane['right']['y'] + self.radius / sin(self.bAngle[2]))) and (self.cords[1] >= (yCollisionPlane['left']['y'] - self.radius / sin(self.bAngle[2]))) and (
                                                   self.cords[2] <= (b.plane['front'] + self.radius)) and (self.cords[2] >= (b.plane['back'] - self.radius))
 
                 if not self.solidCubeCollision:  # do not reset collision value if undergoing a collision so that clipping can be prevented
@@ -591,10 +609,10 @@ class Point:
                         xyz = 2  # colliding about z
                         xyzFriction = [0, 1]  # movement about x and y
 
-                    if (b.angle == [0, 0, 0]) and ((self.e == 0) or (abs(self.oldVelocity[xyz]) < (10 ** -3))):  # to prevent infinite bouncing and to allow friction, if velocity is tiny make velocity 0
+                    if (self.bAngle == [0, 0, 0]) and ((self.e == 0) or (abs(self.oldVelocity[xyz]) < (10 ** -3))):  # to prevent infinite bouncing and to allow friction, if velocity is tiny make velocity 0
                         self.cords[xyz] = b.plane[self.collision] + self.radius * self.multiplier
                     else:
-                        if b.angle == [0, 0, 0]:
+                        if self.bAngle == [0, 0, 0]:
                             self.cords[xyz] = self.oldCords[xyz] - self.oldVelocity[xyz] * self.e  # bounce away from colliding plane with velocity from PREVIOUS frame. link to why:
                             # apply flat surface friction
                             if self.sf > 0:
@@ -602,7 +620,7 @@ class Point:
                                     posNeg = 1  # since angle is changed by pi radians when colliding plane is flipped, this coefficient must be used for friction
                                 elif (self.collision == 'left') or (self.collision == 'bottom') or (self.collision == 'back'):
                                     posNeg = -1  # since angle is changed by pi radians when colliding plane is flipped, this coefficient must be used for friction
-                                if b.angle == [0, 0, 0]:
+                                if self.bAngle == [0, 0, 0]:
                                     friction = self.sf * self.force[xyz] * posNeg
                                     if self.velocity[xyzFriction[1]] != 0:
                                         self.movingAngle[0] = math.atan(self.velocity[xyzFriction[0]] / self.velocity[xyzFriction[1]])
@@ -621,30 +639,26 @@ class Point:
                         else:  # collision rect is at an angle
                             resultV = 0  # resultant velocity used for elastic points (when e > 0)
 
-                            if self.velocity[1] != 0:
-                                self.movingAngle[0] = math.atan(self.velocity[0] / self.velocity[1])
-                            else:
-                                self.movingAngle[0] = math.pi / 2
-                            if self.velocity[2] != 0:
-                                self.movingAngle[1] = math.atan(self.velocity[0] / self.velocity[2])
-                            else:
-                                self.movingAngle[1] = math.pi / 2
-
                             if (self.collision == 'top') or (self.collision == 'right') or (self.collision == 'bottom') or (self.collision == 'left'):  # colliding with top/right/bottom/left plane
                                 if (self.collision == 'right') or (self.collision == 'left'):
-                                    oldAngle = copy.deepcopy(b.angle[2])
-                                    b.angle[2] = b.angle[2] - (math.pi / 2)
-                                self.angle = b.angle[2] + self.movingAngle[0]  # relative angle from plane to moving direction
-                                if self.angle < -(math.pi / 2):
-                                    self.angle += math.pi
-                                elif self.angle > (math.pi / 2):
-                                    self.angle -= math.pi
-                                # resultV = math.sqrt(self.oldVelocity[0] ** 2 + self.oldCords[1] ** 2)
-                                resultV -= self.oldVelocity[0] * cos(b.angle[2])
-                                resultV -= self.oldVelocity[1] * sin(b.angle[2])
+                                    self.oldAngle[2] = copy.deepcopy(self.bAngle[2])  # oldAngle used to bypass floating point error in pi/2
+                                    self.bAngle[2] -= math.pi / 2
+                                else:
+                                    self.oldAngle[2] = 0
+                                # self.angle = self.bAngle[2] + self.movingAngle[0]  # relative angle from plane to moving direction
+                                # if self.angle < -(math.pi / 2):
+                                #     self.angle += math.pi
+                                # elif self.angle > (math.pi / 2):
+                                #     self.angle -= math.pi
+                                if (self.oldAngle[2] == 0) or (abs(math.degrees(self.bAngle[2])) < 45):
+                                    resultV -= self.oldVelocity[0] * cos(self.bAngle[2])
+                                    resultV -= self.oldVelocity[1] * sin(self.bAngle[2])
+                                else:
+                                    resultV += self.oldVelocity[0] * cos(self.bAngle[2])
+                                    resultV += self.oldVelocity[1] * sin(self.bAngle[2])
 
                                 # check out this link to see why I need the logic below:
-                                if abs(math.degrees(b.angle[2])) < 45:
+                                if abs(math.degrees(self.bAngle[2])) < 45:
                                     self.collisionState = 'y'
                                     if self.normalForce == [0, 0, 0]:
                                         # print(math.degrees(self.movingAngle[0]), math.degrees(angle), resultV)
@@ -653,14 +667,14 @@ class Point:
                                         # else:
                                         #     m = (self.cords[1] - self.oldCords[1]) / (self.cords[0] - self.oldCords[0])
                                         # c = self.cords[1] - (m * self.cords[0])
-                                        # x = ((c - yCollisionPlane[self.collision]['c'] - (self.multiplier * self.radius / cos(b.angle[2]))) / (yCollisionPlane[self.collision]['m'] - m))  # radius is used here to increase the collision box of the sphere
+                                        # x = ((c - yCollisionPlane[self.collision]['c'] - (self.multiplier * self.radius / cos(self.bAngle[2]))) / (yCollisionPlane[self.collision]['m'] - m))  # radius is used here to increase the collision box of the sphere
                                         if self.velocity[1] >= 0:  # moving upwards
                                             self.oldCords[0] = self.cords[0] + resultV
                                         else:  # moving downwards
                                             self.cords[0] = self.oldCords[0] - resultV
                                         yCollisionPlane = self.yCollisionPlane(b)  # explicitly reassign yCollisionPlane after changing cords value to allow sphere to stay on the ramp's surface
-                                    self.cords[1] = yCollisionPlane[self.collision]['y'] + (self.multiplier * self.radius / cos(b.angle[2])) + (cos(b.angle[2]) * resultV * self.e)
-                                    self.cords[0] -= resultV * cos(b.angle[2]) * self.e
+                                    self.cords[1] = yCollisionPlane[self.collision]['y'] + (self.multiplier * self.radius / cos(self.bAngle[2])) + (cos(self.bAngle[2]) * resultV * self.e)
+                                    self.cords[0] -= resultV * cos(self.bAngle[2]) * self.e
                                 else:
                                     self.collisionState = 'x'
                                     if self.normalForce == [0, 0, 0]:
@@ -670,18 +684,18 @@ class Point:
                                         # else:
                                         #     m = (self.cords[0] - self.oldCords[0]) / (self.cords[1] - self.oldCords[1])
                                         # c = self.cords[0] - (m * self.cords[1])
-                                        # y = ((c - xCollisionPlane[self.collision]['c'] + (self.multiplier * self.radius / sin(b.angle[2]))) / (xCollisionPlane[self.collision]['m'] - m))
+                                        # y = ((c - xCollisionPlane[self.collision]['c'] + (self.multiplier * self.radius / sin(self.bAngle[2]))) / (xCollisionPlane[self.collision]['m'] - m))
                                         if self.velocity[0] <= 0:  # moving left
                                             self.oldCords[1] = self.cords[1] + resultV
                                         else:  # moving right
                                             self.cords[1] = self.oldCords[1] - resultV
                                         xCollisionPlane = self.xCollisionPlane(b)
-                                    self.cords[0] = xCollisionPlane[self.collision]['x'] - (self.multiplier * self.radius / sin(b.angle[2])) + (sin(b.angle[2]) * resultV * self.e)
-                                    self.cords[1] -= resultV * cos(b.angle[2]) * self.e
-                                if (self.collision == 'right') or (self.collision == 'left'):
-                                    b.angle[2] = oldAngle
+                                    self.cords[0] = xCollisionPlane[self.collision]['x'] - (self.multiplier * self.radius / sin(self.bAngle[2])) + (sin(self.bAngle[2]) * resultV * self.e)
+                                    self.cords[1] -= resultV * cos(self.bAngle[2]) * self.e
                             elif (self.collision == 'front') or (self.collision == 'back'):
                                 self.cords[2] = b.plane[self.collision] + (self.radius * self.multiplier)
+                            if (self.collision == 'left') or (self.collision == 'right'):
+                                self.bAngle[2] = self.oldAngle[2]
 
                 bArray.append(b)
 
@@ -728,7 +742,7 @@ class Point:
                     #     cIdx = 3
                     #     sinCos = 'cos'
 
-                    collisionPoint = self.cords[0] + (self.radius / cos(b.angle[2])), yCollisionPlane[self.lastCollision], b.vertex[vertexIdx[0]][i[0]]
+                    collisionPoint = self.cords[0] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision], b.vertex[vertexIdx[0]][i[0]]
                     self.angle = getThreeDAngle(collisionPoint, self.cords, self.vertexState)
                     # angle = getTwoDAngle([self.cords[i[1]], self.cords[i[0]]], [b.vertex[vertexIdx[0]][i[1]], b.vertex[vertexIdx[0]][i[0]]])
                     resultV = math.sqrt(self.oldVelocity[i[0]] ** 2 + self.oldVelocity[i[1]] ** 2)
@@ -752,10 +766,10 @@ class Point:
                     self.cords[i[2]] += self.multiplier * self.reboundVelocity[i[2]]
                     if sinCos == 'sin':
                         self.normalForce[i[0]] = resultF * sin(self.angle[0]) * self.multiplier  # getSign used here as a result of testing
-                        self.normalForce[i[2]] = -resultF * sin(b.angle[2]) * self.multiplier
+                        self.normalForce[i[2]] = -resultF * sin(self.bAngle[2]) * self.multiplier
                     elif sinCos == 'cos':
                         self.normalForce[i[0]] = resultF * cos(self.angle[0]) * self.multiplier
-                        self.normalForce[i[2]] = -resultF * cos(b.angle[2]) * self.multiplier
+                        self.normalForce[i[2]] = -resultF * cos(self.bAngle[2]) * self.multiplier
                     # print(self.reboundVelocity, self.normalForce, angle)
                 bArray.append(b)
 
@@ -998,7 +1012,7 @@ class CollisionRect:
 game = Main()
 
 # makes a cube using points and joints
-cube = False
+cube = True
 if cube:
     cubeSize = 8
     for ve in range(cubeSize):
@@ -1038,7 +1052,7 @@ if sphere:
 elif not cube:
     game.points.append(Point(0.2, 1000))
 
-game.collisionRect.append(CollisionRect((100, 50, 100), [10, 50, 0], [0, 0, math.radians(30)]))  # CANNOT be negative angle or above 90
+game.collisionRect.append(CollisionRect((50, 50, 50), [10, 30, 0], [math.radians(0), 0, math.radians(10)]))  # CANNOT be negative angle or above 90
 
 vizact.ontimer(1 / refreshRate, game.main)  # run game.main refreshRate times each second
 # add framerate here

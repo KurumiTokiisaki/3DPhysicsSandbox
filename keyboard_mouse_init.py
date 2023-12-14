@@ -19,7 +19,7 @@ minCamSpeed = 0.1
 maxCamSpeed = minCamSpeed * 2
 
 # scroll speed (for hand)
-scrollSpeed = 0.0001
+scrollSpeed = 0.00015
 
 # hide the cursor
 viz.mouse.setCursor(0)
