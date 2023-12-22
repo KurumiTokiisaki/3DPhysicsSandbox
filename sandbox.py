@@ -157,6 +157,7 @@ class Point:
     def __init__(self, radius, density):
         self.radius = radius
         self.sphere = vizshape.addSphere(radius, slices=pointResolution)  # vizard object for sphere
+        # self.sphere.alpha(0.5)  # make transparent
         self.cords = [0, 0, 0]
         self.oldCords = [0, 0, 0]  # coordinate position from last frame
         self.velocity = [0, 0, 0]
@@ -625,7 +626,8 @@ class Joint:
         self._update = [0, 0, 0]
         self.damping = [0, 0, 0]
         if self.show:
-            self.cylinder = vizshape.addCylinder(self.height, self.radius, slices=jointResolution)  # make the joint visible if shown
+            self.cylinder = vizshape.addCylinder(1, self.radius, slices=jointResolution)  # make the joint visible if shown
+            # self.cylinder = viz.add('sphere.glb')
         self.volume = math.pi * (self.radius ** 2) * self.height
         self.theForceJoint = False
         self.cIdx = -1
@@ -649,8 +651,7 @@ class Joint:
 
     def draw(self):
         if self.show:
-            self.cylinder.remove()  # used to change the length of the joint by removing the existing one and making a new one
-            self.cylinder = vizshape.addCylinder(self.height, self.radius, slices=jointResolution)
+            self.cylinder.setScale([1, self.height, 1])  # change visual of cylinder
             if self.theForceJoint:
                 self.cords = midpoint(controls.hand[self.cIdx], game.points[self.pTwo])  # set the midpoint of the joint to the middle of each connected cord
                 self.cylinder.setEuler(getEulerAngle(controls.hand[self.cIdx].cords, game.points[self.pTwo].cords))  # set the facing angle of the joint to "connect" to both points
@@ -787,7 +788,7 @@ if cube:
     for j in range(len(game.points)):
         for jo in range(len(game.points)):
             if (j != jo) and (jo >= j):
-                game.joints.append(Joint(False, '', k, j, jo, damping, 69))
+                game.joints.append(Joint(True, '', k, j, jo, damping, 69))
 
     for p in range(len(game.points)):
         game.points[p].e = 0
