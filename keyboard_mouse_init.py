@@ -12,7 +12,7 @@ import math
 viz.mouse.setOverride()
 
 # mouse sensitivity
-sensitivity = 0.4
+sensitivity = 0.5
 
 # camera speed
 minCamSpeed = 0.1

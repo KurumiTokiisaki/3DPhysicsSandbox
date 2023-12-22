@@ -157,7 +157,6 @@ class Point:
     def __init__(self, radius, density):
         self.radius = radius
         self.sphere = vizshape.addSphere(radius, slices=pointResolution)  # vizard object for sphere
-        # self.sphere.alpha(0.5)  # make transparent
         self.cords = [0, 0, 0]
         self.oldCords = [0, 0, 0]  # coordinate position from last frame
         self.velocity = [0, 0, 0]
@@ -282,6 +281,7 @@ class Point:
             self.force[axis] += self.normalForceAfter[axis]  # parallel normal force done after acceleration calculation as all point collisions are assumed to have infinite magnitude
             self.oldCords[axis] -= self.acc[axis] / (game.physicsTime ** 2)  # divide by time since d(v) = a * d(t)
         # print(self.force, self.collision, self.collisionState)
+        print(self.velocity[1])
         self.constrainForce = [0, 0, 0]  # reset constrainForce
 
         # moving angle about relative to each axis in the form of [x:y, x:z, y:z]
@@ -443,12 +443,12 @@ class Point:
                             self.bAngle[2] -= math.pi / 2
                         else:
                             self.angleState = True
-                        if self.angleState or (abs(math.degrees(self.bAngle[2])) < 45):
-                            resultV -= self.oldVelocity[0] * cos(self.bAngle[2]) / game.physicsTime
-                            resultV -= self.oldVelocity[1] * sin(self.bAngle[2]) / game.physicsTime
+                        if self.angleState or (abs(math.degrees(self.bAngle[2])) > 45):
+                            resultV -= self.oldVelocity[0] * sin(self.bAngle[2]) / game.physicsTime
+                            resultV -= self.oldVelocity[1] * cos(self.bAngle[2]) / game.physicsTime
                         else:  # for some reason there is a special case scenario here. I will fix this later.
-                            resultV += self.oldVelocity[0] * cos(self.bAngle[2]) / game.physicsTime
-                            resultV += self.oldVelocity[1] * sin(self.bAngle[2]) / game.physicsTime
+                            resultV += self.oldVelocity[0] * sin(self.bAngle[2]) / game.physicsTime
+                            resultV += self.oldVelocity[1] * cos(self.bAngle[2]) / game.physicsTime
 
                         # check out this link to see why I need the logic below:
                         if abs(math.degrees(self.bAngle[2])) < 45:
@@ -683,12 +683,15 @@ class Joint:
 
 
 class CollisionRect:
-    def __init__(self, size, cords, angle):
+    def __init__(self, size, cords, angle, density, transparency, rectType):
+        self.type = rectType
         self.angle = angle
         self.vertexAngle = [0, 0, 0]
         self.size = size
         self.rect = vizshape.addBox(self.size)
         self.cords = cords
+        self.density = density
+        self.transparency = transparency
         self.vertex = []  # [x, y, z] -> [['right', 'top', 'front'], ['left', 'top', 'front'], ['left', 'bottom', 'front'], ['left', 'bottom', 'back'], ['left', 'top', 'back'], ['right', 'top', 'back'], ['right', 'bottom', 'back'], ['right', 'bottom', 'front']]
         self.plane = {
             'front': 0,
@@ -706,6 +709,7 @@ class CollisionRect:
         self.rect = vizshape.addBox(self.size)
         self.rect.setPosition(self.cords)
         self.rect.setEuler(math.degrees(self.angle[0]), math.degrees(self.angle[1]), math.degrees(self.angle[2]))
+        self.rect.alpha(self.transparency)
         sizeMultiplier = [0.5, 0.5, 0.5]
         multiplier = 1
         self.vertexAngle = math.atan(self.size[1] / self.size[0])
@@ -802,7 +806,7 @@ if sphere:
 elif not cube:
     game.points.append(Point(0.1, 1000))
 
-game.collisionRect.append(CollisionRect((50, 30, 50), [0, -14, 0], [math.radians(0), 0, math.radians(0.0000001)]))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 1000, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
 
 vizact.ontimer(1 / calcRate, game.main)  # run game.main time times each second
 vizact.ontimer(1 / 144, controls.main)  # controls are independent of framerate

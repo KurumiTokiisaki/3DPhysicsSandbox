@@ -5,7 +5,7 @@ from globalFunctions import cos
 mode = 'k'  # controller mode
 fullscreen = True
 gameSpeed = 1  # game speed factor
-calcRate = 500  # physics calculations/second (higher number means more accurate physics)
+calcRate = 144  # physics calculations/second (higher number means more accurate physics)
 physicsTime = calcRate * (1 / gameSpeed)  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
 renderRate = 144  # render rate (lower for performance)
 gConst = -9.81  # gravitational field constant
