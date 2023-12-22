@@ -5,6 +5,7 @@ import vizshape
 import vizconnect
 import steamvr
 import vizact
+from config import calcRate
 # for trig functions
 import math
 

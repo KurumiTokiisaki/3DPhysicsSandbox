@@ -1,5 +1,6 @@
 # base Vizard libraries
-import builtins
+import random
+import time
 
 import viz
 import vizfx
@@ -13,21 +14,8 @@ import math
 # used for setting one variable to another
 import copy
 
-
-# sin and cos functions used here due to floating point error in math.pi
-def sin(angle):
-    returnAngle = math.sin(angle)
-    return round(returnAngle, 13)
-
-
-def cos(angle):
-    returnAngle = math.cos(angle)
-    return round(returnAngle, 13)
-
-
-# controller mode
-mode = 'k'
-fullscreen = True
+from globalFunctions import *
+from config import *
 
 # Vizard window initialization
 viz.setMultiSample(4)  # FSAA (Full Screen Anti-Alaiasing)
@@ -55,137 +43,6 @@ elif mode == 'k':
         viz.window.setFullscreen()
 
 viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
-time = 300  # inverse of physics speed (cannot be too small or will destroy program)
-calcRate = 300  # physics calculations/second (for 100% time set this to time)
-gConst = -9.81
-gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
-gField = [gConst * cos(gFieldDirection['pitch']) * cos(gFieldDirection['yaw']), gConst * sin(gFieldDirection['pitch']) * cos(gFieldDirection['yaw']), gConst * sin(gFieldDirection['yaw'])]  # gravitational field constant about x, y, and z
-gasDensity = 1.293  # density of all gas
-jointRadius = 0.015  # radius of joints
-jointMadness = 0  # yes
-theForce = False  # when True, "recalling" points causes them to float slowly to you
-jointResolution = 5  # lower to increase performance
-pointResolution = 10  # lower to increase performance
-
-
-# get the scalar distance between 2 points with coordinate attributes
-def distance(cordOne, cordTwo):
-    diff = [0, 0, 0]
-    for d in range(3):
-        diff[d] = cordOne[d] - cordTwo[d]
-    return math.sqrt(diff[0] ** 2 + diff[1] ** 2 + diff[2] ** 2)
-
-
-# get the distance between 2 points given differences in x, y, and z values
-def diffDistance(diffX, diffY, diffZ):
-    return math.sqrt(diffX ** 2 + diffY ** 2 + diffZ ** 2)
-
-
-# detects collisions between 2 points with radius attributes (basically spheres)
-def detectCollision(pOne, pTwo):
-    sumR = pOne.radius + pTwo.radius
-    return distance(pOne.cords, pTwo.cords) <= sumR
-
-
-# returns the midpoint of two points
-def midpoint(pOne, pTwo):
-    mid = [0, 0, 0]
-    for m in range(3):
-        mid[m] = (pOne.cords[m] + pTwo.cords[m]) / 2
-    return [mid[0], mid[1], mid[2]]
-
-
-# returns the angle [pitch, yaw, roll] between 2 points. this is a special case for the Vizard setEuler function some reason unbeknownst to me!
-def getEulerAngle(cordOne, cordTwo):
-    diff = [0, 0, 0]
-    for d in range(3):
-        diff[d] = cordOne[d] - cordTwo[d]
-
-    if diff[2] != 0:
-        pitch = math.degrees(math.atan(diff[0] / diff[2]))  # angle from x to z
-        if diff[0] != 0:
-            yaw = 90 - math.degrees(math.atan(diff[1] / math.sqrt(diff[0] ** 2 + diff[2] ** 2)))  # angle from y to z
-        else:
-            yaw = 0
-    else:
-        pitch = 90
-        yaw = 0
-    if diff[2] <= 0:
-        yaw = -yaw  # angle from y to z (reversed since this negates after negative difference along z for some reason)
-    roll = jointMadness
-
-    return [pitch, yaw, roll]
-
-
-def getThreeDAngle(cordOne, cordTwo, xyz):
-    diff = [0, 0, 0]
-    for d in range(3):
-        diff[d] = cordOne[d] - cordTwo[d]
-
-    # change order of angular calcs when calculating angles relative to x, y, or z
-    # by default, it will be x
-    if (not xyz) or (xyz == 'x'):
-        diffIdx = [2, 1, 0]
-    elif xyz == 'y':
-        diffIdx = [0, 2, 1]
-    elif xyz == 'z':
-        diffIdx = [0, 1, 2]
-
-    if diff[diffIdx[1]] != 0:
-        pitch = math.atan(diff[diffIdx[0]] / diff[diffIdx[1]])  # relative angle from x to z
-    else:
-        pitch = math.pi / 2
-    if (diff[diffIdx[0]] != 0) and (diff[diffIdx[1]] != 0):
-        yaw = math.atan(diff[diffIdx[2]] / math.sqrt(diff[diffIdx[1]] ** 2 + diff[diffIdx[0]] ** 2))  # relative angle from y to x/z
-    else:
-        yaw = math.pi / 2
-
-    return [pitch, yaw, 0]
-
-
-# get the angle between cordOne and cordTwo in a 2D plane
-def getTwoDAngle(cordOne, cordTwo):
-    diff = [0, 0]
-    for d in range(2):
-        diff[d] = cordOne[d] - cordTwo[d]
-    return math.atan(diff[0] / diff[1])
-
-
-# gets the sign of a value (+/-)
-def getSign(value):
-    return 1 if value >= 0 else -1
-
-
-# resolves spheres (points) bouncing on the edges of collision cuboids (collision rects)
-# the returned value to set the new cords to depends on the angle and colliding plane of the particle
-# check out the maths here: https://drive.google.com/file/d/1ES6T8RilTcE5Pu7Zhdxfo6R6hvvsViAT/view?usp=drive_link
-def edgeBounce(resultV, angle, e, angleState):
-    if angleState == 0:
-        if (abs(math.degrees(angle[0])) % 90) > 45:
-            return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2) * e, resultV * sin(angle[1] * 2) * cos(
-                angle[0]) * e  # here's why I multiply the angle by 2: https://drive.google.com/file/d/1BeUFv6UuvRvqFxwgApfSc328uGC2fKmZ/view?usp=drive_link
-        else:
-            return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2), resultV * sin(angle[1] * 2) * cos(angle[0]) * e
-    else:
-        if (abs(math.degrees(angle[0])) % 90) < 45:
-            return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2) * e, resultV * sin(angle[1] * 2) * cos(
-                angle[0]) * e  # here's why I multiply the angle by 2: https://drive.google.com/file/d/1BeUFv6UuvRvqFxwgApfSc328uGC2fKmZ/view?usp=drive_link
-        else:
-            return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2), resultV * sin(angle[1] * 2) * cos(angle[0]) * e
-
-
-# resolves spheres (points) bouncing on the corners of collision cuboids (collision rects)
-# the returned value to set the new cords to depends on the angle of the particle
-# check out the maths here: https://drive.google.com/file/d/1ES6T8RilTcE5Pu7Zhdxfo6R6hvvsViAT/view?usp=drive_link
-def vertexBounce(resultV, angle, e):
-    if (abs(math.degrees(angle[1])) % 90) > 45:
-        return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2) * e, resultV * sin(angle[1] * 2) * cos(angle[0]) * e
-    else:
-        return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2), resultV * sin(angle[1] * 2) * cos(angle[0]) * e
-
-
-k = 2500  # * (time / 165)  # global spring constant (can be negative for weird outcome)
-damping = 1000  # * (time / 165)  # global damping constant
 
 
 # Main class for main.py
@@ -203,8 +60,14 @@ class Main:
         self.pause = False  # pauses physics
         self.pHeld = False  # stores if 'p' is held down
         self.rHeld = False  # stores if 'r' is held down
+        self.physicsTime = physicsTime
+        self.n = 0
 
     def main(self):
+        # if (1 / viz.getFrameElapsed()) > 0:
+        #     self.physicsTime = 1000
+        # self.physicsTime += (1 / viz.getFrameElapsed()) / self.n
+        # print(self.physicsTime)
         # pause if 'p' is pressed
         if (not self.pHeld) and (mode == 'k') and viz.key.isDown('p'):
             self.pause = not self.pause
@@ -212,7 +75,6 @@ class Main:
         elif not viz.key.isDown('p'):
             self.pHeld = False
 
-        controls.main()  # runs the main function in the current control (keyboard/VR) setting
         self.dragPoints()  # runs the function that detects if controller is "dragging" a point
 
         # detect & resolve collisions with collision boxes
@@ -231,6 +93,12 @@ class Main:
             self.joints[j].update()
             if not self.pause:
                 self.joints[j].constrain()
+
+    def render(self):
+        for p in self.points:
+            p.draw()
+        for j in self.joints:
+            j.draw()
 
     # used to drag points around using pointer/controller
     def dragPoints(self):
@@ -262,7 +130,7 @@ class Main:
                         for co in range(3):
                             cordDiff.append(self.points[self.lastP].cords[co] - self.points[self.lastP].oldCords[co])
                         for po in range(len(self.points)):
-                            if (po != self.lastP) and (self.points[po].cloth == self.points[self.lastP].cloth):
+                            if (po != self.lastP) and (self.points[po].cloth == self.points[self.lastP].cloth) and (self.points[self.lastP].cloth != ''):
                                 for cor in range(3):
                                     self.points[po].cords[cor] += cordDiff[cor]
                                     self.points[po].oldCords[cor] += cordDiff[cor]
@@ -342,14 +210,15 @@ class Point:
 
         # Verlet integration
         for c in range(3):
-            self.velocity[c] = (self.cords[c] - self.oldCords[c]) * time  # set velocity to change in position
+            self.velocity[c] = (self.cords[c] - self.oldCords[c]) * game.physicsTime  # set velocity to change in position
         self.oldCords = copy.deepcopy(self.cords)
         self.oldVelocity = copy.deepcopy(self.velocity)
 
         if not game.pause:
             for v in range(3):
-                self.cords[v] += self.velocity[v] / time  # change coordinates based on velocity
+                self.cords[v] += self.velocity[v] / game.physicsTime  # change coordinates based on velocity
 
+    def draw(self):
         self.sphere.setPosition(self.cords)
 
     def physics(self):
@@ -410,8 +279,8 @@ class Point:
             self.force[axis] += self.normalForce[axis] + self.friction[axis]
             self.acc[axis] = self.force[axis] / self.mass
             self.force[axis] += self.normalForceAfter[axis]  # parallel normal force done after acceleration calculation as all point collisions are assumed to have infinite magnitude
-            self.oldCords[axis] -= self.acc[axis] / (time ** 2)  # divide by time since d(v) = a * d(t)
-        print(self.force, self.collision, self.collisionState)
+            self.oldCords[axis] -= self.acc[axis] / (game.physicsTime ** 2)  # divide by time since d(v) = a * d(t)
+        # print(self.force, self.collision, self.collisionState)
         self.constrainForce = [0, 0, 0]  # reset constrainForce
 
         # moving angle about relative to each axis in the form of [x:y, x:z, y:z]
@@ -574,11 +443,11 @@ class Point:
                         else:
                             self.angleState = True
                         if self.angleState or (abs(math.degrees(self.bAngle[2])) < 45):
-                            resultV -= self.oldVelocity[0] * cos(self.bAngle[2]) / time
-                            resultV -= self.oldVelocity[1] * sin(self.bAngle[2]) / time
+                            resultV -= self.oldVelocity[0] * cos(self.bAngle[2]) / game.physicsTime
+                            resultV -= self.oldVelocity[1] * sin(self.bAngle[2]) / game.physicsTime
                         else:  # for some reason there is a special case scenario here. I will fix this later.
-                            resultV += self.oldVelocity[0] * cos(self.bAngle[2]) / time
-                            resultV += self.oldVelocity[1] * sin(self.bAngle[2]) / time
+                            resultV += self.oldVelocity[0] * cos(self.bAngle[2]) / game.physicsTime
+                            resultV += self.oldVelocity[1] * sin(self.bAngle[2]) / game.physicsTime
 
                         # check out this link to see why I need the logic below:
                         if abs(math.degrees(self.bAngle[2])) < 45:
@@ -757,7 +626,7 @@ class Joint:
         self.damping = [0, 0, 0]
         if self.show:
             self.cylinder = vizshape.addCylinder(self.height, self.radius, slices=jointResolution)  # make the joint visible if shown
-            self.volume = math.pi * (self.radius ** 2) * self.height
+        self.volume = math.pi * (self.radius ** 2) * self.height
         self.theForceJoint = False
         self.cIdx = -1
         # additional arguments to set the joint to be "the chosen force joint"
@@ -767,9 +636,6 @@ class Joint:
 
     # update the position and appearance of the joint
     def update(self):
-        if self.show:
-            self.cylinder.remove()  # used to change the length of the joint by removing the existing one and making a new one
-
         for d in range(3):
             if self.theForceJoint:
                 self.diff[d] = controls.hand[self.cIdx].cords[d] - game.points[self.pTwo].cords[d]
@@ -781,7 +647,9 @@ class Joint:
         self.radius = math.sqrt(self.volume / (math.pi * self.height))  # r = sqrt(v / πh)
         # no need to reassign volume here since it always stays constant
 
+    def draw(self):
         if self.show:
+            self.cylinder.remove()  # used to change the length of the joint by removing the existing one and making a new one
             self.cylinder = vizshape.addCylinder(self.height, self.radius, slices=jointResolution)
             if self.theForceJoint:
                 self.cords = midpoint(controls.hand[self.cIdx], game.points[self.pTwo])  # set the midpoint of the joint to the middle of each connected cord
@@ -916,15 +784,15 @@ if cube:
     game.points[7].cords = [-1, 0.5, 1]
     game.points[7].oldCords = [-1, 0.5, 1]
 
-    for j in range(cubeSize):
-        for jo in range(cubeSize):
+    for j in range(len(game.points)):
+        for jo in range(len(game.points)):
             if (j != jo) and (jo >= j):
-                game.joints.append(Joint(True, '', k, j, jo, damping, 69))
+                game.joints.append(Joint(False, '', k, j, jo, damping, 69))
 
     for p in range(len(game.points)):
         game.points[p].e = 0
-        game.points[p].cords[1] += 1
-        game.points[p].oldCords[1] += 1
+        game.points[p].cords[1] += 2
+        game.points[p].oldCords[1] += 2
     # game.points.append(Point(0.1, 1000))
 
 sphere = False
@@ -933,7 +801,9 @@ if sphere:
 elif not cube:
     game.points.append(Point(0.1, 1000))
 
-game.collisionRect.append(CollisionRect((50, 30, 50), [0, -14, 0], [math.radians(0), 0, math.radians(0.000000001)]))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+game.collisionRect.append(CollisionRect((50, 30, 50), [0, -14, 0], [math.radians(0), 0, math.radians(0.0000001)]))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
 
 vizact.ontimer(1 / calcRate, game.main)  # run game.main time times each second
+vizact.ontimer(1 / 144, controls.main)  # controls are independent of framerate
+vizact.ontimer(1 / renderRate, game.render)
 # add framerate here

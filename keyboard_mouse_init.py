@@ -4,7 +4,7 @@ import vizfx
 import vizconnect
 import vizshape
 import vizact
-
+from config import calcRate
 # used for trig functions
 import math
 
@@ -12,7 +12,7 @@ import math
 viz.mouse.setOverride()
 
 # mouse sensitivity
-sensitivity = 0.1
+sensitivity = 0.4
 
 # camera speed
 minCamSpeed = 0.1
@@ -20,7 +20,6 @@ maxCamSpeed = minCamSpeed * 2
 
 # scroll speed (for hand)
 scrollSpeed = 0.00015
-
 # hide the cursor
 viz.mouse.setCursor(0)
 
