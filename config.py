@@ -5,7 +5,7 @@ from globalFunctions import cos
 mode = 'k'  # controller mode
 fullscreen = True
 gameSpeed = 1  # game speed factor
-calcRate = 144  # physics calculations/second (higher number means more accurate physics)
+calcRate = 1000  # physics calculations/second (higher number means more accurate physics)
 physicsTime = calcRate * (1 / gameSpeed)  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
 renderRate = 144  # render rate (lower for performance)
 gConst = -9.81  # gravitational field constant
@@ -17,4 +17,4 @@ theForce = False  # when True, "recalling" points causes them to float slowly to
 jointResolution = 2  # lower to increase performance
 pointResolution = 10  # lower to increase performance
 k = 2500  # global spring constant (can be negative for weird outcome)
-damping = 1000  # global damping constant
+damping = 7  # global damping constant
