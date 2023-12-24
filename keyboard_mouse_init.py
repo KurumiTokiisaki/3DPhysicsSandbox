@@ -12,14 +12,14 @@ import math
 viz.mouse.setOverride()
 
 # mouse sensitivity
-sensitivity = 0.5
+sensitivity = 25 / calcRate  # use maximum dpi and lowest sensitivity for most accurate results
 
 # camera speed
-minCamSpeed = 0.1
+minCamSpeed = 25 / calcRate
 maxCamSpeed = minCamSpeed * 2
 
 # scroll speed (for hand)
-scrollSpeed = 0.00015
+scrollSpeed = 0.015 / calcRate
 # hide the cursor
 viz.mouse.setCursor(0)
 
