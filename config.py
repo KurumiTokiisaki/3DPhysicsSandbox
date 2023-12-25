@@ -18,3 +18,4 @@ jointResolution = 2  # lower to increase performance
 pointResolution = 10  # lower to increase performance
 k = 2500  # global spring constant (can be negative for weird outcome)
 damping = 7  # global damping constant
+collisionTolerance = 0.01  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭

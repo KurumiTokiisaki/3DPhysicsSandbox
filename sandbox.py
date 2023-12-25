@@ -364,8 +364,8 @@ class Point:
                 elif self.cords[2] <= (b.plane['back'] + self.radius):
                     self.lastCollision = 'back'
 
-            self.solidCubeCollision = (self.cords[1] <= (yCollisionPlane['top']['y'] + self.radius / cos(b.angle[2]))) and (self.cords[1] >= (yCollisionPlane['bottom']['y'] - self.radius / cos(b.angle[2]))) and (self.cords[1] <= (yCollisionPlane['right']['y'] + self.radius / sin(b.angle[2]))) and (self.cords[1] >= (yCollisionPlane['left']['y'] - self.radius / sin(b.angle[2]))) and (
-                    self.cords[2] <= (b.plane['front'] + self.radius)) and (self.cords[2] >= (b.plane['back'] - self.radius))
+            self.solidCubeCollision = (self.cords[1] <= (collisionTolerance + yCollisionPlane['top']['y'] + self.radius / cos(b.angle[2]))) and (self.cords[1] >= (-collisionTolerance + yCollisionPlane['bottom']['y'] - self.radius / cos(b.angle[2]))) and (self.cords[1] <= (collisionTolerance + yCollisionPlane['right']['y'] + self.radius / sin(b.angle[2]))) and (
+                    self.cords[1] >= (-collisionTolerance + yCollisionPlane['left']['y'] - self.radius / sin(b.angle[2]))) and (self.cords[2] <= (collisionTolerance + b.plane['front'] + self.radius)) and (self.cords[2] >= (-collisionTolerance + b.plane['back'] - self.radius))
 
             if not self.solidCubeCollision:  # reset self.collision when not in a collision
                 self.collision = ''
@@ -482,7 +482,12 @@ class Point:
                                 self.impulse = [0, 0, 0]
                                 self.cords[0] = xCollisionPlane[self.collision]['x'] - (self.multiplier * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
                     elif (self.collision == 'front') or (self.collision == 'back'):
-                        self.cords[2] = b.plane[self.collision] + (self.radius * self.multiplier)
+                        if not self.colliding:
+                            self.colliding = True
+                            self.cords[2] = b.plane[self.collision] + (self.radius * self.multiplier)
+                            self.oldCords[2] = copy.deepcopy(self.cords[2])
+                        else:
+                            self.cords[2] = b.plane[self.collision] + (self.radius * self.multiplier)
 
                 bArray.append(b)
 
@@ -815,11 +820,11 @@ if sphere:
     game.addPoint(Point(0.01, 1000))
 elif not cube:
     game.addPoint(Point(0.1, 1000))
-    game.addPoint(Point(0.1, 1000))
+    # game.addPoint(Point(0.1, 1000))
     game.points[0].cords = [-20, 90, 0]
     game.points[0].oldCords = [-20, 90, 0]
-    game.points[1].cords = [-20, 90, 5]
-    game.points[1].oldCords = [-20, 90, 5]
+    # game.points[1].cords = [-20, 90, 5]
+    # game.points[1].oldCords = [-20, 90, 5]
 
 game.collisionRect.append(CollisionRect((100, 50, 50), [0, 60, 0], [math.radians(0), 0, math.radians(30)], 1000, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
 
