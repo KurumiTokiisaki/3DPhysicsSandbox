@@ -187,7 +187,7 @@ class Point:
         self.collision = []  # self.collision[count] represents the surface of a collision cuboid that the point is CURRENTLY (hence making self.collision[count] = '' in else cases) in front of, using only its center point as reference
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
-        self.e = 0  # elasticity (should be 0 when part of a cloth)
+        self.e = 0  # elasticity (WARNING: SHOULD ONLY BE >0 WHEN A SINGLE POINT, NOT A CLOTH) (or else UNFUNNY MADNESS will unfold...)
         self.sf = 0.2  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
@@ -200,6 +200,8 @@ class Point:
         self.colliding = []
         self.pIdx = ''
         self.submergedVolume = 0
+        self.submergedArea = 0
+        self.submergedRadius = 0
 
         for _ in range(len(game.collisionRect)):
             self.collision.append('')
@@ -248,7 +250,7 @@ class Point:
         # calculate normal reaction force. the reason it's here and not in boxCollision is because resultant force must first be calculated above.
         count = 0
         for b in game.collisionRect:
-            if self.cubeCollision[count]:
+            if self.cubeCollision[count] and (b.type == 's'):
                 self.bAngle = copy.deepcopy(b.angle)  # assigns collisionRect angle to local variable, so it can be changed (for the sake of calculation) without changing the collisionRect's angle itself
 
                 resultF = 0
@@ -274,21 +276,20 @@ class Point:
                         self.friction[plane] = -resultF * self.sf * getSign(self.velocity[plane]) * sin(abs(self.movingAngle[0]))
 
                 # negative coefficients used for friction here since it always acts in the opposite direction to motion
-                if b.type == 's':
-                    if self.collisionState == 'y':
-                        # negative coefficients used for normalForce here since it always acts in the opposite direction to resultant force
-                        # *0.999999 used here to compensate for floating point error
-                        self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                        self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                        self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
-                        self.friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[1]))
-                        self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[1]))
-                    elif self.collisionState == 'x':
-                        self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                        self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                        self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
-                        self.friction[1] = -getSign(self.velocity[1]) * resultF * cos(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
-                        self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
+                if self.collisionState == 'y':
+                    # negative coefficients used for normalForce here since it always acts in the opposite direction to resultant force
+                    # *0.999999 used here to compensate for floating point error
+                    self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
+                    self.friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[1]))
+                    self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[1]))
+                elif self.collisionState == 'x':
+                    self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
+                    self.friction[1] = -getSign(self.velocity[1]) * resultF * cos(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
+                    self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
                 # print(resultF)
             count += 1
 
@@ -297,8 +298,8 @@ class Point:
             self.acc[axis] = self.force[axis] / self.mass
             self.force[axis] += self.normalForceAfter[axis]  # parallel normal force done after acceleration calculation as all point collisions are assumed to have infinite magnitude
             self.oldCords[axis] -= self.acc[axis] / (game.physicsTime ** 2)  # divide by time since d(v) = a * d(t)
-        # print(self.force, self.multiplier, self.normalForce)
         self.constrainForce = [0, 0, 0]  # reset constrainForce
+        print(self.force)
 
         # moving angle about relative to each axis in the form of [x:y, x:z, y:z]
         if self.velocity[1] != 0:
@@ -334,7 +335,6 @@ class Point:
     # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
     def boxCollision(self):
         cubeCollision = False
-        cubeSubmersion = False
         count = 0  # using count here instead of len(game.collisionRect) since it's just so much easier to read and type 'b' instead of 'game.collisionRect[b]'
         done = False
         for b in game.collisionRect:
@@ -504,14 +504,16 @@ class Point:
                     else:
                         submergedAmt = (xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2])) - self.cords[0]) * sin(self.bAngle[2])
                     self.submergedVolume = abs(capVolume(submergedAmt, self.radius))
+                    self.submergedArea
+                    self.submergedRadius
 
                     if self.cubeSubmersion:  # if fully submerged
                         self.submergedVolume = self.volume
 
                     for axis in range(3):
                         self.liquidUpthrust[axis] = b.density * -gField[axis] * self.submergedVolume  # U = pgV
-                        self.liquidDrag
-                    print(self.submergedVolume)
+                        # self.liquidDrag[axis] = (0.5 * b.dragConst * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.submergedArea) + (6 * math.pi * b.viscosity * self.submergedRadius * -self.velocity[axis])  # D = 6πμrv + 1/2 cpAv² (Drag = Stokes' law + drag force)
+                    # print(self.liquidUpthrust)
 
                 # collidingB.append(b)
 
@@ -644,10 +646,12 @@ class Point:
             self.reboundVelocity = [0, 0, 0]
             self.friction = [0, 0, 0]
             self.impulse = [0, 0, 0]
-        if not cubeSubmersion:
+        if not self.cubeSubmersion:
             self.liquidUpthrust = [0, 0, 0]
             self.liquidDrag = [0, 0, 0]
             self.submergedVolume = 0
+            self.submergedArea = 0
+            self.submergedRadius = 0
 
 
 # class for cylinders (joints) connecting spheres
@@ -734,7 +738,7 @@ class Joint:
 
 
 class CollisionRect:
-    def __init__(self, size, cords, angle, density, transparency, rectType):
+    def __init__(self, size, cords, angle, density, dragConst, transparency, rectType):
         self.type = rectType  # solid or liquid
         self.angle = angle
         self.vertexAngle = [0, 0, 0]
@@ -742,6 +746,8 @@ class CollisionRect:
         self.rect = vizshape.addBox(self.size)
         self.cords = cords
         self.density = density
+        self.dragConst = dragConst
+        self.viscosity = 0.01  # viscosity of water
         self.transparency = transparency
         self.vertex = []  # [x, y, z] -> [['right', 'top', 'front'], ['left', 'top', 'front'], ['left', 'bottom', 'front'], ['left', 'bottom', 'back'], ['left', 'top', 'back'], ['right', 'top', 'back'], ['right', 'bottom', 'back'], ['right', 'bottom', 'front']]
         self.plane = {
@@ -821,15 +827,16 @@ if slantedSurface:
         x = radius * s / surfaceRes
         try:
             y = math.sqrt(radius - (x ** 2))
-            game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 0.9, 's'))
+            game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 's'))
         except ValueError:
             continue
 else:
-    game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(60)], 1000, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
-    game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 1000, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(60)], 1000, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 1000, 1, 0.9, 's'))
+    game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 1000, 1, 0.9, 'l'))
 
 # makes a cube using points and joints
-cube = True
+cube = False
 if cube:
     cubeSize = 8
     for ve in range(cubeSize):
@@ -870,7 +877,7 @@ sphere = False
 if sphere:
     game.addPoint(Point(0.01, 1000))
 elif not cube:
-    game.addPoint(Point(0.1, 100))
+    game.addPoint(Point(0.1, 1000))
     # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cos(math.radians(30)), 0]
     # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
 
