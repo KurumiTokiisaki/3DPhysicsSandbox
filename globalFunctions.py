@@ -1,4 +1,5 @@
 import math
+
 jointMadness = 0  # yes
 
 
@@ -127,3 +128,7 @@ def vertexBounce(resultV, angle, e):
         return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2) * e, resultV * sin(angle[1] * 2) * cos(angle[0]) * e
     else:
         return resultV * sin(angle[1] * 2) * sin(angle[0]) * e, resultV * cos(angle[1] * 2), resultV * sin(angle[1] * 2) * cos(angle[0]) * e
+
+
+def capVolume(h, r):  # submerged height and sphere radius as parameters
+    return (math.pi * (h ** 2) / 3) * ((3 * r) - h)
