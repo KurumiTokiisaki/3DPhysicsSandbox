@@ -1,4 +1,5 @@
 # base Vizard libraries
+
 import random
 import time
 
@@ -52,6 +53,7 @@ class Main:
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
+        self.diff = []  # scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
         self.dragP = 'none'  # last clicked point index
         self.dragC = 'none'  # last clicked controller index for the last clicked point
@@ -62,7 +64,19 @@ class Main:
         self.rHeld = False  # stores if 'r' is held down
         self.returnHeld = False  # stores if 'return' is held down
         self.physicsTime = physicsTime
-        self.n = 0
+
+    def initLists(self):
+        for p in range(len(self.points)):
+            for _ in range(len(self.collisionRect)):
+                self.points[p].collision.append('')
+                self.points[p].lastCollision.append('')
+                self.points[p].colliding.append(False)
+                self.points[p].cubeCollision.append(False)
+                self.points[p].multiplier.append(1)
+
+            self.diff.append([])
+            for _ in range(len(self.points)):
+                self.diff[p].append(None)
 
     def main(self):
         # pause if 'p' is pressed
@@ -85,8 +99,10 @@ class Main:
                 if detectCollision(self.points[p], self.points[po]) and (p != po):
                     pass  # self.sphereCollision(p, po)
 
+            # self.points[p].move()
             self.points[p].move()
 
+        self.getDist()  # cache the distance between each point
         # update the visuals of joints and constrain points
         for j in range(len(self.joints)):
             self.joints[j].update()
@@ -150,6 +166,15 @@ class Main:
             self.points[pOne].cords[v] = self.points[pOne].oldCords[v] - self.points[pOne].oldVelocity[v] * self.points[pOne].e
             self.points[pTwo].cords[v] = self.points[pTwo].oldCords[v] - self.points[pTwo].oldVelocity[v] * self.points[pTwo].e
 
+    # get the distance between each point
+    def getDist(self):
+        for p in range(len(self.points)):
+            for po in range(len(self.points)):
+                sumR = self.points[p].radius + self.points[po].radius
+                disp = displacement(self.points[p].cords, self.points[po].cords)
+                if (((disp[0] < sumR) or (disp[1] < sumR) or (disp[2] < sumR)) or (self.points[p].cloth != '') and (self.points[po].cloth != '')) and (p != po) and (po > p):  # don't detect for collisions if any diff value is greater than the sum of both points' radii. also don't get distance between 2 points if you already have it!
+                    self.diff[p][po] = diffDistance(disp[0], disp[1], disp[2])
+
     def addPoint(self, point):
         self.points.append(point)
         for p in range(len(self.points)):
@@ -158,9 +183,11 @@ class Main:
 
 # class for spheres
 class Point:
-    def __init__(self, radius, density):
+    def __init__(self, radius, density, show):
+        self.show = show
         self.radius = radius
-        self.sphere = vizshape.addSphere(radius, slices=pointResolution)  # vizard object for sphere
+        if self.show:
+            self.sphere = vizshape.addSphere(radius, slices=pointResolution)  # vizard object for sphere
         self.cords = [0, 0, 0]
         self.oldCords = [0, 0, 0]  # coordinate position from last frame
         self.velocity = [0, 0, 0]
@@ -173,6 +200,7 @@ class Point:
         self.acc = [0, 0, 0]
         self.density = density
         self.volume = (4 / 3) * math.pi * self.radius ** 3
+        self.halfArea = 2 * math.pi * self.radius ** 2
         self.mass = self.density * self.volume
         self.weight = [self.mass * gField[0], self.mass * gField[1], self.mass * gField[2]]
         self.gasDrag = [0, 0, 0]
@@ -188,7 +216,7 @@ class Point:
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
         self.e = 0  # elasticity (WARNING: SHOULD ONLY BE >0 WHEN A SINGLE POINT, NOT A CLOTH) (or else UNFUNNY MADNESS will unfold...)
-        self.sf = 0.2  # surface friction coefficient. set to 'sticky' for infinite value.
+        self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
@@ -203,20 +231,15 @@ class Point:
         self.submergedArea = 0
         self.submergedRadius = 0
 
-        for _ in range(len(game.collisionRect)):
-            self.collision.append('')
-            self.lastCollision.append('')
-            self.colliding.append(False)
-            self.cubeCollision.append(False)
-            self.multiplier.append(1)
-
     def setRadiusDensity(self, radius, density):
         self.radius = radius
         self.volume = 4 / 3 * math.pi * self.radius ** 3
+        self.halfArea = 2 * math.pi * self.radius ** 2
         self.mass = density * self.volume
         self.weight = self.mass * gField
-        self.sphere.remove()
-        self.sphere = vizshape.addSphere(radius, slices=pointResolution)
+        if self.show:
+            self.sphere.remove()
+            self.sphere = vizshape.addSphere(radius, slices=pointResolution)
 
     def move(self):
         if not game.pause:
@@ -236,7 +259,8 @@ class Point:
                 self.cords[v] += self.velocity[v] / game.physicsTime  # change coordinates based on velocity
 
     def draw(self):
-        self.sphere.setPosition(self.cords)
+        if self.show:
+            self.sphere.setPosition(self.cords)
 
     def physics(self):
         for axis in range(3):
@@ -290,7 +314,6 @@ class Point:
                     self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
                     self.friction[1] = -getSign(self.velocity[1]) * resultF * cos(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
                     self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
-                # print(resultF)
             count += 1
 
         for axis in range(3):
@@ -299,7 +322,7 @@ class Point:
             self.force[axis] += self.normalForceAfter[axis]  # parallel normal force done after acceleration calculation as all point collisions are assumed to have infinite magnitude
             self.oldCords[axis] -= self.acc[axis] / (game.physicsTime ** 2)  # divide by time since d(v) = a * d(t)
         self.constrainForce = [0, 0, 0]  # reset constrainForce
-        print(self.force)
+        # print(self.force)
 
         # moving angle about relative to each axis in the form of [x:y, x:z, y:z]
         if self.velocity[1] != 0:
@@ -469,12 +492,11 @@ class Point:
                                     self.oldCords[0] = copy.deepcopy(self.cords[0])
                                     self.oldCords[1] = copy.deepcopy(self.cords[1])
                                     resultP = ((self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2])))
-                                    self.impulse[0] = resultP * cos(self.bAngle[2]) * game.physicsTime
-                                    self.impulse[1] = resultP * sin(self.bAngle[2]) * game.physicsTime
-                                    # print(self.impulse)
+                                    self.impulse[0] = resultP * cos(self.bAngle[2]) * game.physicsTime * (1 + self.e)
+                                    self.impulse[1] = resultP * sin(self.bAngle[2]) * game.physicsTime * (1 + self.e)
                                 else:
                                     self.impulse = [0, 0, 0]
-                                    self.cords[1] = yCollisionPlane[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))  # + (cos(self.bAngle[2]) * resultV * self.e)
+                                    self.cords[1] = yCollisionPlane[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))
                             else:
                                 if not self.colliding[count]:
                                     self.colliding[count] = True
@@ -482,9 +504,8 @@ class Point:
                                     self.oldCords[0] = copy.deepcopy(self.cords[0])
                                     self.oldCords[1] = copy.deepcopy(self.cords[1])
                                     resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
-                                    self.impulse[0] = resultP * cos(self.bAngle[2]) * game.physicsTime
-                                    self.impulse[1] = resultP * sin(self.bAngle[2]) * game.physicsTime
-                                    # print(self.impulse)
+                                    self.impulse[0] = resultP * cos(self.bAngle[2]) * game.physicsTime * (1 + self.e)
+                                    self.impulse[1] = resultP * sin(self.bAngle[2]) * game.physicsTime * (1 + self.e)
                                 else:
                                     self.impulse = [0, 0, 0]
                                     self.cords[0] = xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
@@ -500,19 +521,23 @@ class Point:
                     # get cap volume with submerged radius, etc.
                     # also disable gas upthrust for submerged parts
                     if self.collisionState == 'y':
-                        submergedAmt = (yCollisionPlane[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2])) - self.cords[1]) * cos(self.bAngle[2])  # check out the maths for this here:
-                    else:
-                        submergedAmt = (xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2])) - self.cords[0]) * sin(self.bAngle[2])
-                    self.submergedVolume = abs(capVolume(submergedAmt, self.radius))
-                    self.submergedArea
-                    self.submergedRadius
+                        submergedAmt = abs((yCollisionPlane[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2])) - self.cords[1]) * cos(self.bAngle[2]))  # check out the maths for this here:
+                    elif self.collisionState == 'x':
+                        submergedAmt = abs((xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2])) - self.cords[0]) * sin(self.bAngle[2]))
+                    self.submergedVolume = capVolume(submergedAmt, self.radius)
+                    self.submergedArea = capArea(submergedAmt, self.radius)
+                    self.submergedRadius = submergedAmt
 
                     if self.cubeSubmersion:  # if fully submerged
-                        self.submergedVolume = self.volume
+                        self.submergedVolume = copy.deepcopy(self.volume)
+
+                    if self.submergedRadius > self.radius:  # if half of sphere is submerged
+                        self.submergedArea = copy.deepcopy(self.halfArea)
+                        self.submergedRadius = copy.deepcopy(self.radius)
 
                     for axis in range(3):
                         self.liquidUpthrust[axis] = b.density * -gField[axis] * self.submergedVolume  # U = pgV
-                        # self.liquidDrag[axis] = (0.5 * b.dragConst * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.submergedArea) + (6 * math.pi * b.viscosity * self.submergedRadius * -self.velocity[axis])  # D = 6πμrv + 1/2 cpAv² (Drag = Stokes' law + drag force)
+                        self.liquidDrag[axis] = (0.5 * b.dragConst * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.submergedArea) + (6 * math.pi * b.viscosity * self.submergedRadius * -self.velocity[axis])  # D = 6πμrv + 1/2 cpAv² (Drag = Stokes' law + drag force)
                     # print(self.liquidUpthrust)
 
                 # collidingB.append(b)
@@ -662,7 +687,7 @@ class Joint:
         game.points[pOne].connectedJoint = True
         game.points[pTwo].connectedJoint = True
         self.height = distance(game.points[self.pOne].cords, game.points[self.pTwo].cords)  # current size of joint
-        self.oldHeight = distance(game.points[self.pOne].cords, game.points[self.pTwo].cords)  # size of joint from previous frame
+        self.oldHeight = copy.deepcopy(self.height)  # size of joint from previous frame
         self.radius = jointRadius
         self.stiffness = stiffness
         self.origStiffness = stiffness
@@ -672,17 +697,16 @@ class Joint:
         self.angle = [0, 0, 0]
         self.show = show
         if origLength == '':
-            self.origLength = distance(game.points[self.pOne].cords, game.points[self.pTwo].cords)
+            self.origLength = copy.deepcopy(self.height)
         else:
             self.origLength = origLength
         self.maxLength = maxLength  # maximum length of joint before breaking
-        self.diff = [0, 0, 0]  # by having this local variable,  multiple redundant sq(rt) calcs are prevented increase performance
+        self.diff = [0, 0, 0]  # caching variable, avoiding repeat calcs to increase performance
         self.constrainForce = [0, 0, 0]
         self._update = [0, 0, 0]
         self.damping = [0, 0, 0]
         if self.show:
             self.cylinder = vizshape.addCylinder(1, self.radius, slices=jointResolution)  # make the joint visible if shown
-            # self.cylinder = viz.add('sphere.glb')
         self.volume = math.pi * (self.radius ** 2) * self.height
         self.theForceJoint = False
         self.cIdx = -1
@@ -693,20 +717,21 @@ class Joint:
 
     # update the position and appearance of the joint
     def update(self):
-        for d in range(3):
-            if self.theForceJoint:
-                self.diff[d] = controls.hand[self.cIdx].cords[d] - game.points[self.pTwo].cords[d]
-            else:
-                self.diff[d] = game.points[self.pOne].cords[d] - game.points[self.pTwo].cords[d]
-
+        if self.theForceJoint:
+            self.diff = displacement(controls.hand[self.cIdx].cords, game.points[self.pTwo].cords)
+        else:
+            self.diff = displacement(game.points[self.pOne].cords, game.points[self.pTwo].cords)
         self.oldHeight = copy.deepcopy(self.height)
-        self.height = diffDistance(self.diff[0], self.diff[1], self.diff[2])
+        if self.pOne > self.pTwo:  # must be used to compensate for "also don't get distance between 2 points if you already have it!"
+            self.height = game.diff[self.pTwo][self.pOne]
+        else:
+            self.height = game.diff[self.pOne][self.pTwo]
         self.radius = math.sqrt(self.volume / (math.pi * self.height))  # r = sqrt(v / πh)
         # no need to reassign volume here since it always stays constant
 
     def draw(self):
         if self.show:
-            self.cylinder.setScale([1, self.height, 1])  # change visual of cylinder
+            self.cylinder.setScale([self.radius, self.height, 1])  # change visual of cylinder
             if self.theForceJoint:
                 self.cords = midpoint(controls.hand[self.cIdx], game.points[self.pTwo])  # set the midpoint of the joint to the middle of each connected cord
                 self.cylinder.setEuler(getEulerAngle(controls.hand[self.cIdx].cords, game.points[self.pTwo].cords))  # set the facing angle of the joint to "connect" to both points
@@ -718,7 +743,7 @@ class Joint:
 
     # constrain points connected to this joint
     def constrain(self):
-        if (self.height < self.origLength) or (self.height > self.origLength):
+        if self.height != self.origLength:
             for u in range(3):
                 if self.theForceJoint:
                     self._update[u] = 0.01 * (self.diff[u] * ((self.origLength / self.height) - 1))  # pull points by changing their cords directly rather than force (since it doesn't matter when you use The Force!)
@@ -731,6 +756,7 @@ class Joint:
             else:
                 game.points[self.pOne].constrainForce[i] += self.constrainForce[i] - self.damping[i]
                 game.points[self.pTwo].constrainForce[i] -= self.constrainForce[i] - self.damping[i]  # negative due to Newton's 3rd law
+        return None
 
     # break the joint after extending a specified distance
     def snap(self):
@@ -738,7 +764,7 @@ class Joint:
 
 
 class CollisionRect:
-    def __init__(self, size, cords, angle, density, dragConst, transparency, rectType):
+    def __init__(self, size, cords, angle, density, viscosity, dragConst, transparency, rectType):
         self.type = rectType  # solid or liquid
         self.angle = angle
         self.vertexAngle = [0, 0, 0]
@@ -747,7 +773,7 @@ class CollisionRect:
         self.cords = cords
         self.density = density
         self.dragConst = dragConst
-        self.viscosity = 0.01  # viscosity of water
+        self.viscosity = viscosity
         self.transparency = transparency
         self.vertex = []  # [x, y, z] -> [['right', 'top', 'front'], ['left', 'top', 'front'], ['left', 'bottom', 'front'], ['left', 'bottom', 'back'], ['left', 'top', 'back'], ['right', 'top', 'back'], ['right', 'bottom', 'back'], ['right', 'bottom', 'front']]
         self.plane = {
@@ -819,6 +845,84 @@ class CollisionRect:
 
 game = Main()
 
+# makes a cube using points and joints
+cube = True
+if cube:
+    cubeSize = 5
+    cubeRes = 3
+    pointRadius = 0.1
+    # for ve in range(cubeSize):
+    #     if ve > 7:
+    #         if ve == 8:
+    #             game.addPoint(Point(0.1, 1000, False))  # central point
+    #         else:
+    #             game.addPoint(Point(0.1, 1000, False))
+    #     else:
+    #         game.addPoint(Point(0.1, 1000, True))
+    #     game.points[ve].cloth = 'cube'
+    # game.points[0].cords = [1, 2.5, 1]  # top-front-right
+    # game.points[0].oldCords = [1, 2.5, 1]
+    # game.points[1].cords = [1, 2.5, -1]  # top-back-right
+    # game.points[1].oldCords = [1, 2.5, -1]
+    # game.points[2].cords = [-1, 2.5, -1]  # top-back-left
+    # game.points[2].oldCords = [-1, 2.5, -1]
+    # game.points[3].cords = [-1, 2.5, 1]  # top-front-left
+    # game.points[3].oldCords = [-1, 2.5, 1]
+    # game.points[4].cords = [1, 0.5, 1]
+    # game.points[4].oldCords = [1, 0.5, 1]
+    # game.points[5].cords = [1, 0.5, -1]
+    # game.points[5].oldCords = [1, 0.5, -1]
+    # game.points[6].cords = [-1, 0.5, -1]
+    # game.points[6].oldCords = [-1, 0.5, -1]
+    # game.points[7].cords = [-1, 0.5, 1]
+    # game.points[7].oldCords = [-1, 0.5, 1]
+    # if cubeSize > 8:
+    #     game.points[8].cords = [0, 1.5, 0]
+    #     game.points[8].oldCords = [0, 1.5, 0]
+    #     game.points[9].cords = [0, 2.5, 0]
+    #     game.points[9].oldCords = [0, 2.5, 0]
+    #     game.points[10].cords = [0, 0.5, 0]
+    #     game.points[10].oldCords = [0, 0.5, 0]
+    #     game.points[11].cords = [1, 1.5, 0]
+    #     game.points[11].oldCords = [1, 1.5, 0]
+    #     game.points[12].cords = [-1, 1.5, 0]
+    #     game.points[12].oldCords = [-1, 1.5, 0]
+    #     game.points[13].cords = [0, 1.5, 1]
+    #     game.points[13].oldCords = [0, 1.5, 1]
+    #     game.points[14].cords = [0, 1.5, -1]
+    #     game.points[14].oldCords = [0, 1.5, -1]
+
+    for z in range(cubeRes):
+        for y in range(cubeRes):
+            for x in range(cubeRes):
+                if (x == 0) or (y == 0) or (z == 0) or (x == (cubeRes - 1)) or (y == (cubeRes - 1)) or (z == (cubeRes - 1)):
+                    game.addPoint(Point(pointRadius, 1000, True))
+                    game.points[-1].cords = [x * cubeSize / cubeRes, y * cubeSize / cubeRes, z * cubeSize / cubeRes]
+                    game.points[-1].oldCords = copy.deepcopy(game.points[-1].cords)
+                    game.points[-1].cloth = 'cube'
+
+    for j in range(len(game.points)):
+        for jo in range(len(game.points)):
+            if (j != jo) and (jo > j):
+                if jo <= 7:
+                    game.joints.append(Joint(True, '', k, j, jo, damping, 69))
+                else:
+                    game.joints.append(Joint(True, '', k, j, jo, damping, 69))
+
+    for p in range(len(game.points)):
+        game.points[p].e = 0
+        game.points[p].cords[1] += 2
+        game.points[p].oldCords[1] += 2
+    # game.addPoint(Point(0.1, 1000))
+
+sphere = False
+if sphere:
+    game.addPoint(Point(0.01, 1000, True))
+elif not cube:
+    game.addPoint(Point(1, 1000, True))
+    # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cosx(math.radians(30)), 0]
+    # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
+
 slantedSurface = False
 if slantedSurface:
     surfaceRes = 400
@@ -831,55 +935,12 @@ if slantedSurface:
         except ValueError:
             continue
 else:
-    # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(60)], 1000, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
-    # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 1000, 1, 0.9, 's'))
-    game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 1000, 1, 0.9, 'l'))
+    # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 2000, 1, 1, 0.5, 'l'))
+    # game.collisionRect.append(CollisionRect((500, 5, 5), [0, 125, 0], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((500, 5, 5), [0, 128, 5], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((500, 5, 5), [0, 128, -5], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))
 
-# makes a cube using points and joints
-cube = False
-if cube:
-    cubeSize = 8
-    for ve in range(cubeSize):
-        if ve != 7:
-            game.addPoint(Point(0.1, 1000))
-        else:
-            game.addPoint(Point(0.1, 1000))
-        game.points[ve].cloth = 'cube'
-    game.points[0].cords = [1, 2.5, 1]  # top-front-right
-    game.points[0].oldCords = [1, 2.5, 1]
-    game.points[1].cords = [1, 2.5, -1]  # top-back-right
-    game.points[1].oldCords = [1, 2.5, -1]
-    game.points[2].cords = [-1, 2.5, -1]  # top-back-left
-    game.points[2].oldCords = [-1, 2.5, -1]
-    game.points[3].cords = [-1, 2.5, 1]  # top-front-left
-    game.points[3].oldCords = [-1, 2.5, 1]
-    game.points[4].cords = [1, 0.5, 1]
-    game.points[4].oldCords = [1, 0.5, 1]
-    game.points[5].cords = [1, 0.5, -1]
-    game.points[5].oldCords = [1, 0.5, -1]
-    game.points[6].cords = [-1, 0.5, -1]
-    game.points[6].oldCords = [-1, 0.5, -1]
-    game.points[7].cords = [-1, 0.5, 1]
-    game.points[7].oldCords = [-1, 0.5, 1]
-
-    for j in range(len(game.points)):
-        for jo in range(len(game.points)):
-            if (j != jo) and (jo >= j):
-                game.joints.append(Joint(True, '', k, j, jo, damping, 69))
-
-    for p in range(len(game.points)):
-        game.points[p].e = 0
-        game.points[p].cords[1] += 2
-        game.points[p].oldCords[1] += 2
-    # game.addPoint(Point(0.1, 1000))
-
-sphere = False
-if sphere:
-    game.addPoint(Point(0.01, 1000))
-elif not cube:
-    game.addPoint(Point(0.1, 1000))
-    # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cos(math.radians(30)), 0]
-    # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
-
+game.initLists()  # run this just before vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
 vizact.ontimer(1 / renderRate, game.render)  # render objects game.render times each second

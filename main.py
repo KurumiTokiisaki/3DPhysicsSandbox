@@ -1,14 +1,13 @@
 import copy
+import math
 
 import panda3d.core
-from panda3d.core import WindowProperties
+from panda3d.core import *
 from panda3d.core import AmbientLight, DirectionalLight
 from direct.showbase.ShowBase import ShowBase
 from direct.actor.Actor import Actor
-from panda3d.core import Vec3, Vec4
 from panda3d.core import MeshDrawer2D
 from direct.showbase.ShowBaseGlobal import globalClock
-import math
 
 
 class Main(ShowBase):
@@ -22,7 +21,7 @@ class Main(ShowBase):
         self.win.requestProperties(self.windowProperties)
 
         # time since last frame
-        self.dt = globalClock.getDt()
+        self.dt = 1 / 144
 
         # add the main function to the task manager
         self.taskMgr.add(self.main, 'update')
@@ -34,63 +33,83 @@ class Main(ShowBase):
 
         # sprite lists
         self.points = []
+        self.colliders = []
         self.collisionRects = []
 
     # create a point and add it to the points list
     def createPoint(self, radius, cords, oldCords):
-        self.points.append(Point(radius, cords, oldCords))
+        self.points.append(Point(radius, cords, oldCords, 1000))
 
     # load the points into the game window
     def loadActors(self):
         # render points
         for p in self.points:
             p.reparentTo(self.render)
-
-    # run physics on all points
-    def physics(self):
-        # print(self.points[0].cords)
-        # input(self.points[0].oldCords)
-        for p in range(len(self.points)):
-            self.points[p].move()
+        for c in self.colliders:
+            c.reparentTo(self.render)
+        for r in self.collisionRects:
+            r.reparentTo(self.render)
 
     def main(self, task):
-        self.dt = globalClock.getDt()
         if not self.pause:
-            self.physics()
+            for p in range(len(self.points)):
+                self.points[p].physics()
 
         return task.cont
 
 
 class Point(Actor):
-    def __init__(self, radius, cords, oldCords):
+    def __init__(self, radius, cords, oldCords, density):
         Actor.__init__(self, "sphere.glb")
-        self.physics = True
         self.radius = radius
         self.updateSize()
         self.collisionRadius = radius
-        self.cords = cords
+        self.cords = cords  # (x, z, y)
+        self.density = density
+        self.mass = (4 / 3) * math.pi * (self.radius ** 3) * self.density
         self.oldCords = oldCords
         self.velocity = Vec3(0, 0, 0)
+        self.acceleration = Vec3(0, 0, 0)
+        self.force = Vec3(0, 0, 0)
+        self.magneticForce = Vec3(0, 0, 0)
 
-    def move(self):
+    def physics(self):
+        self.magnet()
+
+        self.acceleration = self.force / self.mass
+        for axis in range(3):
+            self.oldCords[axis] -= self.acceleration[axis] * (game.dt ** 2)  # s = ½at²
+
         # Verlet integration
-        self.velocity = self.cords - self.oldCords
+        self.velocity = (self.cords - self.oldCords) / game.dt
 
         # make previous frame's cords a copy of current frame's cords
         self.oldCords = copy.deepcopy(self.cords)
 
         # move the point
-        self.cords += self.velocity
+        self.cords += self.velocity * game.dt
         self.setPos(self.cords)
+
+    def magnet(self):
+        pass
 
     def updateSize(self):
         self.set_scale(self.radius)
 
 
+class Collider(Actor):
+    def __init__(self, outerRadius, innerRadius, thickness):
+        Actor.__init__(self)
+        self.outerRad = outerRadius
+        self.innerRad = innerRadius
+        self.thickness = thickness
+
+
 game = Main()
 
-game.createPoint(1, Vec3(-30, 100, 0), Vec3(-30 - 1 / 144, 100, 0))
-game.createPoint(2, Vec3(-33, 100, 0), Vec3(-33, 100, 0))
+game.createPoint(1, Vec3(0, 100, 0), Vec3(0, 100, 0))
+hadronCollider = Collider(69, 10, 1)
+# game.createPoint(2, Vec3(-33, 100, 0), Vec3(-33, 100, 0))
 
 game.loadActors()
 game.run()

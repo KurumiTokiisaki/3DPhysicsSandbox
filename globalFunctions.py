@@ -14,7 +14,7 @@ def cos(angle):
     return round(returnAngle, 13)
 
 
-# get the scalar distance between 2 points with coordinate attributes
+# get the scalar distance between 2 coordinates
 def distance(cordOne, cordTwo):
     diff = [0, 0, 0]
     for d in range(3):
@@ -25,6 +25,11 @@ def distance(cordOne, cordTwo):
 # get the distance between 2 points given differences in x, y, and z values
 def diffDistance(diffX, diffY, diffZ):
     return math.sqrt(diffX ** 2 + diffY ** 2 + diffZ ** 2)
+
+
+# get the relative displacement between 2 points
+def displacement(cordOne, cordTwo):
+    return [cordOne[0] - cordTwo[0], cordOne[1] - cordTwo[1], cordOne[2] - cordTwo[2]]
 
 
 # detects collisions between 2 points with radius attributes (basically spheres)
@@ -132,3 +137,7 @@ def vertexBounce(resultV, angle, e):
 
 def capVolume(h, r):  # submerged height and sphere radius as parameters
     return (math.pi * (h ** 2) / 3) * ((3 * r) - h)
+
+
+def capArea(h, r):  # submerged height and sphere radius as parameters
+    return 2 * math.pi * r * h
