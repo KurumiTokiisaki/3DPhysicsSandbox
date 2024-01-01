@@ -18,5 +18,5 @@ jointResolution = 3  # lower to increase performance
 pointResolution = 10  # lower to increase performance
 k = 2500  # global spring constant (make negative to break the sandbox)
 damping = 3  # global damping constant (reduce as more points are connected to the same object)
-collisionTolerance = 0  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
-collisionCalcTolerance = 0.1
+collisionTolerance = 0.001  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
+collisionCalcTolerance = 0.01
