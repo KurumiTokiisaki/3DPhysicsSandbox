@@ -92,9 +92,9 @@ class Main:
         self.dragPoints()  # runs the function that detects if controller is "dragging" a point
 
         for p in range(len(self.points)):
-            if (self.points[p].cords[1] - self.points[p].radius) <= self.gridFloor:
-                self.points[p].cords[1] = self.gridFloor + self.points[p].radius
-                self.points[p].oldCords[1] = self.points[p].cords[1]
+            # if (self.points[p].cords[1] - self.points[p].radius) <= self.gridFloor:
+                # self.points[p].cords[1] = self.gridFloor + self.points[p].radius
+                # self.points[p].oldCords[1] = self.points[p].cords[1]
             # detect collisions with other points
             for po in range(len(self.points)):
                 # detect collisions utilizing the cached values of dist
@@ -217,7 +217,7 @@ class Point:
         self.collision = []  # self.collision[count] represents the surface of a collision cuboid that the point is CURRENTLY (hence making self.collision[count] = '' in else cases) in front of, using only its center point as reference
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
-        self.e = 1  # elasticity (WARNING: must be less than 1 (can be closer to 1 as calcRate increases) due to floating point error)
+        self.e = 0.95  # elasticity (WARNING: must be less than 1 (can be closer to 1 as calcRate increases) due to floating point error)
         self.sf = 1  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
@@ -361,7 +361,6 @@ class Point:
     def boxCollision(self):
         cubeCollision = False
         count = 0  # using count here instead of len(game.collisionRect) since it's just so much easier to read and type 'b' instead of 'game.collisionRect[b]'
-        done = False
         for b in game.collisionRect:
             self.bAngle = copy.deepcopy(b.angle)
             yCollisionPlane = self.yCollisionPlane(b)
@@ -911,7 +910,7 @@ if cube:
                     game.joints.append(Joint(True, '', k, j, jo, damping, 69))
 
     for p in range(len(game.points)):
-        game.points[p].e = 0
+        # game.points[p].e = 0
         game.points[p].cords[1] += 2
         game.points[p].oldCords[1] += 2
     # game.addPoint(Point(0.1, 1000))
@@ -938,9 +937,9 @@ if slantedSurface:
 else:
     # game.collisionRect.append(CollisionRect((150, 50, 50), [75, 50, 0], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
     # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 2000, 1, 1, 0.5, 'l'))
-    game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-    game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-    game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+    game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))
+    game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))
+    game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))
 
 game.initLists()  # run this just before vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
