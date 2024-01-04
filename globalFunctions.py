@@ -141,3 +141,23 @@ def capVolume(h, r):  # submerged height and sphere radius as parameters
 
 def capArea(h, r):  # submerged height and sphere radius as parameters
     return 2 * math.pi * r * h
+
+
+# returns the dot product between 2 cords (operator can vary)
+def dotP(pOne, pTwo, op):
+    if op == '+':
+        return [pOne[0] + pTwo[0], pOne[1] + pTwo[1], pOne[2] + pTwo[2]]
+    elif op == '-':
+        return [pOne[0] - pTwo[0], pOne[1] - pTwo[1], pOne[2] - pTwo[2]]
+    elif op == '*':
+        return [pOne[0] * pTwo[0], pOne[1] * pTwo[1], pOne[2] * pTwo[2]]
+    elif op == '/':
+        return [pOne[0] / pTwo[0], pOne[1] / pTwo[1], pOne[2] / pTwo[2]]
+
+
+# returns the 3D cords between 2 cords given a singular cord missing the two other cords (e.g. solve for cord C on the line AB, given C's x-value)
+def dotPLine(a, b, c, ty):
+    ab = dotP(b, a, '-')
+    m = (c - a[ty]) / ab[ty]
+    r = dotP(a, dotP(ab, [m, m, m], '*'), '+')  # resultant cord value
+    return r

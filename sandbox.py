@@ -77,7 +77,7 @@ class Main:
 
             self.diff.append([])
             for _ in range(len(self.points)):
-                self.diff[p].append(None)
+                self.diff[p].append(0)
 
     def main(self):
         # pause if 'p' is pressed
@@ -93,17 +93,39 @@ class Main:
 
         for p in range(len(self.points)):
             # if (self.points[p].cords[1] - self.points[p].radius) <= self.gridFloor:
-                # self.points[p].cords[1] = self.gridFloor + self.points[p].radius
-                # self.points[p].oldCords[1] = self.points[p].cords[1]
+            # self.points[p].cords[1] = self.gridFloor + self.points[p].radius
+            # self.points[p].oldCords[1] = self.points[p].cords[1]
             # detect collisions with other points
             for po in range(len(self.points)):
-                # detect collisions utilizing the cached values of dist
-                pass
+                if (po > p) and (p != po):
+                    sumR = self.points[p].radius + self.points[po].radius
+                    # detect collisions utilizing the cached values of dist
+                    if self.diff[p][po] <= sumR:
+                        mOne = copy.deepcopy(self.points[p].mass)
+                        mTwo = copy.deepcopy(self.points[po].mass)
+                        vOne = copy.deepcopy(self.points[p].velocity)
+                        vTwo = copy.deepcopy(self.points[po].velocity)
+                        normal = getThreeDAngle(self.points[p].cords, self.points[po].cords, 'y')
+                        normal[0] = abs(normal[0])
+                        normal[1] = abs(normal[1])
+                        normal[2] = abs(normal[2])
+                        vRel = [abs(vOne[0] - vTwo[0]), abs(vOne[1] - vTwo[1]), abs(vOne[2] - vTwo[2])]
+                        resultV = (vRel[0] * cos(normal[1]) * sin(normal[0])) + (vRel[1] * sin(normal[1])) + (vRel[2]) * cos(normal[1]) * cos(normal[0])
+                        deltaP = (mTwo / (mOne + mTwo)) * mOne * resultV * 2
+                        self.points[p].cords = copy.deepcopy(self.points[p].oldCords)
+                        self.points[po].cords = copy.deepcopy(self.points[po].oldCords)
+                        self.points[p].cords[0] -= deltaP * cos(normal[1]) * sin(normal[0]) / (self.points[p].mass * calcRate) * getSign(vOne[0] - vTwo[0]) - self.points[p].velocity[0] / calcRate
+                        self.points[po].cords[0] -= deltaP * cos(normal[1]) * sin(normal[0]) / (self.points[po].mass * calcRate) * -getSign(vOne[0] - vTwo[0]) - self.points[po].velocity[0] / calcRate
+                        self.points[p].cords[1] -= deltaP * sin(normal[1]) / (self.points[p].mass * calcRate) * getSign(vOne[1] - vTwo[1]) - self.points[p].velocity[1] / calcRate
+                        self.points[po].cords[1] -= deltaP * sin(normal[1]) / (self.points[po].mass * calcRate) * -getSign(vOne[1] - vTwo[1]) - self.points[po].velocity[1] / calcRate
+                        self.points[p].cords[2] -= deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[p].mass * calcRate) * getSign(vOne[2] - vTwo[2]) - self.points[p].velocity[2] / calcRate
+                        self.points[po].cords[2] -= deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[po].mass * calcRate) * -getSign(vOne[2] - vTwo[2]) - self.points[po].velocity[2] / calcRate
+                        print(deltaP)
 
-            # self.points[p].move()
             self.points[p].move()
 
         self.getDist()  # cache the distance between each point
+
         # update the visuals of joints and constrain points
         for j in range(len(self.joints)):
             self.joints[j].update()
@@ -218,7 +240,7 @@ class Point:
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
         self.e = 0.95  # elasticity (WARNING: must be less than 1 (can be closer to 1 as calcRate increases) due to floating point error)
-        self.sf = 1  # surface friction coefficient. set to 'sticky' for infinite value.
+        self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
@@ -509,8 +531,8 @@ class Point:
                                     else:
                                         self.impulse = [0, 0, 0]
                                         self.cords[0] = xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
-                                if abs(self.impulse[0]) > 0 or abs(self.impulse[1]) > 0 or abs(self.impulse[2]) > 0:
-                                    print(self.impulse)
+                                # if abs(self.impulse[0]) > 0 or abs(self.impulse[1]) > 0 or abs(self.impulse[2]) > 0:
+                                # print(self.impulse)
                             elif (self.collision[count] == 'front') or (self.collision[count] == 'back'):
                                 if not self.colliding[count]:
                                     self.colliding[count] = True
@@ -796,6 +818,7 @@ class CollisionRect:
         sizeMultiplier = [0.5, 0.5, 0.5]
         multiplier = 1
         self.vertexAngle = math.atan(self.size[1] / self.size[0])
+        print(math.degrees(self.vertexAngle))
         for v in range(8):
             if (v == 1) or (v == 5):
                 sizeMultiplier[0] = -sizeMultiplier[0]
@@ -814,18 +837,70 @@ class CollisionRect:
                     tempVertex[i] = self.cords[i] + (xySize * sizeMultiplier[i] * cos(self.vertexAngle + (multiplier * self.angle[2])))
                 elif i == 1:  # y
                     tempVertex[i] = self.cords[i] + (xySize * sizeMultiplier[i] * sin(self.vertexAngle + (multiplier * self.angle[2])))
-                else:  # z
+                elif i == 2:  # z
                     tempVertex[i] = self.cords[i] + (self.size[i] * sizeMultiplier[i])
 
             self.vertex.append(tempVertex)
-        print(self.vertex)
 
-        self.plane['front'] = self.cords[2] + (self.size[2] / 2)
-        self.plane['back'] = self.cords[2] - (self.size[2] / 2)
-        self.plane['left'] = self.cords[0] - (self.size[0] / 2)
+        # multiplier = [1, 1]
+        # self.vertexAngle = getThreeDAngle([0, 0, 0], self.size, 'y')
+        # self.vertexAngle = [abs(self.vertexAngle[0]), abs(self.vertexAngle[1]), abs(self.vertexAngle[2])]
+        # size = math.sqrt((self.size[0]) ** 2 + (self.size[1]) ** 2 + (self.size[2]) ** 2)
+        # size = [0, 0, 0]
+        # size[0] = math.sqrt((self.size[0]) ** 2 + (self.size[1]) ** 2)  # front/back
+        # size[1] = math.sqrt((self.size[0]) ** 2 + (self.size[2]) ** 2)  # top/bottom
+        # size[2] = math.sqrt((self.size[1]) ** 2 + (self.size[2]) ** 2)  # left/right
+        # self.vertexAngle[0] = math.atan(self.size[1] / self.size[0])
+        # self.vertexAngle[1] = math.atan(self.size[2] / self.size[0])
+        # self.vertexAngle[2] = math.atan(self.size[2] / self.size[1])
+        # print(math.degrees(self.vertexAngle[0]), math.degrees(self.vertexAngle[1]), math.degrees(self.vertexAngle[2]))
+        # bAngle = copy.deepcopy(self.angle)
+        # bAngle[0] += self.vertexAngle[0]
+        # bAngle[1] += self.vertexAngle[1]
+        # bAngle[2] += self.vertexAngle[2]
+        # matrix = [0, 0, 0]
+        # matrix[0] = [cos(bAngle[0]) * cos(bAngle[1]), cos(bAngle[0]) * sin(bAngle[1]) * sin(bAngle[2]) - sin(bAngle[0]) * cos(bAngle[2]), cos(bAngle[0]) * sin(bAngle[1]) * cos(bAngle[2]) + sin(bAngle[0]) * sin(bAngle[2])]
+        # matrix[1] = [sin(bAngle[0]) * cos(bAngle[1]), sin(bAngle[0]) * sin(bAngle[1]) * sin(bAngle[2]) + cos(bAngle[0]) * cos(bAngle[2]), sin(bAngle[0]) * sin(bAngle[1]) * cos(bAngle[2]) - cos(bAngle[0]) * sin(bAngle[2])]
+        # matrix[2] = [-sin(bAngle[1]), cos(bAngle[1]) * sin(bAngle[2]), cos(bAngle[1]) * cos(bAngle[2])]
+        # for i in range(3):
+        #     for j in range(3):
+        #         matrix[i][j] *= size
+        # print(matrix)
+        # for v in range(8):
+        #     if (v == 1) or (v == 5):
+        #         sizeMultiplier[0] = -sizeMultiplier[0]
+        #     elif (v == 4) or (v == 6) or (v == 2):
+        #         sizeMultiplier[1] = -sizeMultiplier[1]
+        #     elif (v == 3) or (v == 7):
+        #         sizeMultiplier[2] = -sizeMultiplier[2]
+        #     if (v == 1) or (v == 4) or (v == 6) or (v == 7):
+        #         multiplier[0] = -1
+        #     elif (v == 0) or (v == 5) or (v == 2) or (v == 3):
+        #         multiplier[0] = 1
+        #     if (v == 0) or (v == 2) or (v == 3) or (v == 5):
+        #         multiplier[1] = -1
+        #     else:
+        #         multiplier[1] = 1
+        #     tempVertex = [0, 0, 0]
+        #     for i in range(3):
+        #         if i == 0:  # x
+        #             tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * cos(self.vertexAngle[1] + (multiplier[0] * self.angle[0])) * sin(self.vertexAngle[0] + (multiplier[1] * self.angle[2])))
+        #             # tempVertex[i] = self.cords[i] + (sizeMultiplier[i] * size[0] * cos(self.vertexAngle[0] + (multiplier[0] * (self.angle[2] - self.angle[0]))))
+        #         elif i == 1:  # y
+        #             # tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * sin(self.vertexAngle[1] + (multiplier[0] * self.angle[2])))
+        #             tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * cos(self.vertexAngle[1] + (multiplier[0] * self.angle[0])) * cos(self.vertexAngle[0] + (multiplier[1] * self.angle[2])))
+        #             # tempVertex[i] = self.cords[i] + (sizeMultiplier[i] * size[0] * sin(self.vertexAngle[0] + (multiplier[0] * self.angle[2])))
+        #         elif i == 2:  # z
+        #             tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * cos(self.vertexAngle[1]) * cos(self.vertexAngle[0] + (multiplier[1] * self.angle[0])))
+        #             # tempVertex[i] = self.cords[i] + (sizeMultiplier[i] * self.size[2])
+        #     self.vertex.append(tempVertex)
+
         self.plane['right'] = self.cords[0] + (self.size[0] / 2)
+        self.plane['left'] = self.cords[0] - (self.size[0] / 2)
         self.plane['top'] = self.cords[1] + (self.size[1] / 2)
         self.plane['bottom'] = self.cords[1] - (self.size[1] / 2)
+        self.plane['front'] = self.cords[2] + (self.size[2] / 2)
+        self.plane['back'] = self.cords[2] - (self.size[2] / 2)
 
         if self.vertex[0][0] != self.vertex[1][0]:
             mx = (self.vertex[0][1] - self.vertex[1][1]) / (self.vertex[0][0] - self.vertex[1][0])
@@ -839,14 +914,15 @@ class CollisionRect:
             'x': mx,
             'y': my
         }
-        print(self.plane)
-        print(self.grad)
+
+        print(self.vertex)
+        # print(self.vertexAngle)
 
 
 game = Main()
 
 # makes a cube using points and joints
-cube = True
+cube = False
 if cube:
     cubeSize = 8
     cubeRes = 3
@@ -908,20 +984,25 @@ if cube:
                     game.joints.append(Joint(True, '', k, j, jo, damping, 69))
                 else:
                     game.joints.append(Joint(True, '', k, j, jo, damping, 69))
-
-    for p in range(len(game.points)):
-        # game.points[p].e = 0
-        game.points[p].cords[1] += 2
-        game.points[p].oldCords[1] += 2
     # game.addPoint(Point(0.1, 1000))
 
 sphere = False
 if sphere:
     game.addPoint(Point(0.01, 1000, True))
 elif not cube:
+    # pass
     game.addPoint(Point(1, 1000, True))
+    game.addPoint(Point(0.1, 1000, True))
     # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cosx(math.radians(30)), 0]
     # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
+
+for p in range(len(game.points)):
+    game.points[p].cords[1] += 30
+    game.points[p].oldCords[1] += 30
+game.points[0].cords[0] += 5
+game.points[0].oldCords[0] += 5
+game.points[1].cords[0] -= 5
+game.points[1].oldCords[0] -= 5
 
 slantedSurface = False
 if slantedSurface:
@@ -935,11 +1016,11 @@ if slantedSurface:
         except ValueError:
             continue
 else:
-    # game.collisionRect.append(CollisionRect((150, 50, 50), [75, 50, 0], [math.radians(0), 0, math.radians(30)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect((500, 50, 500), [0, 0, 0], [math.radians(0), math.radians(0), math.radians(0.0001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
     # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 2000, 1, 1, 0.5, 'l'))
-    game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-    game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-    game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
 
 game.initLists()  # run this just before vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
