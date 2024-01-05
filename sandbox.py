@@ -97,7 +97,7 @@ class Main:
             # self.points[p].oldCords[1] = self.points[p].cords[1]
             # detect collisions with other points
             for po in range(len(self.points)):
-                if (po > p) and (p != po):
+                if (po > p) and (p != po):  # performance optimisation: only go through unique combinations of p and po (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
                     sumR = self.points[p].radius + self.points[po].radius
                     # detect collisions utilizing the cached values of dist
                     if self.diff[p][po] <= sumR:
@@ -111,16 +111,24 @@ class Main:
                         normal[2] = abs(normal[2])
                         vRel = [abs(vOne[0] - vTwo[0]), abs(vOne[1] - vTwo[1]), abs(vOne[2] - vTwo[2])]
                         resultV = (vRel[0] * cos(normal[1]) * sin(normal[0])) + (vRel[1] * sin(normal[1])) + (vRel[2]) * cos(normal[1]) * cos(normal[0])
-                        deltaP = (mTwo / (mOne + mTwo)) * mOne * resultV * 2
-                        self.points[p].cords = copy.deepcopy(self.points[p].oldCords)
-                        self.points[po].cords = copy.deepcopy(self.points[po].oldCords)
-                        self.points[p].cords[0] -= deltaP * cos(normal[1]) * sin(normal[0]) / (self.points[p].mass * calcRate) * getSign(vOne[0] - vTwo[0]) - self.points[p].velocity[0] / calcRate
-                        self.points[po].cords[0] -= deltaP * cos(normal[1]) * sin(normal[0]) / (self.points[po].mass * calcRate) * -getSign(vOne[0] - vTwo[0]) - self.points[po].velocity[0] / calcRate
-                        self.points[p].cords[1] -= deltaP * sin(normal[1]) / (self.points[p].mass * calcRate) * getSign(vOne[1] - vTwo[1]) - self.points[p].velocity[1] / calcRate
-                        self.points[po].cords[1] -= deltaP * sin(normal[1]) / (self.points[po].mass * calcRate) * -getSign(vOne[1] - vTwo[1]) - self.points[po].velocity[1] / calcRate
-                        self.points[p].cords[2] -= deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[p].mass * calcRate) * getSign(vOne[2] - vTwo[2]) - self.points[p].velocity[2] / calcRate
-                        self.points[po].cords[2] -= deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[po].mass * calcRate) * -getSign(vOne[2] - vTwo[2]) - self.points[po].velocity[2] / calcRate
-                        print(deltaP)
+                        deltaP = ((mOne * mTwo) / (mOne + mTwo)) * resultV * 2
+                        # self.points[p].cords = copy.deepcopy(self.points[p].oldCords)
+                        # self.points[po].cords = copy.deepcopy(self.points[po].oldCords)
+                        # get direction of impulse depending on difference in cords
+                        multiplier = [1, 1, 1]
+                        if self.points[p].cords[0] > self.points[po].cords[0]:
+                            multiplier[0] = -1
+                        if self.points[p].cords[1] > self.points[po].cords[1]:
+                            multiplier[1] = -1
+                        if self.points[p].cords[2] > self.points[po].cords[2]:
+                            multiplier[2] = -1
+                        self.points[p].cords[0] -= deltaP * cos(normal[1]) * sin(normal[0]) / (self.points[p].mass * calcRate) * multiplier[0]  # * getSign(vOne[0] - vTwo[0])  # - self.points[p].velocity[0] / calcRate
+                        self.points[po].cords[0] += deltaP * cos(normal[1]) * sin(normal[0]) / (self.points[po].mass * calcRate) * multiplier[0]  # * -getSign(vOne[0] - vTwo[0])  # - self.points[po].velocity[0] / calcRate
+                        self.points[p].cords[1] -= deltaP * sin(normal[1]) / (self.points[p].mass * calcRate) * multiplier[1]  # * getSign(vOne[1] - vTwo[1])  # - self.points[p].velocity[1] / calcRate
+                        self.points[po].cords[1] += deltaP * sin(normal[1]) / (self.points[po].mass * calcRate) * multiplier[1]  # * -getSign(vOne[1] - vTwo[1])  # - self.points[po].velocity[1] / calcRate
+                        self.points[p].cords[2] -= deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[p].mass * calcRate) * multiplier[2]  # * getSign(vOne[2] - vTwo[2])  # - self.points[p].velocity[2] / calcRate
+                        self.points[po].cords[2] += deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[po].mass * calcRate) * multiplier[2]  # * -getSign(vOne[2] - vTwo[2])  # - self.points[po].velocity[2] / calcRate
+                        print(normal)
 
             self.points[p].move()
 
@@ -979,7 +987,7 @@ if cube:
 
     for j in range(len(game.points)):
         for jo in range(len(game.points)):
-            if (j != jo) and (jo > j):
+            if (j != jo) and (jo > j):  # performance optimisation: only go through unique combinations of j and jo (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
                 if jo <= 7:
                     game.joints.append(Joint(True, '', k, j, jo, damping, 69))
                 else:
@@ -992,7 +1000,7 @@ if sphere:
 elif not cube:
     # pass
     game.addPoint(Point(1, 1000, True))
-    game.addPoint(Point(0.1, 1000, True))
+    game.addPoint(Point(1, 1000, True))
     # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cosx(math.radians(30)), 0]
     # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
 
@@ -1016,7 +1024,7 @@ if slantedSurface:
         except ValueError:
             continue
 else:
-    game.collisionRect.append(CollisionRect((500, 50, 500), [0, 0, 0], [math.radians(0), math.radians(0), math.radians(0.0001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect((500, 50, 500), [0, 0, 0], [math.radians(0), math.radians(0), math.radians(0.00001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
     # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 2000, 1, 1, 0.5, 'l'))
     # game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
     # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
