@@ -8,6 +8,7 @@ from direct.showbase.ShowBase import ShowBase
 from direct.actor.Actor import Actor
 from panda3d.core import MeshDrawer2D
 from direct.showbase.ShowBaseGlobal import globalClock
+from globalFunctions import *
 
 
 class Main(ShowBase):
@@ -71,10 +72,11 @@ class Point(Actor):
         self.velocity = Vec3(0, 0, 0)
         self.acceleration = Vec3(0, 0, 0)
         self.force = Vec3(0, 0, 0)
+        self.circularForce = Vec3(0, 0, 0)
         self.magneticForce = Vec3(0, 0, 0)
 
     def physics(self):
-        self.magnet()
+        self.circularMotion(hadronCollider)
 
         self.acceleration = self.force / self.mass
         for axis in range(3):
@@ -90,16 +92,20 @@ class Point(Actor):
         self.cords += self.velocity * game.dt
         self.setPos(self.cords)
 
-    def magnet(self):
-        pass
+    def circularMotion(self, c):
+        radius = distance(c.cords, self.cords)
+        resultV = math.sqrt(self.velocity[0] ** 2 + self.velocity[1] ** 2 + self.velocity[2] ** 2)
+        resultF = self.mass * (resultV ** 2) / radius
+        angle = getThreeDAngle(c.cords, self.cords, 'y')
+        self.circularForce[0] = resultF * sin(angle[0]) * cos(angle[1])
 
     def updateSize(self):
         self.set_scale(self.radius)
 
 
-class Collider(Actor):
+class Collider:
     def __init__(self, outerRadius, innerRadius, thickness):
-        Actor.__init__(self)
+        self.cords = Vec3(0, 0, 0)
         self.outerRad = outerRadius
         self.innerRad = innerRadius
         self.thickness = thickness

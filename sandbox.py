@@ -17,6 +17,7 @@ import copy
 
 from globalFunctions import *
 from config import *
+import myGUI
 
 # Vizard window initialization
 viz.setMultiSample(4)  # FSAA (Full Screen Anti-Alaiasing)
@@ -46,6 +47,10 @@ elif mode == 'k':
 viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
 
 
+def selectP(cIdx):
+    return ((mode == 'k') and (viz.mouse.getState() == select)) or ((mode == 'vr') and (steamVR_init.controllers[cIdx].getButtonState() == select))
+
+
 # Main class for main.py
 class Main:
     def __init__(self):
@@ -53,6 +58,10 @@ class Main:
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
+        self.GUI = {
+            'gFieldMagnitude': None,
+            'gravityDirection': None
+        }  # dict of GUIs
         self.diff = []  # scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
         self.dragP = 'none'  # last clicked point index
@@ -62,6 +71,7 @@ class Main:
         self.pause = False  # pauses physics
         self.pHeld = False  # stores if 'p' is held down
         self.rHeld = False  # stores if 'r' is held down
+        self.gHeld = False  # stores if 'g' is held down
         self.returnHeld = False  # stores if 'return' is held down
         self.physicsTime = physicsTime
 
@@ -88,6 +98,18 @@ class Main:
         elif not viz.key.isDown('p'):
             self.pHeld = False
 
+        if (not self.gHeld) and (mode == 'k') and viz.key.isDown('g'):
+            if self.GUI['gFieldMagnitude'] is None:
+                self.GUI['gFieldMagnitude'] = myGUI.Slider(1, gField[1], controls.hand[0].cords, 5, 0.15, 15, -15, 'Gravity')
+            else:
+                self.GUI['gFieldMagnitude'].unDraw()
+                self.GUI['gFieldMagnitude'] = None
+            if viz.key.isDown('g'):
+                self.gHeld = True
+        elif not viz.key.isDown('g'):
+            self.gHeld = False
+
+        self.updateGUI()  # update all GUIs
         controls.main()  # runs the main function in the current control (keyboard/VR) setting
         self.dragPoints()  # runs the function that detects if controller is "dragging" a point
 
@@ -145,14 +167,20 @@ class Main:
             p.draw()
         for j in self.joints:
             j.draw()
+        for g in self.GUI:
+            if self.GUI[g] is not None:
+                self.GUI[g].draw(controls.camCords)
 
     # used to drag points around using pointer/controller
     def dragPoints(self):
         for c in range(len(controls.hand)):
+            for g in self.GUI:
+                if self.GUI[g] is not None:
+                    self.GUI[g].drag(controls.hand[c], selectP(c))
             for p in range(len(self.points)):
-                if ((mode == 'k') and (viz.mouse.getState() == select)) or ((mode == 'vr') and (steamVR_init.controllers[c].getButtonState() == select)):  # detect if the select button is being pressed, depending on the controller mode
+                if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
                     if (self.dragP == 'none') and (self.dragC == 'none'):  # used to set the drag variables if they are not already set
-                        if detectCollision(self.points[p], controls.hand[c]):
+                        if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
                             self.dragP = p
                             self.lastP = p
                             self.dragC = c
@@ -210,6 +238,12 @@ class Main:
         self.points.append(point)
         for p in range(len(self.points)):
             self.points[p].pIdx = p
+
+    def updateGUI(self):
+        for g in self.GUI:
+            if self.GUI[g] is not None:
+                if g == 'gFieldMagnitude':
+                    gField[1] = self.GUI[g].main()
 
 
 # class for spheres
@@ -275,6 +309,7 @@ class Point:
             self.sphere = vizshape.addSphere(radius, slices=pointResolution)
 
     def move(self):
+        self.weight = [self.mass * gField[0], self.mass * gField[1], self.mass * gField[2]]
         if not game.pause:
             self.physics()
 
@@ -1030,6 +1065,6 @@ else:
     # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
     # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
 
-game.initLists()  # run this just before vizact.ontimer
+game.initLists()  # WARNING: MUST ALWAYS RUN THIS RIGHT BEFORE vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
 vizact.ontimer(1 / renderRate, game.render)  # render objects game.render times each second

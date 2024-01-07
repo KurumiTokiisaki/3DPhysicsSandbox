@@ -33,9 +33,9 @@ def displacement(cordOne, cordTwo):
 
 
 # detects collisions between 2 points with radius attributes (basically spheres)
-def detectCollision(pOne, pTwo):
-    sumR = pOne.radius + pTwo.radius
-    return distance(pOne.cords, pTwo.cords) <= sumR
+def detectCollision(rOne, rTwo, cOne, cTwo):
+    sumR = rOne + rTwo
+    return distance(cOne, cTwo) <= sumR
 
 
 # returns the midpoint of two points
@@ -161,3 +161,4 @@ def dotPLine(a, b, c, ty):
     m = (c - a[ty]) / ab[ty]
     r = dotP(a, dotP(ab, [m, m, m], '*'), '+')  # resultant cord value
     return r
+
