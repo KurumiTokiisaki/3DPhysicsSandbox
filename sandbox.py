@@ -60,7 +60,7 @@ class Main:
         self.joints = []  # list of joints for the whole program
         self.GUI = {
             'gFieldMagnitude': None,
-            'gravityDirection': None
+            'gFieldDirection': None
         }  # dict of GUIs
         self.diff = []  # scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
@@ -72,6 +72,7 @@ class Main:
         self.pHeld = False  # stores if 'p' is held down
         self.rHeld = False  # stores if 'r' is held down
         self.gHeld = False  # stores if 'g' is held down
+        self.hHeld = False  # stores if 'h' is held down
         self.returnHeld = False  # stores if 'return' is held down
         self.physicsTime = physicsTime
 
@@ -108,6 +109,17 @@ class Main:
                 self.gHeld = True
         elif not viz.key.isDown('g'):
             self.gHeld = False
+
+        if (not self.hHeld) and (mode == 'k') and viz.key.isDown('h'):
+            if self.GUI['gFieldDirection'] is None:
+                self.GUI['gFieldDirection'] = myGUI.Dial(1, gField, controls.hand[0].cords, 10, 0.1, [-15, -15, -15], [15, 15, 15], ['g(x)', 'g(y)', 'g(z)'])
+            else:
+                self.GUI['gFieldDirection'].unDraw()
+                self.GUI['gFieldDirection'] = None
+            if viz.key.isDown('h'):
+                self.hHeld = True
+        elif not viz.key.isDown('h'):
+            self.hHeld = False
 
         self.updateGUI()  # update all GUIs
         controls.main()  # runs the main function in the current control (keyboard/VR) setting
@@ -240,10 +252,13 @@ class Main:
             self.points[p].pIdx = p
 
     def updateGUI(self):
+        global gField
         for g in self.GUI:
             if self.GUI[g] is not None:
                 if g == 'gFieldMagnitude':
                     gField[1] = self.GUI[g].main()
+                elif g == 'gFieldDirection':
+                    gField = self.GUI[g].main()
 
 
 # class for spheres

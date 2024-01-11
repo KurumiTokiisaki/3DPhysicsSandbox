@@ -86,7 +86,33 @@ def getThreeDAngle(cordOne, cordTwo, xyz):
         pitch = math.atan(diff[diffIdx[0]] / diff[diffIdx[1]])  # relative angle from x to z
     else:
         pitch = math.pi / 2
-    if (diff[diffIdx[0]] != 0) and (diff[diffIdx[1]] != 0):
+    if (diff[diffIdx[0]] != 0) or (diff[diffIdx[1]] != 0):
+        yaw = math.atan(diff[diffIdx[2]] / math.sqrt(diff[diffIdx[1]] ** 2 + diff[diffIdx[0]] ** 2))  # relative angle from y to x/z
+    else:
+        yaw = math.pi / 2
+
+    return [pitch, yaw, 0]
+
+
+def getAbsThreeDAngle(cordOne, cordTwo, xyz):
+    diff = [0, 0, 0]
+    for d in range(3):
+        diff[d] = abs(cordOne[d] - cordTwo[d])
+
+    # change order of angular calcs when calculating angles relative to x, y, or z
+    # by default, it will be x
+    if (not xyz) or (xyz == 'x'):
+        diffIdx = [2, 1, 0]
+    elif xyz == 'y':
+        diffIdx = [0, 2, 1]
+    elif xyz == 'z':
+        diffIdx = [0, 1, 2]
+
+    if diff[diffIdx[1]] != 0:
+        pitch = math.atan(diff[diffIdx[0]] / diff[diffIdx[1]])  # relative angle from x to z
+    else:
+        pitch = math.pi / 2
+    if (diff[diffIdx[0]] != 0) or (diff[diffIdx[1]] != 0):
         yaw = math.atan(diff[diffIdx[2]] / math.sqrt(diff[diffIdx[1]] ** 2 + diff[diffIdx[0]] ** 2))  # relative angle from y to x/z
     else:
         yaw = math.pi / 2
@@ -99,6 +125,15 @@ def getTwoDAngle(cordOne, cordTwo):
     diff = [0, 0]
     for d in range(2):
         diff[d] = cordOne[d] - cordTwo[d]
+    return math.atan(diff[0] / diff[1])
+
+
+def getAbsTwoDAngle(cordOne, cordTwo):
+    diff = [0, 0]
+    for d in range(2):
+        diff[d] = abs(cordOne[d] - cordTwo[d])
+    if diff[1] == 0:
+        return math.pi / 2
     return math.atan(diff[0] / diff[1])
 
 
@@ -162,3 +197,24 @@ def dotPLine(a, b, c, ty):
     r = dotP(a, dotP(ab, [m, m, m], '*'), '+')  # resultant cord value
     return r
 
+
+# converts True/False to +/-
+def TFNum(boolean):
+    return 1 if boolean else -1
+
+
+# gets the angle (in degrees) and displacement of an object around a bounding sphere (give a radius as disp) from said object to another object (currently only used for text and the camera)
+def camAnglePos(camCords, pCords, disp):
+    angleDisp = getThreeDAngle(pCords, camCords, 'y')
+    angle = getEulerAngle(camCords, pCords)
+    multiplier = 1
+    if camCords[2] > pCords[2]:
+        angle[0] -= 180
+        angle[1] -= 180
+        multiplier = -1
+    facingAngle = [angle[0], (angle[1] + 90) * multiplier, 0]
+    if disp != 0:
+        pos = pCords[0] - (multiplier * disp * cos(angleDisp[1]) * sin(angleDisp[0])), pCords[1] - (disp * sin(angleDisp[1])), pCords[2] - (multiplier * disp * cos(angleDisp[1]) * cos(angleDisp[0]))
+    else:
+        pos = pCords
+    return facingAngle, pos

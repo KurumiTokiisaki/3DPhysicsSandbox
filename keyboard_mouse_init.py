@@ -15,7 +15,7 @@ viz.mouse.setOverride()
 sensitivity = 25 / calcRate  # use maximum dpi and lowest sensitivity for most accurate results
 
 # camera speed
-minCamSpeed = 25 / calcRate
+minCamSpeed = 10 / calcRate
 maxCamSpeed = minCamSpeed * 2
 
 # scroll speed (for hand)
