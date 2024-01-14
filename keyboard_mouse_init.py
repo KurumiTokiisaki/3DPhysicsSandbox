@@ -7,6 +7,7 @@ import vizact
 from config import calcRate
 # used for trig functions
 import math
+import myGUI
 
 # disable built-in mouse commands
 viz.mouse.setOverride()
@@ -43,6 +44,8 @@ class Main:
         # camera speed (local)
         self.camSpeed = minCamSpeed
 
+        self.anim = [myGUI.CircleAnim(self.hand[0], 3, self.hand[0].radius, 0.01, [100, 10, 1], True)]
+
     def main(self):
         # call updateView when mouse is moved
         viz.callback(viz.MOUSE_MOVE_EVENT, self.updateView)
@@ -50,7 +53,7 @@ class Main:
         # update hand position with new facing angle
         self.updateHandPos()
 
-        # call keypressed when keyboard is pressed
+        # call moveCam when keyboard is pressed
         if viz.key.anyDown(['w', 'a', 's', 'd', ' ', viz.KEY_SHIFT_L, 'q']):
             self.camCords = viz.MainView.getPosition()
             # move camera based on button pressed
@@ -60,6 +63,7 @@ class Main:
         viz.MainView.setEuler(self.camAngle)
         self.hand[0].sphere.setPosition(self.hand[0].cords)
         self.hand[0].sphere.setEuler(self.handAngle[0])
+        self.anim[0].draw()
 
     def updateView(self, cords):
         # camAngle = [pitch, yaw, tilt]
@@ -129,15 +133,14 @@ class Main:
 
         # change movement based on facing angle
         if viz.key.isDown('w'):
-            self.camVelocity = self.getCamVelocity(f + b, l + r,
-                                                   'sin')  # camSpeed * (f + b) * math.sin(math.radians(self.camAngle[0]) + 45 * (l + r)), camSpeed * (u + d), camSpeed * (f + b) * math.cos(math.radians(self.camAngle[0]) + 45 * (l + r))]
+            self.camVelocity = self.getCamVelocity(f + b, l + r, 'sin')
             if viz.key.isDown('s'):
-                self.camVelocity = self.getCamVelocity(l + r, f + b, 'cos')  # [camSpeed * (l + r) * math.cos(-math.radians(self.camAngle[0])), camSpeed * (u + d), camSpeed * (l + r) * math.sin(-math.radians(self.camAngle[0]))]
+                self.camVelocity = self.getCamVelocity(l + r, f + b, 'cos')
         elif viz.key.isDown('s'):
             self.camVelocity = self.getCamVelocity(f + b, l + r,
-                                                   'sin')  # [camSpeed * (f + b) * math.sin(math.radians(self.camAngle[0]) - 45 * (l + r)), camSpeed * (u + d), camSpeed * (f + b) * math.cos(math.radians(self.camAngle[0]) -  45 * (l + r))]
+                                                   'sin')
         elif viz.key.isDown('a') or viz.key.isDown('d'):
-            self.camVelocity = self.getCamVelocity(l + r, l + r, 'cos')  # [camSpeed * (l + r) * math.cos(-math.radians(self.camAngle[0])), camSpeed * (u + d), camSpeed * (l + r) * math.sin(-math.radians(self.camAngle[0]))]
+            self.camVelocity = self.getCamVelocity(l + r, l + r, 'cos')
         else:
             self.camVelocity = [0, self.camVelocity[1], 0]
         # x and z velocities must be 0 when there is no lateral camera movement or else verical movement will be affected

@@ -64,8 +64,8 @@ class Main:
         }  # dict of GUIs
         self.diff = []  # scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
-        self.dragP = 'none'  # last clicked point index
-        self.dragC = 'none'  # last clicked controller index for the last clicked point
+        self.dragP = None  # last clicked point index
+        self.dragC = None  # last clicked controller index for the last clicked point
         self.lastP = -1  # last clicked point that always retains its value for "recalling" objects to the controller
         self.theForceJoint = False  # True if the force is being used
         self.pause = False  # pauses physics
@@ -75,6 +75,11 @@ class Main:
         self.hHeld = False  # stores if 'h' is held down
         self.returnHeld = False  # stores if 'return' is held down
         self.physicsTime = physicsTime
+        self.anim = []
+        self.collP = None
+        self.animScale = 1
+        self.animScaleSpeed = 0
+        self.animColor = [0, 0, 0]
 
     def initLists(self):
         for p in range(len(self.points)):
@@ -123,7 +128,7 @@ class Main:
 
         self.updateGUI()  # update all GUIs
         controls.main()  # runs the main function in the current control (keyboard/VR) setting
-        self.dragPoints()  # runs the function that detects if controller is "dragging" a point
+        self.dragPoint()  # runs the function that detects if controller is "dragging" a point
 
         for p in range(len(self.points)):
             # if (self.points[p].cords[1] - self.points[p].radius) <= self.gridFloor:
@@ -162,7 +167,6 @@ class Main:
                         self.points[po].cords[1] += deltaP * sin(normal[1]) / (self.points[po].mass * calcRate) * multiplier[1]  # * -getSign(vOne[1] - vTwo[1])  # - self.points[po].velocity[1] / calcRate
                         self.points[p].cords[2] -= deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[p].mass * calcRate) * multiplier[2]  # * getSign(vOne[2] - vTwo[2])  # - self.points[p].velocity[2] / calcRate
                         self.points[po].cords[2] += deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[po].mass * calcRate) * multiplier[2]  # * -getSign(vOne[2] - vTwo[2])  # - self.points[po].velocity[2] / calcRate
-                        print(normal)
 
             self.points[p].move()
 
@@ -184,24 +188,55 @@ class Main:
                 self.GUI[g].draw(controls.camCords)
 
     # used to drag points around using pointer/controller
-    def dragPoints(self):
+    def dragPoint(self):
         for c in range(len(controls.hand)):
             for g in self.GUI:
                 if self.GUI[g] is not None:
                     self.GUI[g].drag(controls.hand[c], selectP(c))
             for p in range(len(self.points)):
-                if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
-                    if (self.dragP == 'none') and (self.dragC == 'none'):  # used to set the drag variables if they are not already set
-                        if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
+                if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
+                    self.collP = p
+                    if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
+                        if (self.dragP is None) and (self.dragC is None):  # used to set the drag variables if they are not already set
                             self.dragP = p
                             self.lastP = p
                             self.dragC = c
+            if self.dragP is not None:
+                self.points[self.dragP].cords = copy.deepcopy(controls.hand[self.dragC].cords)  # set the point position to the controller (that grabbed that point)'s position
+            # unique animation for selecting points
+            if self.collP is not None:
+                if self.dragP is not None:
+                    controls.anim[c].point = self.points[self.collP]
+                    if self.animScale > self.points[self.collP].radius / controls.anim[c].sphereRad:
+                        self.animScaleSpeed -= 0.1 / game.physicsTime
+                        self.animScale += self.animScaleSpeed
+                        # approximate function for changing color with time based on radius: f(x) = 6 / (time * sqrt(radius * 10))
+                        f = 6 / (game.physicsTime * math.sqrt(self.points[self.collP].radius * 10))
+                        self.animColor[0] -= f
+                        self.animColor[1] += f
                     else:
-                        self.points[self.dragP].cords = copy.deepcopy(controls.hand[self.dragC].cords)  # set the point position to the controller (that grabbed that point)'s position
+                        self.animScale = self.points[self.collP].radius / controls.anim[c].sphereRad
+                        controls.anim[c].pause = True
+                        print(self.animColor)
+                    controls.anim[c].setScale(self.animScale)
+                    controls.anim[c].setColor(self.animColor)
+                elif not detectCollision(self.points[self.collP].radius, controls.hand[c].radius, self.points[self.collP].cords, controls.hand[c].cords):
+                    controls.anim[c].point = controls.hand[c]
+                    controls.anim[c].setScale(1)
+                    self.collP = None
+                    controls.anim[c].pause = False
+                else:
+                    controls.anim[c].point = self.points[self.collP]
+                    self.animScale = 1.2 * self.points[self.collP].radius / controls.anim[c].sphereRad
+                    self.animScaleSpeed = 0
+                    controls.anim[c].setScale(self.animScale)
+                    self.animColor = [1, 0, 0]
+                    controls.anim[c].setColor([1, 0, 0])
+                    controls.anim[c].pause = False
             # reset drag variables if select button is not pressed
-            if (self.dragC != 'none') and (((mode == 'vr') and (steamVR_init.controllers[self.dragC].getButtonState() != select)) or ((mode == 'k') and (viz.mouse.getState() != select))):
-                self.dragP = 'none'
-                self.dragC = 'none'
+            if ((mode == 'vr') and (steamVR_init.controllers[self.dragC].getButtonState() != select)) or ((mode == 'k') and (viz.mouse.getState() != select)):
+                self.dragP = None
+                self.dragC = None
             # recalls the last clicked point to the controller's position
             if ((mode == 'vr') and (steamVR_init.controllers[c].getButtonState() == recall)) or ((mode == 'k') and viz.key.isDown(recall)):
                 # allows the force to be used (if True)
@@ -1049,18 +1084,16 @@ if sphere:
     game.addPoint(Point(0.01, 1000, True))
 elif not cube:
     # pass
-    game.addPoint(Point(1, 1000, True))
+    game.addPoint(Point(1.3, 1000, True))
     game.addPoint(Point(1, 1000, True))
     # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cosx(math.radians(30)), 0]
     # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
 
 for p in range(len(game.points)):
-    game.points[p].cords[1] += 30
-    game.points[p].oldCords[1] += 30
-game.points[0].cords[0] += 5
-game.points[0].oldCords[0] += 5
-game.points[1].cords[0] -= 5
-game.points[1].oldCords[0] -= 5
+    game.points[p].cords[1] += 50
+    game.points[p].oldCords[1] += 50
+game.points[0].cords[0] += 10
+game.points[0].oldCords[0] += 10
 
 slantedSurface = False
 if slantedSurface:

@@ -103,6 +103,15 @@ class Slider:
         self.text.remove()
 
 
+class Point:
+    def __init__(self, rad):
+        self.cords = [0, 0, 0]
+        self.oldCords = [0, 0, 0]
+        self.velocity = [0, 0, 0]
+        self.radius = rad
+        self.point = vizshape.addSphere(self.radius, slices=pointResolution)
+
+
 class Dial:
     def __init__(self, xyz, referenceVar, cords, cRad, pointRadius, mini, maxi, text):
         self.xyz = xyz
@@ -116,32 +125,20 @@ class Dial:
         self.cAngle = []
         self.cMultiplier = []
         self.tDim = True if len(referenceVar) == 3 else False
-        if self.tDim:
-            loops = 8
-            for c in range(loops):
-                self.circle.append(vizshape.addTorus(cRad, 0.04))
-                self.circle[c].setPosition(self.cords)
-                self.cAngle.append([0, (180 / loops) * c, 0])
-                self.cMultiplier.append(0)
-                if (c % 2) == 0:
-                    self.cMultiplier[c] = random.triangular(-1, 1, 1)  # weight more heavily to +1
-                else:
-                    self.cMultiplier[c] = random.triangular(-1, 1, -1)  # weight more heavily to -1
-        else:
+        if not self.tDim:
             self.circle.append(vizshape.addTorus(cRad, 0.04))
             self.cAngle.append([0, 90, 0])
             self.circle[0].setPosition(self.cords)
             self.circle[0].setEuler(self.cAngle[0])
-        self.pRad = pointRadius
-        self.pointer = vizshape.addSphere(self.pRad, slices=pointResolution)
-        self.pCords = copy.deepcopy(cords)
-        self.oldPCords = copy.deepcopy(self.pCords)
+        self.p = Point(pointRadius)
+        self.p.cords = copy.deepcopy(cords)
+        self.p.oldCords = copy.deepcopy(self.p.cords)
         for axis in range(len(referenceVar)):  # used to allow for inheritance in DialThreeD
             self.min.append(mini[axis])
             self.max.append(maxi[axis])
             self.range.append(maxi[axis] - mini[axis])
             if self.tDim:
-                self.pCords[axis] += (self.var[axis] / self.range[axis]) * self.cRad * 2
+                self.p.cords[axis] += (self.var[axis] / self.range[axis]) * self.cRad * 2
         if not self.tDim:
             if self.xyz == 0:  # lying down
                 self.axes = [0, 2]
@@ -149,33 +146,34 @@ class Dial:
                 self.axes = [0, 1]
             else:  # upright (facing x)
                 self.axes = [1, 2]
-            self.pCords[self.axes[0]] += (self.var[self.axes[0]] / self.range[self.axes[0]]) * self.cRad * 2
-            self.pCords[self.axes[1]] += (self.var[self.axes[1]] / self.range[self.axes[1]]) * self.cRad * 2
-        self.pVelocity = [0, 0, 0]
+            self.p.cords[self.axes[0]] += (self.var[self.axes[0]] / self.range[self.axes[0]]) * self.cRad * 2
+            self.p.cords[self.axes[1]] += (self.var[self.axes[1]] / self.range[self.axes[1]]) * self.cRad * 2
         self.text = text
         self.textFront = viz.addText3D('', fontSize=0.15)
         self.collision = False
         self.dragging = False
+        if self.tDim:
+            self.anim = CircleAnim(self.p, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -1, 1, 0)
 
     def drag(self, c, dragging):
         self.dragging = dragging
         if dragging:
-            self.collision = detectCollision(c.radius, self.pRad, c.cords, self.pCords)
+            self.collision = detectCollision(c.radius, self.p.radius, c.cords, self.p.cords)
             if self.collision:
                 if not self.tDim:
-                    self.pCords[0] = copy.deepcopy(c.cords[0])
-                    self.pCords[1] = copy.deepcopy(c.cords[1])
+                    self.p.cords[0] = copy.deepcopy(c.cords[0])
+                    self.p.cords[1] = copy.deepcopy(c.cords[1])
                 else:
-                    self.pCords = copy.deepcopy(c.cords)
+                    self.p.cords = copy.deepcopy(c.cords)
 
     def interpolate(self):
         relDist = []
         ratio = []
         for dim in range(len(self.var)):
             if not self.tDim:
-                relDist.append(self.pCords[self.axes[dim]] - (self.cords[self.axes[dim]] - self.cRad))
+                relDist.append(self.p.cords[self.axes[dim]] - (self.cords[self.axes[dim]] - self.cRad))
             else:
-                relDist.append(self.pCords[dim] - (self.cords[dim] - self.cRad))
+                relDist.append(self.p.cords[dim] - (self.cords[dim] - self.cRad))
             ratio.append(relDist[dim] / (self.cRad * 2))
             self.var[dim] = self.min[dim] + (self.range[dim] * ratio[dim])
 
@@ -184,63 +182,112 @@ class Dial:
         self.boundDial()
 
         if not self.tDim:
-            movingAngle = getAbsTwoDAngle([0, 0], [self.pVelocity[self.axes[0]], self.pVelocity[self.axes[1]]])
-            self.oldPCords[self.axes[0]] += 1.25 * getSign(self.pVelocity[self.axes[0]]) * sin(movingAngle) / (calcRate ** 2)  # adds some drag on the dial
-            self.oldPCords[self.axes[1]] += 1.25 * getSign(self.pVelocity[self.axes[1]]) * cos(movingAngle) / (calcRate ** 2)
+            movingAngle = getAbsTwoDAngle([0, 0], [self.p.velocity[self.axes[0]], self.p.velocity[self.axes[1]]])
+            self.p.oldCords[self.axes[0]] += 1.25 * getSign(self.p.velocity[self.axes[0]]) * sin(movingAngle) / (calcRate ** 2)  # adds some drag on the dial
+            self.p.oldCords[self.axes[1]] += 1.25 * getSign(self.p.velocity[self.axes[1]]) * cos(movingAngle) / (calcRate ** 2)
         else:
-            movingAngle = getAbsThreeDAngle([0, 0, 0], self.pVelocity, 'y')
-            self.oldPCords[0] += 1.25 * getSign(self.pVelocity[0]) * cos(movingAngle[1]) * sin(movingAngle[0]) / (calcRate ** 2)  # adds some drag on the dial
-            self.oldPCords[1] += 1.25 * getSign(self.pVelocity[1]) * sin(movingAngle[1]) / (calcRate ** 2)
-            self.oldPCords[2] += 1.25 * getSign(self.pVelocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / (calcRate ** 2)
+            movingAngle = getAbsThreeDAngle([0, 0, 0], self.p.velocity, 'y')
+            self.p.oldCords[0] += 1.25 * getSign(self.p.velocity[0]) * cos(movingAngle[1]) * sin(movingAngle[0]) / (calcRate ** 2)  # adds some drag on the dial
+            self.p.oldCords[1] += 1.25 * getSign(self.p.velocity[1]) * sin(movingAngle[1]) / (calcRate ** 2)
+            self.p.oldCords[2] += 1.25 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / (calcRate ** 2)
 
         for axis in range(len(self.var)):
-            if (abs(self.pVelocity[axis]) < (10 ** -4)) and (not self.dragging):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
-                self.oldPCords[axis] = copy.deepcopy(self.pCords[axis])
+            if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
+                self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
 
         # Verlet integration
         for axis in range(3):
-            self.pVelocity[axis] = self.pCords[axis] - self.oldPCords[axis]
-        self.oldPCords = copy.deepcopy(self.pCords)
+            self.p.velocity[axis] = self.p.cords[axis] - self.p.oldCords[axis]
+        self.p.oldCords = copy.deepcopy(self.p.cords)
         for axis in range(3):
-            self.pCords[axis] += self.pVelocity[axis]
+            self.p.cords[axis] += self.p.velocity[axis]
 
         self.interpolate()
 
         return self.var
 
     def circularMotion(self):
-        resultAcc = (distance([0, 0, 0], self.pVelocity) ** 2) / self.cRad
-        angle = getAbsTwoDAngle([self.cords[0], self.cords[1]], [self.pCords[0], self.pCords[1]])
-        quartiles = [self.pCords[0] <= self.cords[0], self.pCords[1] <= self.cords[1]]
+        resultAcc = (distance([0, 0, 0], self.p.velocity) ** 2) / self.cRad
+        angle = getAbsTwoDAngle([self.cords[0], self.cords[1]], [self.p.cords[0], self.p.cords[1]])
+        quartiles = [self.p.cords[0] <= self.cords[0], self.p.cords[1] <= self.cords[1]]
         acc = [resultAcc * sin(angle) * TFNum(quartiles[0]), resultAcc * cos(angle) * TFNum(quartiles[1])]
-        self.oldPCords[0] -= acc[0]  # / calcRate ** 2
-        self.oldPCords[1] -= acc[1]  # / calcRate ** 2
+        self.p.oldCords[0] -= acc[0]  # / calcRate ** 2
+        self.p.oldCords[1] -= acc[1]  # / calcRate ** 2
 
     # prevent "dialer" (point) from exiting the dial
     def boundDial(self):
-        if distance(self.cords, self.pCords) > self.cRad:
-            self.pCords = copy.deepcopy(self.oldPCords)
+        if distance(self.cords, self.p.cords) > self.cRad:
+            self.p.cords = copy.deepcopy(self.p.oldCords)
 
     def draw(self, camCords):
-        self.pointer.setPosition(self.pCords)
+        self.p.point.setPosition(self.p.cords)
 
         if not self.tDim:
             self.textFront.message(f'{self.text[0]}: {round(self.var[0], 4)}\n{self.text[1]}: {round(self.var[1], 4)}')
-            self.textFront.setPosition(self.pCords[0] - 0.3, self.pCords[1] - 0.2, self.pCords[2] - 0.2)
+            self.textFront.setPosition(self.p.cords[0] - 0.3, self.p.cords[1] - 0.2, self.p.cords[2] - 0.2)
         else:
             self.textFront.message(f'{self.text[0]}: {round(self.var[0], 4)}\n{self.text[1]}: {round(self.var[1], 4)}\n{self.text[2]}: {round(self.var[2], 4)}')
-        angle, pos = camAnglePos(camCords, self.pCords, self.pRad ** (1 / 3))
+        angle, pos = camAnglePos(camCords, self.p.cords, self.p.radius ** (1 / 3))
         self.textFront.setEuler(angle)
         self.textFront.setPosition(pos)
 
         if self.tDim:
-            for c in range(len(self.circle)):
-                self.cAngle[c][0] += animSpeed * 8 * self.cMultiplier[c] * (distance([0, 0, 0], self.pVelocity) * physicsTime + 1)
-                self.cAngle[c][1] += animSpeed * 8 * self.cMultiplier[c] * (distance([0, 0, 0], self.pVelocity) * physicsTime + 1)
-                self.circle[c].setEuler(self.cAngle[c])
+            self.anim.draw(distance([0, 0, 0], self.p.velocity) * physicsTime * 0.2 + 0.1)
 
     def unDraw(self):
-        self.pointer.remove()
-        for c in range(len(self.circle)):
-            self.circle[c].remove()
+        self.p.point.remove()
+        self.anim.unDraw()
         self.textFront.remove()
+
+
+class Manual:
+    def __init__(self, referenceVar):
+        pass
+
+
+class CircleAnim:
+    def __init__(self, obj, circleAmount, radius, internalRadius, color, follow, *args):  # args = [minSpeed, maxSpeed, weight]
+        self.point = obj
+        self.sphereRad = radius
+        self.circles = []
+        self.rotations = []
+        self.rotationSpeeds = []
+        self.circleColor = color
+        for c in range(circleAmount):
+            self.circles.append(vizshape.addTorus(self.sphereRad, internalRadius))
+            self.rotations.append([0, (180 / circleAmount) * c, 0])
+            if args:
+                self.rotationSpeeds.append([random.triangular(args[0], args[1], random.choice([-args[2], args[2]])), random.triangular(args[0], args[1], random.choice([-args[2], args[2]])), random.triangular(args[0], args[1], random.choice([-args[2], args[2]]))])  # make weighing random as well
+            else:
+                if (c % 2) == 0:
+                    self.rotationSpeeds.append([1, 1, 1])
+                else:
+                    self.rotationSpeeds.append([-1, -1, -1])
+            self.circles[c].setPosition(self.point.cords)
+        self.follow = follow
+        self.pause = False
+
+    def draw(self, *speedScaler):
+        for c in range(len(self.circles)):
+            if self.follow:
+                self.circles[c].setPosition(self.point.cords)
+            if not self.pause:
+                coefficient = 1
+                if speedScaler:
+                    coefficient = speedScaler[0]  # cache this value as it does not change throughout the loops below
+                for axis in range(3):
+                    self.rotations[c][axis] += animSpeed * 8 * self.rotationSpeeds[c][axis] * coefficient * 1440 / physicsTime
+                self.circles[c].setEuler(self.rotations[c])
+            self.circles[c].color(self.circleColor)
+
+    def setScale(self, scale):
+        for c in self.circles:
+            c.setScale([scale, scale, scale])
+
+    def setColor(self, color):
+        for c in self.circles:
+            c.color(color)
+
+    def unDraw(self):
+        for c in self.circles:
+            c.remove()
