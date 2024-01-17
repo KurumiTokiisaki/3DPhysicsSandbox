@@ -1,4 +1,6 @@
 import math
+from config import *
+import viz
 
 jointMadness = 0  # yes
 
@@ -218,3 +220,13 @@ def camAnglePos(camCords, pCords, disp):
     else:
         pos = pCords
     return facingAngle, pos
+
+
+def buttonPressed(button, *args):  # gets the button currently being pressed
+    if mode == 'k':
+        if args[1] == 'mouse':
+            return viz.mouse.getState() == controls[button]
+        else:
+            return viz.key.isDown(controls[button])
+    elif mode == 'vr':
+        return args[0].getButtonState() == controls[button][args[2]]

@@ -1,17 +1,16 @@
 import copy
-import math
 import random
 
 import viz
 import vizshape
-from config import *
 from globalFunctions import *
 
 
 class Slider:
-    def __init__(self, xyz, referenceVar, cords, length, pointRadius, maxi, mini, text):
+    def __init__(self, xyz, referenceVar, cords, length, pointRadius, maxi, mini, text, lController):
         self.xyz = xyz
         self.var = referenceVar
+        self.origVar = referenceVar
         self.cords = copy.deepcopy(cords)
         self.length = length
         self.limits = [self.cords[self.xyz] - (self.length / 2), cords[self.xyz] + (self.length / 2)]  # x cords of both ends of the slider
@@ -22,7 +21,6 @@ class Slider:
         self.pointer = vizshape.addSphere(pointRadius, slices=pointResolution)
         self.sliders = [vizshape.addCylinder(length, 0.05), vizshape.addCylinder(pointRadius * 2, 0.02), vizshape.addCylinder(pointRadius * 2, 0.02)]
         self.pCords = copy.deepcopy(self.cords)
-        self.pCords[xyz] += (self.var / self.range) * self.length
         self.oldPCords = copy.deepcopy(self.pCords)
         self.pVelocity = [0, 0, 0]
         self.textFront = viz.addText3D('', fontSize=0.1)
@@ -51,6 +49,16 @@ class Slider:
         setPos = copy.deepcopy(self.cords)
         setPos[self.xyz] = self.limits[1]
         self.sliders[2].setPosition(setPos)
+        self.resetVar()
+        self.c = lController
+
+    def resetVar(self):  # reset the value of the reference variable to its initial value from when this class was initialized
+        self.pCords[self.xyz] = self.cords[self.xyz] + (self.origVar / self.range) * self.length
+        self.oldPCords = copy.deepcopy(self.pCords)
+
+    def setVar(self, var):  # set the reference variable to a specific value
+        if (not self.dragging) or (not self.collision):
+            self.pCords[self.xyz] = self.cords[self.xyz] + (var / self.range) * self.length
 
     def interpolate(self):
         relDist = self.pCords[self.xyz] - self.limits[0]
@@ -65,6 +73,9 @@ class Slider:
                 self.pCords[self.xyz] = copy.deepcopy(c.cords[self.xyz])
 
     def main(self):
+        if buttonPressed('reset', self.c, None, 0):
+            self.resetVar()
+
         if self.pCords[self.xyz] < self.limits[0]:
             self.pCords[self.xyz] = copy.deepcopy(self.limits[0])
             self.oldPCords[self.xyz] = copy.deepcopy(self.pCords[self.xyz])
@@ -113,9 +124,10 @@ class Point:
 
 
 class Dial:
-    def __init__(self, xyz, referenceVar, cords, cRad, pointRadius, mini, maxi, text):
+    def __init__(self, xyz, referenceVar, cords, cRad, pointRadius, mini, maxi, text, lController):
         self.xyz = xyz
         self.var = referenceVar
+        self.origVar = copy.deepcopy(referenceVar)
         self.cRad = cRad
         self.cords = copy.deepcopy(cords)
         self.min = []
@@ -137,8 +149,6 @@ class Dial:
             self.min.append(mini[axis])
             self.max.append(maxi[axis])
             self.range.append(maxi[axis] - mini[axis])
-            if self.tDim:
-                self.p.cords[axis] += (self.var[axis] / self.range[axis]) * self.cRad * 2
         if not self.tDim:
             if self.xyz == 0:  # lying down
                 self.axes = [0, 2]
@@ -146,14 +156,32 @@ class Dial:
                 self.axes = [0, 1]
             else:  # upright (facing x)
                 self.axes = [1, 2]
-            self.p.cords[self.axes[0]] += (self.var[self.axes[0]] / self.range[self.axes[0]]) * self.cRad * 2
-            self.p.cords[self.axes[1]] += (self.var[self.axes[1]] / self.range[self.axes[1]]) * self.cRad * 2
         self.text = text
         self.textFront = viz.addText3D('', fontSize=0.15)
         self.collision = False
         self.dragging = False
         if self.tDim:
-            self.anim = CircleAnim(self.p, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -1, 1, 0)
+            self.anim = CircleAnim(self.p, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -3, 3, 5)
+        self.resetVar()
+        self.c = lController
+
+    def resetVar(self):
+        if self.tDim:
+            for axis in range(3):
+                self.p.cords[axis] = self.cords[axis] + (self.origVar[axis] / self.range[axis]) * self.cRad * 2
+        else:
+            self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (self.origVar[self.axes[0]] / self.range[self.axes[0]]) * self.cRad * 2
+            self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (self.origVar[self.axes[1]] / self.range[self.axes[1]]) * self.cRad * 2
+        self.p.oldCords = copy.deepcopy(self.p.cords)
+
+    def setVar(self, var):
+        if (not self.dragging) or (not self.collision):
+            if self.tDim:
+                for axis in range(3):
+                    self.p.cords[axis] = self.cords[axis] + (var[axis] / self.range[axis]) * self.cRad * 2
+            else:
+                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (var[self.axes[0]] / self.range[self.axes[0]]) * self.cRad * 2
+                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (var[self.axes[1]] / self.range[self.axes[1]]) * self.cRad * 2
 
     def drag(self, c, dragging):
         self.dragging = dragging
@@ -178,6 +206,9 @@ class Dial:
             self.var[dim] = self.min[dim] + (self.range[dim] * ratio[dim])
 
     def main(self):
+        if buttonPressed('reset', self.c, None, 0):
+            self.resetVar()
+
         # self.circularMotion()  # MASSIVE work-in-progress
         self.boundDial()
 
@@ -192,7 +223,7 @@ class Dial:
             self.p.oldCords[2] += 1.25 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / (calcRate ** 2)
 
         for axis in range(len(self.var)):
-            if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
+            if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging or not self.collision):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
                 self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
 
         # Verlet integration
@@ -232,7 +263,7 @@ class Dial:
         self.textFront.setPosition(pos)
 
         if self.tDim:
-            self.anim.draw(distance([0, 0, 0], self.p.velocity) * physicsTime * 0.2 + 0.1)
+            self.anim.draw(distance([0, 0, 0], self.p.velocity) * 0.2 + 1)
 
     def unDraw(self):
         self.p.point.remove()
@@ -246,18 +277,24 @@ class Manual:
 
 
 class CircleAnim:
-    def __init__(self, obj, circleAmount, radius, internalRadius, color, follow, *args):  # args = [minSpeed, maxSpeed, weight]
+    def __init__(self, obj, circleAmount, radius, internalRadius, color, follow, *args):  # args = [fixedSpeed] OR [minSpeed, maxSpeed, probabilityWeighting]
         self.point = obj
         self.sphereRad = radius
         self.circles = []
         self.rotations = []
         self.rotationSpeeds = []
         self.circleColor = color
+        self.origColor = color
         for c in range(circleAmount):
             self.circles.append(vizshape.addTorus(self.sphereRad, internalRadius))
             self.rotations.append([0, (180 / circleAmount) * c, 0])
-            if args:
+            if len(args) == 3:
                 self.rotationSpeeds.append([random.triangular(args[0], args[1], random.choice([-args[2], args[2]])), random.triangular(args[0], args[1], random.choice([-args[2], args[2]])), random.triangular(args[0], args[1], random.choice([-args[2], args[2]]))])  # make weighing random as well
+            elif len(args) == 1:
+                if (c % 2) == 0:
+                    self.rotationSpeeds.append([args[0], args[0], args[0]])
+                else:
+                    self.rotationSpeeds.append([-args[0], -args[0], -args[0]])
             else:
                 if (c % 2) == 0:
                     self.rotationSpeeds.append([1, 1, 1])
@@ -276,7 +313,7 @@ class CircleAnim:
                 if speedScaler:
                     coefficient = speedScaler[0]  # cache this value as it does not change throughout the loops below
                 for axis in range(3):
-                    self.rotations[c][axis] += animSpeed * 8 * self.rotationSpeeds[c][axis] * coefficient * 1440 / physicsTime
+                    self.rotations[c][axis] += animSpeed * self.rotationSpeeds[c][axis] * coefficient * 500 / renderRate
                 self.circles[c].setEuler(self.rotations[c])
             self.circles[c].color(self.circleColor)
 
@@ -285,8 +322,14 @@ class CircleAnim:
             c.setScale([scale, scale, scale])
 
     def setColor(self, color):
+        self.circleColor = color
+
+    def resetColor(self):
+        self.circleColor = copy.deepcopy(self.origColor)
+
+    def resetScale(self):
         for c in self.circles:
-            c.color(color)
+            c.setScale([1, 1, 1])
 
     def unDraw(self):
         for c in self.circles:

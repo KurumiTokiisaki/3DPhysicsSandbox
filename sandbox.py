@@ -16,7 +16,6 @@ import math
 import copy
 
 from globalFunctions import *
-from config import *
 import myGUI
 
 # Vizard window initialization
@@ -24,31 +23,22 @@ viz.setMultiSample(4)  # FSAA (Full Screen Anti-Alaiasing)
 viz.fov(90)
 viz.go()
 
-# controls for keyboard/VR
-if mode == 'k':
-    select = 1
-    recall = 'r'
-elif mode == 'vr':
-    select = 4
-    recall = 24
-touchPad = 16
-
 if mode == 'vr':
-    import steamVR_init
-
-    controls = steamVR_init.Main()
+    import steamVR_init as controlsConf
 elif mode == 'k':
-    import keyboard_mouse_init
+    import keyboard_mouse_init as controlsConf
 
-    controls = keyboard_mouse_init.Main()
     if fullscreen:
         viz.window.setFullscreen()
+
+controls = controlsConf.Main()
 
 viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
 
 
 def selectP(cIdx):
-    return ((mode == 'k') and (viz.mouse.getState() == select)) or ((mode == 'vr') and (steamVR_init.controllers[cIdx].getButtonState() == select))
+    return buttonPressed('select', controlsConf.controllers[cIdx], 'mouse', cIdx)
+    # return ((mode == 'k') and (viz.mouse.getState() == cConf.controls['select'])) or ((mode == 'vr') and (steamVR_init.controllers[cIdx].getButtonState() == cConf.controls['select']))
 
 
 # Main class for main.py
@@ -64,22 +54,23 @@ class Main:
         }  # dict of GUIs
         self.diff = []  # scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
-        self.dragP = None  # last clicked point index
-        self.dragC = None  # last clicked controller index for the last clicked point
-        self.lastP = -1  # last clicked point that always retains its value for "recalling" objects to the controller
+        self.dragP = [None, None]  # last clicked point index
+        self.dragC = [None, None]  # last clicked controller index for the last clicked point
+        self.lastP = [None, None]  # last clicked point that always retains its value for "recalling" objects to the controller
         self.theForceJoint = False  # True if the force is being used
         self.pause = False  # pauses physics
         self.pHeld = False  # stores if 'p' is held down
         self.rHeld = False  # stores if 'r' is held down
         self.gHeld = False  # stores if 'g' is held down
         self.hHeld = False  # stores if 'h' is held down
+        self.GUISelector = False  # stores if the button to summon the GUI selector is held
         self.returnHeld = False  # stores if 'return' is held down
         self.physicsTime = physicsTime
         self.anim = []
-        self.collP = None
-        self.animScale = 1
-        self.animScaleSpeed = 0
-        self.animColor = [0, 0, 0]
+        self.collP = [None, None]
+        self.animeScale = [1, 1]
+        self.animeScaleSpeed = 0
+        self.animColor = [[0, 0, 0], [0, 0, 0]]
 
     def initLists(self):
         for p in range(len(self.points)):
@@ -94,40 +85,39 @@ class Main:
             self.diff.append([])
             for _ in range(len(self.points)):
                 self.diff[p].append(0)
+        self.lastP = [len(self.points) - 1, len(self.points) - 2]
 
     def main(self):
         # pause if 'p' is pressed
-        if (not self.pHeld) and (mode == 'k') and viz.key.isDown('p'):
+        if (not self.pHeld) and buttonPressed('pause', controlsConf.controllers[1], None, 1):
             self.pause = not self.pause  # reverse the boolean value of self.pause
-            if viz.key.isDown('p'):
+            if buttonPressed('pause', controlsConf.controllers[1], None, 1):
                 self.pHeld = True
-        elif not viz.key.isDown('p'):
+        elif not buttonPressed('pause', controlsConf.controllers[1], None, 1):
             self.pHeld = False
 
-        if (not self.gHeld) and (mode == 'k') and viz.key.isDown('g'):
+        if (not self.gHeld) and buttonPressed('gFieldY', controlsConf.controllers[0], None, 0):
             if self.GUI['gFieldMagnitude'] is None:
-                self.GUI['gFieldMagnitude'] = myGUI.Slider(1, gField[1], controls.hand[0].cords, 5, 0.15, 15, -15, 'Gravity')
+                self.GUI['gFieldMagnitude'] = myGUI.Slider(1, gField[1], controls.hand[0].cords, 5, 0.15, 15, -15, 'Gravity', controlsConf.controllers[0])
             else:
                 self.GUI['gFieldMagnitude'].unDraw()
                 self.GUI['gFieldMagnitude'] = None
-            if viz.key.isDown('g'):
+            if buttonPressed('gFieldY', controlsConf.controllers[0], None, 0):
                 self.gHeld = True
-        elif not viz.key.isDown('g'):
+        elif not buttonPressed('gFieldY', controlsConf.controllers[0], None, 0):
             self.gHeld = False
 
-        if (not self.hHeld) and (mode == 'k') and viz.key.isDown('h'):
+        if (not self.hHeld) and buttonPressed('gField', controlsConf.controllers[1], None, 1):
             if self.GUI['gFieldDirection'] is None:
-                self.GUI['gFieldDirection'] = myGUI.Dial(1, gField, controls.hand[0].cords, 10, 0.1, [-15, -15, -15], [15, 15, 15], ['g(x)', 'g(y)', 'g(z)'])
+                self.GUI['gFieldDirection'] = myGUI.Dial(1, gField, controls.hand[1].cords, 5, 0.1, [-15, -15, -15], [15, 15, 15], ['g(x)', 'g(y)', 'g(z)'], controlsConf.controllers[0])
             else:
                 self.GUI['gFieldDirection'].unDraw()
                 self.GUI['gFieldDirection'] = None
-            if viz.key.isDown('h'):
+            if buttonPressed('gField', controlsConf.controllers[1], None, 1):
                 self.hHeld = True
-        elif not viz.key.isDown('h'):
+        elif not buttonPressed('gField', controlsConf.controllers[1], None, 1):
             self.hHeld = False
 
-        self.updateGUI()  # update all GUIs
-        controls.main()  # runs the main function in the current control (keyboard/VR) setting
         self.dragPoint()  # runs the function that detects if controller is "dragging" a point
 
         for p in range(len(self.points)):
@@ -179,6 +169,8 @@ class Main:
                 self.joints[j].constrain()
 
     def render(self):
+        self.updateGUI()  # update all GUIs
+        controls.main()  # runs the main function in the current control (keyboard/VR) setting
         for p in self.points:
             p.draw()
         for j in self.joints:
@@ -189,73 +181,82 @@ class Main:
 
     # used to drag points around using pointer/controller
     def dragPoint(self):
+        print(controlsConf.controllers[0].getButtonState(), controlsConf.controllers[1].getButtonState())
+        # print(self.lastP)
         for c in range(len(controls.hand)):
             for g in self.GUI:
                 if self.GUI[g] is not None:
                     self.GUI[g].drag(controls.hand[c], selectP(c))
             for p in range(len(self.points)):
                 if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
-                    self.collP = p
+                    self.collP[c] = p
                     if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
-                        if (self.dragP is None) and (self.dragC is None):  # used to set the drag variables if they are not already set
-                            self.dragP = p
-                            self.lastP = p
-                            self.dragC = c
-            if self.dragP is not None:
-                self.points[self.dragP].cords = copy.deepcopy(controls.hand[self.dragC].cords)  # set the point position to the controller (that grabbed that point)'s position
+                        if self.dragP[c] is None:  # used to set the drag variables if they are not already set
+                            self.dragP[c] = p
+                            if self.lastP[c] != p:
+                                if mode == 'vr':
+                                    if self.lastP[c - 1] != p:  # only allow unique points to be recalled by each controller
+                                        self.lastP[c] = p
+                                else:
+                                    self.lastP[c] = p
+            if self.dragP[c] is not None:
+                self.points[self.dragP[c]].cords = copy.deepcopy(controls.hand[c].cords)  # set the point position to the controller (that grabbed that point)'s position
             # unique animation for selecting points
-            if self.collP is not None:
-                if self.dragP is not None:
-                    controls.anim[c].point = self.points[self.collP]
-                    if self.animScale > self.points[self.collP].radius / controls.anim[c].sphereRad:
-                        self.animScaleSpeed -= 0.1 / game.physicsTime
-                        self.animScale += self.animScaleSpeed
+            if self.collP[c] is not None:
+                if self.dragP[c] is not None:
+                    controls.anim[c].point = self.points[self.collP[c]]
+                    if self.animeScale[c] > (self.points[self.collP[c]].radius / controls.anim[c].sphereRad):
+                        self.animeScaleSpeed -= 0.1 / game.physicsTime
+                        self.animeScale[c] += self.animeScaleSpeed
                         # approximate function for changing color with time based on radius: f(x) = 6 / (time * sqrt(radius * 10))
-                        f = 6 / (game.physicsTime * math.sqrt(self.points[self.collP].radius * 10))
-                        self.animColor[0] -= f
-                        self.animColor[1] += f
+                        f = 6 / (game.physicsTime * math.sqrt(self.points[self.collP[c]].radius * 10))
+                        self.animColor[c][0] -= f
+                        self.animColor[c][1] += f
                     else:
-                        self.animScale = self.points[self.collP].radius / controls.anim[c].sphereRad
+                        self.animeScale[c] = self.points[self.collP[c]].radius / controls.anim[c].sphereRad
                         controls.anim[c].pause = True
-                        print(self.animColor)
-                    controls.anim[c].setScale(self.animScale)
-                    controls.anim[c].setColor(self.animColor)
-                elif not detectCollision(self.points[self.collP].radius, controls.hand[c].radius, self.points[self.collP].cords, controls.hand[c].cords):
+                    controls.anim[c].setScale(self.animeScale[c])
+                    controls.anim[c].setColor(self.animColor[c])
+                elif not detectCollision(self.points[self.collP[c]].radius, controls.hand[c].radius, self.points[self.collP[c]].cords, controls.hand[c].cords):
                     controls.anim[c].point = controls.hand[c]
                     controls.anim[c].setScale(1)
-                    self.collP = None
+                    self.collP[c] = None
                     controls.anim[c].pause = False
                 else:
-                    controls.anim[c].point = self.points[self.collP]
-                    self.animScale = 1.2 * self.points[self.collP].radius / controls.anim[c].sphereRad
-                    self.animScaleSpeed = 0
-                    controls.anim[c].setScale(self.animScale)
-                    self.animColor = [1, 0, 0]
+                    controls.anim[c].point = self.points[self.collP[c]]
+                    self.animeScale[c] = 1.2 * self.points[self.collP[c]].radius / controls.anim[c].sphereRad
+                    self.animeScaleSpeed = 0
+                    controls.anim[c].setScale(self.animeScale[c])
+                    self.animColor[c] = [1, 0, 0]
                     controls.anim[c].setColor([1, 0, 0])
                     controls.anim[c].pause = False
+            else:
+                controls.anim[c].resetColor()
+                controls.anim[c].resetScale()
+                controls.anim[c].point = controls.hand[c]
             # reset drag variables if select button is not pressed
-            if ((mode == 'vr') and (steamVR_init.controllers[self.dragC].getButtonState() != select)) or ((mode == 'k') and (viz.mouse.getState() != select)):
-                self.dragP = None
-                self.dragC = None
+            if not selectP(c):
+                self.dragP[c] = None
             # recalls the last clicked point to the controller's position
-            if ((mode == 'vr') and (steamVR_init.controllers[c].getButtonState() == recall)) or ((mode == 'k') and viz.key.isDown(recall)):
+            # if ((mode == 'vr') and (steamVR_init.controllers[c].getButtonState() == recall)) or ((mode == 'k') and viz.key.isDown(recall)):
+            if buttonPressed('recall', controlsConf.controllers[c], None, c):
                 # allows the force to be used (if True)
                 if theForce and (not self.theForceJoint):
-                    self.joints.append(Joint(False, 0, 0.01, None, self.lastP, True, c))
+                    self.joints.append(Joint(False, 0, 0.01, None, self.lastP[c], True, c))
                     self.theForceJoint = True
                 # set cords of point to user pointer/hand
                 elif not theForce:
-                    self.points[self.lastP].cords = copy.deepcopy(controls.hand[c].cords)
+                    self.points[self.lastP[c]].cords = copy.deepcopy(controls.hand[c].cords)
                     if not self.rHeld:
                         cordDiff = []
                         for co in range(3):
-                            cordDiff.append(self.points[self.lastP].cords[co] - self.points[self.lastP].oldCords[co])
+                            cordDiff.append(self.points[self.lastP[c]].cords[co] - self.points[self.lastP[c]].oldCords[co])
                         for po in range(len(self.points)):
-                            if (po != self.lastP) and (self.points[po].cloth == self.points[self.lastP].cloth) and (self.points[self.lastP].cloth != ''):
+                            if (po != self.lastP[c]) and (self.points[po].cloth == self.points[self.lastP[c]].cloth) and (self.points[self.lastP[c]].cloth != ''):
                                 for cor in range(3):
                                     self.points[po].cords[cor] += cordDiff[cor]
                                     self.points[po].oldCords[cor] += cordDiff[cor]
-                        self.points[self.lastP].oldCords = copy.deepcopy(controls.hand[c].cords)
+                        self.points[self.lastP[c]].oldCords = copy.deepcopy(controls.hand[c].cords)
                         self.rHeld = True
             # remove the force joint after recall is no longer active
             elif self.theForceJoint:
@@ -291,8 +292,10 @@ class Main:
         for g in self.GUI:
             if self.GUI[g] is not None:
                 if g == 'gFieldMagnitude':
-                    gField[1] = self.GUI[g].main()
+                    self.GUI[g].setVar(gField[self.GUI[g].xyz])
+                    gField[self.GUI[g].xyz] = self.GUI[g].main()
                 elif g == 'gFieldDirection':
+                    self.GUI[g].setVar(gField)
                     gField = self.GUI[g].main()
 
 
@@ -1084,8 +1087,8 @@ if sphere:
     game.addPoint(Point(0.01, 1000, True))
 elif not cube:
     # pass
-    game.addPoint(Point(1.3, 1000, True))
-    game.addPoint(Point(1, 1000, True))
+    game.addPoint(Point(0.6, 1000, True))
+    game.addPoint(Point(0.4, 1000, True))
     # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cosx(math.radians(30)), 0]
     # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
 

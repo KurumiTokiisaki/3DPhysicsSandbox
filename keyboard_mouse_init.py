@@ -4,25 +4,27 @@ import vizfx
 import vizconnect
 import vizshape
 import vizact
-from config import calcRate
 # used for trig functions
 import math
 import myGUI
+from config import *
+from globalFunctions import buttonPressed
 
 # disable built-in mouse commands
 viz.mouse.setOverride()
 
 # mouse sensitivity
-sensitivity = 25 / calcRate  # use maximum dpi and lowest sensitivity for most accurate results
+sensitivity = 25 / renderRate  # use maximum dpi and lowest sensitivity for most accurate results
 
 # camera speed
-minCamSpeed = 10 / calcRate
+minCamSpeed = 10 / renderRate
 maxCamSpeed = minCamSpeed * 2
 
 # scroll speed (for hand)
-scrollSpeed = 0.015 / calcRate
+scrollSpeed = 0.015 / renderRate
 # hide the cursor
 viz.mouse.setCursor(0)
+controllers = [None, None]
 
 
 # main class for keyboard & mouse
@@ -37,6 +39,7 @@ class Main:
         # add the hand object
         self.radius = 0.1
         self.hand = [Point()]
+        self.hand.append(self.hand[0])
         # how far hand is from camera initially
         self.handDepth = 1
         self.handAngle = [[0, 0, 0]]
@@ -44,7 +47,7 @@ class Main:
         # camera speed (local)
         self.camSpeed = minCamSpeed
 
-        self.anim = [myGUI.CircleAnim(self.hand[0], 3, self.hand[0].radius, 0.01, [100, 10, 1], True)]
+        self.anim = [myGUI.CircleAnim(self.hand[0], 4, self.hand[0].radius, 0.01, [100, 10, 1], True, 10)]
 
     def main(self):
         # call updateView when mouse is moved

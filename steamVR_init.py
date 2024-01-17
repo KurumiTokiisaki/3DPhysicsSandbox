@@ -7,14 +7,15 @@ import steamvr
 import vizact
 from config import calcRate
 # for trig functions
-import math
 import myGUI
+from config import *
+from globalFunctions import buttonPressed
 
 # link HMD to program
 hmdConfig = steamvr.HMD()
 
 # camera speed
-minCamSpeed = 0.03
+minCamSpeed = 10 / renderRate
 maxCamSpeed = minCamSpeed * 2
 
 # degrees of freedom to prevent joystick drift
@@ -56,8 +57,7 @@ class Main:
         for c in range(2):
             self.hand[c].sphere.setPosition(self.hand[c].cords)
             self.hand[c].sphere.setEuler(self.handAngle[c])
-        self.anim[0].draw()
-        self.anim[1].draw()
+            self.anim[c].draw()
 
     # set controller position relative to camera position
     def updateHMD(self):
