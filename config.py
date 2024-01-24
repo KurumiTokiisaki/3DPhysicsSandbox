@@ -3,7 +3,7 @@ import math
 
 fullscreen = True
 handRadius = 0.1  # radius of each hand
-gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
+gFieldDirection = {'pitch': math.radians(0), 'yaw': math.radians(0)}
 gConst = -9.81  # gravitational field constant
 renderRate = 144  # render rate (lower for performance)
 collisionTolerance = 0  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
@@ -24,7 +24,7 @@ globalVars = {
     'gasDensity': 0,  # density of all gases
     'springConst': 2500,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
-    'friction': 0  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'friction': 2  # global frictional force coefficient. set to 'sticky' for infinite value.
 }
 
 globalRanges = {

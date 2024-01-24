@@ -504,8 +504,9 @@ class Point:
                     self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
-                    self.friction[1] = -getSign(self.velocity[1]) * resultF * cos(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
-                    self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
+                    self.friction[1] = getSign(self.velocity[1]) * resultF * sin(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
+                    self.friction[2] = getSign(self.velocity[2]) * resultF * sin(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
+                    print(sin(self.bAngle[2]))
             count += 1
 
         for axis in range(3):
