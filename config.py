@@ -24,6 +24,7 @@ globalVars = {
     'gasDensity': 0,  # density of all gases
     'springConst': 2500,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
+    'friction': 0  # global frictional force coefficient. set to 'sticky' for infinite value.
 }
 
 globalRanges = {
@@ -32,10 +33,11 @@ globalRanges = {
     'gasDensity': [10000, 0],
     'springConst': [5000, 0],
     'damping': [10, 0],
+    'friction': [2, 0]
 }
 
 mode = 'k'  # controller mode (keyboard/mouse or VR)
-calcRate = 1440  # physics calculations/second (higher number means more accurate physics but lower framerate)
+calcRate = 144  # physics calculations/second (higher number means more accurate physics but lower framerate)
 physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
 
 # controls for keyboard/VR
