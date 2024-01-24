@@ -32,7 +32,7 @@ globalRanges = {
     'gField': [15, -15],
     'gasDensity': [10000, 0],
     'springConst': [5000, 0],
-    'damping': [10, 0],
+    'damping': [2, 0],
     'friction': [2, 0]
 }
 

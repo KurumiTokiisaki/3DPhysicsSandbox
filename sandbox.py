@@ -89,6 +89,7 @@ class Main:
                 self.points[p].colliding.append(False)
                 self.points[p].cubeCollision.append(False)
                 self.points[p].cubeCollisionCalc.append(False)
+                self.points[p].cubeSubmersion.append(False)
                 self.points[p].multiplier.append(1)
 
             self.diff.append([])
@@ -401,7 +402,7 @@ class Point:
         self.impulse = [0, 0, 0]
         self.cubeCollision = []
         self.cubeCollisionCalc = []
-        self.cubeSubmersion = False
+        self.cubeSubmersion = []
         self.collision = []  # self.collision[count] represents the surface of a collision cuboid that the point is CURRENTLY (hence making self.collision[count] = '' in else cases) in front of, using only its center point as reference
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
@@ -548,6 +549,7 @@ class Point:
     # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
     def boxCollision(self):
         cubeCollision = False
+        cubeSubmersion = False
         count = 0  # using count here instead of len(game.collisionRect) since it's just so much easier to read and type 'b' instead of 'game.collisionRect[b]'
         for b in game.collisionRect:
             self.bAngle = copy.deepcopy(b.angle)
@@ -588,7 +590,7 @@ class Point:
 
             self.cubeCollision[count] = (self.cords[1] <= (collisionTolerance + yCollisionPlane['top']['y'] + self.radius / cos(self.bAngle[2]))) and (self.cords[1] >= (-collisionTolerance + yCollisionPlane['bottom']['y'] - self.radius / cos(self.bAngle[2]))) and (self.cords[1] <= (collisionTolerance + yCollisionPlane['right']['y'] + self.radius / sin(self.bAngle[2]))) and (
                     self.cords[1] >= (-collisionTolerance + yCollisionPlane['left']['y'] - self.radius / sin(self.bAngle[2]))) and (self.cords[2] <= (collisionTolerance + b.plane['front'] + self.radius)) and (self.cords[2] >= (-collisionTolerance + b.plane['back'] - self.radius))
-            self.cubeSubmersion = (self.cords[1] <= (collisionTolerance + yCollisionPlane['top']['y'] - self.radius / cos(self.bAngle[2]))) and (self.cords[1] >= (-collisionTolerance + yCollisionPlane['bottom']['y'] + self.radius / cos(self.bAngle[2]))) and (self.cords[1] <= (collisionTolerance + yCollisionPlane['right']['y'] - self.radius / sin(self.bAngle[2]))) and (
+            self.cubeSubmersion[count] = (self.cords[1] <= (collisionTolerance + yCollisionPlane['top']['y'] - self.radius / cos(self.bAngle[2]))) and (self.cords[1] >= (-collisionTolerance + yCollisionPlane['bottom']['y'] + self.radius / cos(self.bAngle[2]))) and (self.cords[1] <= (collisionTolerance + yCollisionPlane['right']['y'] - self.radius / sin(self.bAngle[2]))) and (
                     self.cords[1] >= (-collisionTolerance + yCollisionPlane['left']['y'] + self.radius / sin(self.bAngle[2]))) and (self.cords[2] <= (collisionTolerance + b.plane['front'] - self.radius)) and (self.cords[2] >= (-collisionTolerance + b.plane['back'] + self.radius))  # cubeCollision[count] but with reversed radii calcs
 
             if not self.cubeCollision[count]:  # reset self.collision[count] when not in front of a plane
@@ -697,7 +699,6 @@ class Point:
                                     else:
                                         self.impulse = [0, 0, 0]
                                         self.cords[0] = xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
-                                print(self.impulse, self.bAngle)
                             elif (self.collision[count] == 'front') or (self.collision[count] == 'back'):
                                 if not self.colliding[count]:
                                     self.colliding[count] = True
@@ -717,7 +718,7 @@ class Point:
                         self.submergedArea = capArea(submergedAmt, self.radius)
                         self.submergedRadius = submergedAmt
 
-                        if self.cubeSubmersion:  # if fully submerged
+                        if self.cubeSubmersion[count]:  # if fully submerged
                             self.submergedVolume = copy.deepcopy(self.volume)
 
                         if self.submergedRadius > self.radius:  # if half of sphere is submerged
@@ -727,7 +728,6 @@ class Point:
                         for axis in range(3):
                             self.liquidUpthrust[axis] = b.density * -globalVars['gField'][axis] * self.submergedVolume  # U = pgV
                             self.liquidDrag[axis] = (0.5 * b.dragConst * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.submergedArea) + (6 * math.pi * b.viscosity * self.submergedRadius * -self.velocity[axis])  # D = 6πμrv + 1/2 cpAv² (Drag = Stokes' law + drag force)
-                        # print(self.liquidUpthrust)
 
                 # collidingB.append(b)
 
@@ -851,6 +851,7 @@ class Point:
                 self.colliding[count] = False
 
             cubeCollision = cubeCollision or self.cubeCollisionCalc[count]
+            cubeSubmersion = cubeSubmersion or self.cubeSubmersion[count]
             count += 1
 
         if not cubeCollision:
@@ -859,7 +860,7 @@ class Point:
             self.reboundVelocity = [0, 0, 0]
             self.friction = [0, 0, 0]
             self.impulse = [0, 0, 0]
-        if not self.cubeSubmersion:
+        if not cubeSubmersion:
             self.liquidUpthrust = [0, 0, 0]
             self.liquidDrag = [0, 0, 0]
             self.submergedVolume = 0
@@ -1155,22 +1156,27 @@ sphere = False
 if sphere:
     game.addPoint(Point(0.01, 1000, True))
 elif not cube:
-    game.addPoint(Point(0.6, 1000, True))
-    game.addPoint(Point(0.4, 1000, True))
+    pass
+    # game.addPoint(Point(0.6, 1000, True))
+    # game.addPoint(Point(0.4, 1000, True))
     # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cos(math.radians(30)), 0]
     # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
-# game.addPoint(Point(0.6, 1000, True))
-# game.addPoint(Point(0.4, 1000, True))
+game.addPoint(Point(0.6, 1000, True))
+game.addPoint(Point(0.4, 1000, True))
 
 for p in range(len(game.points)):
     game.points[p].cords[1] += 50
     game.points[p].oldCords[1] += 50
-    game.points[p].cords[0] -= 10
-    game.points[p].oldCords[0] -= 10
+    game.points[p].cords[0] -= 20
+    game.points[p].oldCords[0] -= 20
+game.points[-1].cords[1] += 10
+game.points[-1].oldCords[1] += 10
+game.points[-2].cords[1] += 10
+game.points[-2].oldCords[1] += 10
 game.points[-1].cords[0] -= 10
 game.points[-1].oldCords[0] -= 10
-game.points[-2].cords[0] -= 10
-game.points[-2].oldCords[0] -= 10
+game.points[-2].cords[0] -= 20
+game.points[-2].oldCords[0] -= 20
 
 slantedSurface = False
 if slantedSurface:
@@ -1180,16 +1186,15 @@ if slantedSurface:
         x = radius * s / surfaceRes
         try:
             y = math.sqrt(radius - (x ** 2))
-            game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 's'))
+            game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 1, 's'))
         except ValueError:
             continue
 game.collisionRect.append(CollisionRect((100, 50, 50), [-50, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
 game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
-game.collisionRect.append(CollisionRect((100, 50, 50), [170, 0, 0], [math.radians(0), math.radians(0), math.radians(60)], 1000, 10, 1, 0.9, 's'))
-game.collisionRect.append(CollisionRect((50, 50, 50), [280, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
-# game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-# game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-# game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
+game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
 
 game.initLists()  # WARNING: MUST ALWAYS RUN THIS RIGHT BEFORE vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
