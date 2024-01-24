@@ -24,6 +24,7 @@ yFreedomDegrees = 0.3
 # gets the HMD's controllers
 controllers = [steamvr.getControllerList()[0], steamvr.getControllerList()[1]]
 hmd = hmdConfig.getSensor()
+controllerAmt = 2
 
 
 # main class for HMD
@@ -99,7 +100,7 @@ class Main:
 
 class Point:
     def __init__(self, lr):
-        self.radius = 0.1
+        self.radius = handRadius
         if lr == 'l':
             self.sphere = controllers[0].addModel()
         elif lr == 'r':

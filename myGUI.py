@@ -1,4 +1,5 @@
 import copy
+import math
 import random
 
 import viz
@@ -7,13 +8,15 @@ from globalFunctions import *
 
 
 class Slider:
-    def __init__(self, xyz, referenceVar, cords, length, pointRadius, maxi, mini, text, lController):
+    def __init__(self, xyz, referenceVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
+        self.type = 'slider'
+        self.drawn = True
         self.xyz = xyz
         self.var = referenceVar
         self.origVar = referenceVar
         self.cords = copy.deepcopy(cords)
         self.length = length
-        self.limits = [self.cords[self.xyz] - (self.length / 2), cords[self.xyz] + (self.length / 2)]  # x cords of both ends of the slider
+        self.limits = [self.cords[self.xyz] - (self.length / 2), cords[self.xyz] + (self.length / 2)]  # x/y/z (depending on the value of self.xyz) cords of both ends of the slider
         self.pRad = pointRadius
         self.max = maxi  # maximum variable value
         self.min = mini  # minimum variable value
@@ -29,6 +32,17 @@ class Slider:
         self.dragging = False
         self.text = viz.addText3D(f'{text}', fontSize=0.2)
         self.textPos = [0, 0, 0]
+        self.closeButton = XSymbol(0.5, self.cords)
+        if self.xyz == 0:
+            self.closeButton.cords = [self.limits[1] + 0.2, self.cords[1] + 0.5, self.cords[2]]
+        elif self.xyz == 1:
+            self.closeButton.cords = [self.cords[0] + 0.5, self.limits[1] + 0.2, self.cords[2]]
+        elif self.xyz == 2:
+            self.closeButton.cords = [self.cords[0], self.cords[1] + 0.5, self.limits[0] - 0.2]
+        for s in self.closeButton.X:
+            if (self.xyz == 0) or (self.xyz == 1):
+                s.setEuler(s.getEuler()[0] + 90, s.getEuler()[1], s.getEuler()[2])
+            s.setPosition(self.closeButton.cords)
 
         if xyz == 0:
             self.textPos = [self.cords[0] - (len(text) / 20), self.cords[1] + 0.3, self.cords[2]]
@@ -50,31 +64,37 @@ class Slider:
         setPos[self.xyz] = self.limits[1]
         self.sliders[2].setPosition(setPos)
         self.resetVar()
-        self.c = lController
+        self.cObj = [lController[0], rController[0]]  # controller objects
+        self.cDat = [lController[1], rController[1]]  # controller point data
 
     def resetVar(self):  # reset the value of the reference variable to its initial value from when this class was initialized
-        self.pCords[self.xyz] = self.cords[self.xyz] + (self.origVar / self.range) * self.length
+        self.pCords[self.xyz] = self.limits[0] + ((self.origVar + abs(self.min)) / self.range) * self.length
         self.oldPCords = copy.deepcopy(self.pCords)
 
     def setVar(self, var):  # set the reference variable to a specific value
         if (not self.dragging) or (not self.collision):
-            self.pCords[self.xyz] = self.cords[self.xyz] + (var / self.range) * self.length
+            self.pCords[self.xyz] = self.limits[0] + ((var + abs(self.min)) / self.range) * self.length
 
     def interpolate(self):
         relDist = self.pCords[self.xyz] - self.limits[0]
         ratio = relDist / self.length
         self.var = self.min + (self.range * ratio)
 
-    def drag(self, c, dragging):
+    def drag(self, cIdx, dragging):
         self.dragging = dragging
         if dragging:
-            self.collision = detectCollision(c.radius, self.pRad, c.cords, self.pCords)
+            self.collision = detectCollision(self.cDat[cIdx].radius, self.pRad, self.cDat[cIdx].cords, self.pCords)
             if self.collision:
-                self.pCords[self.xyz] = copy.deepcopy(c.cords[self.xyz])
+                self.pCords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
 
     def main(self):
-        if buttonPressed('reset', self.c, None, 0):
+        if buttonPressed('reset', self.cObj[0], 0):
             self.resetVar()
+
+        for c in range(2):
+            if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
+                self.unDraw()
+                self.drawn = False
 
         if self.pCords[self.xyz] < self.limits[0]:
             self.pCords[self.xyz] = copy.deepcopy(self.limits[0])
@@ -94,6 +114,7 @@ class Slider:
         self.pCords[self.xyz] += self.pVelocity[self.xyz]
 
         self.interpolate()
+
         return self.var
 
     def draw(self, camCords):
@@ -112,19 +133,43 @@ class Slider:
             self.sliders[s].remove()
         self.textFront.remove()
         self.text.remove()
+        self.closeButton.unDraw()
 
 
 class Point:
-    def __init__(self, rad):
+    def __init__(self, rad, show):
         self.cords = [0, 0, 0]
         self.oldCords = [0, 0, 0]
         self.velocity = [0, 0, 0]
         self.radius = rad
-        self.point = vizshape.addSphere(self.radius, slices=pointResolution)
+        self.show = show
+        if self.show:  # can be false for use in buttons
+            self.point = vizshape.addSphere(self.radius, slices=pointResolution)
+
+
+class XSymbol:
+    def __init__(self, size, cords):
+        self.radius = size / 2
+        self.cBox = Point(self.radius, False)  # True for testing
+        # self.cBox.point.setPosition(cords)
+        self.cords = cords
+        self.X = [vizshape.addCylinder(size / math.sqrt(2), 0.03), vizshape.addCylinder(size / math.sqrt(2), 0.03)]
+        self.X[0].setEuler(0, 45, 0)
+        self.X[1].setEuler(0, 135, 0)
+        for c in range(len(self.X)):
+            self.X[c].setPosition(self.cords)
+
+    def unDraw(self):
+        self.X[0].remove()
+        self.X[1].remove()
+        if self.cBox.show:
+            self.cBox.point.remove()
 
 
 class Dial:
-    def __init__(self, xyz, referenceVar, cords, cRad, pointRadius, mini, maxi, text, lController):
+    def __init__(self, xyz, referenceVar, cords, cRad, pointRadius, mini, maxi, text, lController, rController):
+        self.type = 'dial'
+        self.drawn = True
         self.xyz = xyz
         self.var = referenceVar
         self.origVar = copy.deepcopy(referenceVar)
@@ -136,80 +181,90 @@ class Dial:
         self.circle = []
         self.cAngle = []
         self.cMultiplier = []
-        self.tDim = True if len(referenceVar) == 3 else False
+        self.tDim = True if len(mini) == 3 else False
         if not self.tDim:
+            if self.xyz == 1:
+                self.cAngle.append([0, 90, 0])
+            else:
+                self.cAngle.append([0, 0, 0])
             self.circle.append(vizshape.addTorus(cRad, 0.04))
-            self.cAngle.append([0, 90, 0])
             self.circle[0].setPosition(self.cords)
             self.circle[0].setEuler(self.cAngle[0])
-        self.p = Point(pointRadius)
+        self.p = Point(pointRadius, True)
         self.p.cords = copy.deepcopy(cords)
         self.p.oldCords = copy.deepcopy(self.p.cords)
-        for axis in range(len(referenceVar)):  # used to allow for inheritance in DialThreeD
+        for axis in range(len(mini)):  # used to allow for inheritance in DialThreeD
             self.min.append(mini[axis])
             self.max.append(maxi[axis])
             self.range.append(maxi[axis] - mini[axis])
         if not self.tDim:
             if self.xyz == 0:  # lying down
-                self.axes = [0, 2]
+                self.axes = [0, 2]  # XZ
             elif self.xyz == 1:  # upright (facing z)
-                self.axes = [0, 1]
+                self.axes = [0, 1]  # XY
             else:  # upright (facing x)
-                self.axes = [1, 2]
+                self.axes = [1, 2]  # YZ
+        else:
+            self.axes = [0, 1, 2]
         self.text = text
         self.textFront = viz.addText3D('', fontSize=0.15)
         self.collision = False
         self.dragging = False
+        self.anim = None
         if self.tDim:
             self.anim = CircleAnim(self.p, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -3, 3, 5)
         self.resetVar()
-        self.c = lController
+        self.closeButton = XSymbol(0.5, [self.cords[0], self.cords[1] + self.cRad + 0.5, self.cords[2]])
+        self.cObj = [lController[0], rController[0]]
+        self.cDat = [lController[1], rController[1]]
 
     def resetVar(self):
         if self.tDim:
             for axis in range(3):
-                self.p.cords[axis] = self.cords[axis] + (self.origVar[axis] / self.range[axis]) * self.cRad * 2
+                self.p.cords[axis] = self.cords[axis] - (self.origVar[axis] / self.range[axis]) * self.cRad * 2
         else:
-            self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (self.origVar[self.axes[0]] / self.range[self.axes[0]]) * self.cRad * 2
-            self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (self.origVar[self.axes[1]] / self.range[self.axes[1]]) * self.cRad * 2
+            self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (self.origVar[self.axes[0]] / self.range[0]) * self.cRad * 2
+            self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (self.origVar[self.axes[1]] / self.range[1]) * self.cRad * 2
         self.p.oldCords = copy.deepcopy(self.p.cords)
 
     def setVar(self, var):
         if (not self.dragging) or (not self.collision):
             if self.tDim:
                 for axis in range(3):
-                    self.p.cords[axis] = self.cords[axis] + (var[axis] / self.range[axis]) * self.cRad * 2
+                    self.p.cords[axis] = self.cords[axis] - (var[axis] / self.range[axis]) * self.cRad * 2
             else:
-                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (var[self.axes[0]] / self.range[self.axes[0]]) * self.cRad * 2
-                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (var[self.axes[1]] / self.range[self.axes[1]]) * self.cRad * 2
+                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (var[self.axes[0]] / self.range[0]) * self.cRad * 2
+                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (var[self.axes[1]] / self.range[1]) * self.cRad * 2
 
-    def drag(self, c, dragging):
+    def drag(self, cIdx, dragging):
         self.dragging = dragging
         if dragging:
-            self.collision = detectCollision(c.radius, self.p.radius, c.cords, self.p.cords)
+            self.collision = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
             if self.collision:
                 if not self.tDim:
-                    self.p.cords[0] = copy.deepcopy(c.cords[0])
-                    self.p.cords[1] = copy.deepcopy(c.cords[1])
+                    self.p.cords[0] = copy.deepcopy(self.cDat[cIdx].cords[0])
+                    self.p.cords[1] = copy.deepcopy(self.cDat[cIdx].cords[1])
                 else:
-                    self.p.cords = copy.deepcopy(c.cords)
+                    self.p.cords = copy.deepcopy(self.cDat[cIdx].cords)
 
     def interpolate(self):
         relDist = []
         ratio = []
-        for dim in range(len(self.var)):
-            if not self.tDim:
-                relDist.append(self.p.cords[self.axes[dim]] - (self.cords[self.axes[dim]] - self.cRad))
-            else:
-                relDist.append(self.p.cords[dim] - (self.cords[dim] - self.cRad))
+        for dim in range(len(self.min)):
+            relDist.append(self.p.cords[self.axes[dim]] - (self.cords[self.axes[dim]] - self.cRad))
             ratio.append(relDist[dim] / (self.cRad * 2))
-            self.var[dim] = self.min[dim] + (self.range[dim] * ratio[dim])
+            self.var[self.axes[dim]] = -self.min[dim] - (self.range[dim] * ratio[dim])
 
     def main(self):
-        if buttonPressed('reset', self.c, None, 0):
+        if buttonPressed('reset', self.cObj, 0):
             self.resetVar()
 
-        # self.circularMotion()  # MASSIVE work-in-progress
+        for c in range(2):
+            if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
+                self.unDraw()
+                self.drawn = False
+
+        # self.circularMotion()  # MASSIVE WIP
         self.boundDial()
 
         if not self.tDim:
@@ -267,8 +322,11 @@ class Dial:
 
     def unDraw(self):
         self.p.point.remove()
-        self.anim.unDraw()
+        if self.anim is not None:
+            self.anim.unDraw()
+        self.circle[0].remove()
         self.textFront.remove()
+        self.closeButton.unDraw()
 
 
 class Manual:
@@ -334,3 +392,93 @@ class CircleAnim:
     def unDraw(self):
         for c in self.circles:
             c.remove()
+
+
+class GUISelector:
+    def __init__(self, varDict, cords, lController, rController):
+        self.cords = [cords[0] - (len(varDict) - 1) / 2, cords[1], cords[2]]
+        self.drawn = True
+        self.cObj = [lController[0], rController[0]]
+        self.cDat = [lController[1], rController[1]]
+        self.selecting = False
+        self.sHeld = False
+        self.collision = False
+        self.var = None
+        self.GUI = []
+        self.stage = 'varSelection'
+
+        self.GUIs = copy.deepcopy(varDict)
+        for g in self.GUIs:
+            self.GUIs[g] = None
+
+        self.boxes = []
+        self.collP = []
+        self.text = []
+        self.textObj = []
+        self.drawSelection()
+
+    def drawSelection(self):
+        for g in self.GUIs:
+            self.text.append(g)
+            self.textObj.append(viz.addText3D(g, fontSize=0.1))
+        for b in range(len(self.GUIs)):
+            self.boxes.append(vizshape.addBox([0.9, 0.9, 0.9]))
+            self.boxes[b].alpha(0.3)
+            self.collP.append(Point(0.5 - self.cDat[1].radius, False))  # True for testing only
+            self.collP[b].cords = [self.cords[0] + b, self.cords[1], self.cords[2]]
+            # self.collP[b].point.setPosition(self.collP[b].cords)  # line here for testing only
+            self.boxes[b].setPosition(self.collP[b].cords)
+            self.textObj[b].setPosition([self.collP[b].cords[0] - len(self.text[b]) / 35, self.collP[b].cords[1], self.collP[b].cords[2]])
+
+    def drag(self, cIdx, selecting):
+        self.selecting = selecting
+        if selecting:
+            for p in range(len(self.collP)):
+                self.collision = detectCollision(self.cDat[cIdx].radius, self.collP[p].radius, self.cDat[cIdx].cords, self.collP[p].cords)
+                if self.collision and (not self.sHeld):
+                    self.sHeld = True
+                    if self.stage == 'varSelection':
+                        self.var = list(self.GUIs.keys())[p]
+                        self.unDraw()
+                        self.selectGUI(GUItypes)
+                    elif self.stage == 'GUISelection':
+                        self.GUI.append(list(self.GUIs.keys())[p])
+                        self.unDraw()
+                        self.selectGUI(self.GUIs[list(self.GUIs.keys())[p]])
+                    break
+        else:
+            self.sHeld = False
+
+    def selectGUI(self, dictionary):
+        if dictionary is not None:
+            self.GUIs = copy.deepcopy(dictionary)
+            self.drawSelection()
+            self.stage = 'GUISelection'
+        else:
+            self.stage = 'complete'
+
+    def main(self):
+        if self.stage == 'complete':
+            self.drawn = False
+        if not self.drawn:
+            self.unDraw()
+            return self.var, self.GUI
+
+    def draw(self, camCords):
+        for t in range(len(self.textObj)):
+            angle, pos = camAnglePos(camCords, self.collP[t].cords, 0.1)
+            self.textObj[t].setEuler(angle)
+            self.textObj[t].setPosition(pos)
+
+    def unDraw(self):
+        for b in self.boxes:
+            b.remove()
+        for t in self.textObj:
+            t.remove()
+        for p in self.collP:
+            if p.show:
+                p.point.remove()
+        self.boxes = []
+        self.text = []
+        self.textObj = []
+        self.collP = []

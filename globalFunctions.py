@@ -224,9 +224,9 @@ def camAnglePos(camCords, pCords, disp):
 
 def buttonPressed(button, *args):  # gets the button currently being pressed
     if mode == 'k':
-        if args[1] == 'mouse':
+        if button == 'select':
             return viz.mouse.getState() == controls[button]
         else:
             return viz.key.isDown(controls[button])
     elif mode == 'vr':
-        return args[0].getButtonState() == controls[button][args[2]]
+        return args[0].getButtonState() == controls[button][args[1]]

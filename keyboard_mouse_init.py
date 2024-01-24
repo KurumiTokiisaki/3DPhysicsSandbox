@@ -25,6 +25,7 @@ scrollSpeed = 0.015 / renderRate
 # hide the cursor
 viz.mouse.setCursor(0)
 controllers = [None, None]
+controllerAmt = 1
 
 
 # main class for keyboard & mouse
@@ -37,7 +38,7 @@ class Main:
         self.camVelocity = [0, 0, 0]
 
         # add the hand object
-        self.radius = 0.1
+        self.radius = handRadius
         self.hand = [Point()]
         self.hand.append(self.hand[0])
         # how far hand is from camera initially

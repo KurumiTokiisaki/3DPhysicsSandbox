@@ -1,25 +1,42 @@
 import viz
 import math
 
-mode = 'vr'  # controller mode
 fullscreen = True
-gameSpeed = 1  # game speed factor
-calcRate = 144  # physics calculations/second (higher number means more accurate physics but lower framerate)
-physicsTime = calcRate * (1 / gameSpeed)  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
-renderRate = 90  # render rate (lower for performance)
-animSpeed = 1 / renderRate  # speed of animations
-gConst = -9.81  # gravitational field constant
+handRadius = 0.1  # radius of each hand
 gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
-gField = [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])]  # gravitational field constant about x, y, and z
-gasDensity = 0  # density of all gas
-jointRadius = 0.015  # radius of joints
-theForce = False  # when True, "recalling" points causes them to float slowly to you
-jointResolution = 3  # lower to increase performance
-pointResolution = 10  # lower to increase performance
-k = 2500  # global spring constant (make negative to break the sandbox)
-damping = 3  # global damping constant (reduce as more points are connected to the same object)
+gConst = -9.81  # gravitational field constant
+renderRate = 144  # render rate (lower for performance)
 collisionTolerance = 0  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
 collisionCalcTolerance = 0.1  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
+jointResolution = 3  # lower to increase performance
+pointResolution = 10  # lower to increase performance
+theForce = False  # when True, "recalling" points causes them to float slowly to you
+jointRadius = 0.015  # radius of all joints
+animSpeed = 1 / renderRate  # speed of animations
+GUItypes = {
+    'Slider': {'X': None, 'Y': None, 'Z': None},
+    'Dial': {'2D': {'XY': None, 'YZ': None, 'XZ': None}, '3D': None}
+}
+
+globalVars = {
+    'gameSpeed': 1,  # game speed factor
+    'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
+    'gasDensity': 0,  # density of all gases
+    'springConst': 2500,  # global spring constant (make negative to break the sandbox)
+    'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
+}
+
+globalRanges = {
+    'gameSpeed': [5, 0.1],  # [max, min]
+    'gField': [15, -15],
+    'gasDensity': [10000, 0],
+    'springConst': [5000, 0],
+    'damping': [10, 0],
+}
+
+mode = 'k'  # controller mode (keyboard/mouse or VR)
+calcRate = 144  # physics calculations/second (higher number means more accurate physics but lower framerate)
+physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
 
 # controls for keyboard/VR
 if mode == 'k':
@@ -27,10 +44,10 @@ if mode == 'k':
         'select': 1,
         'recall': 'r',
         'reset': viz.KEY_DELETE,
-        'pause': viz.key.charToCode('p'),
-        'gFieldY': viz.key.charToCode('g'),
-        'gField': viz.key.charToCode('h'),
-        'GUISelector': None
+        'pause': 'p',
+        'gFieldY': 'g',
+        'gField': 'h',
+        'GUISelector': 'l'
     }
 elif mode == 'vr':
     controls = {

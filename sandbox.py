@@ -37,7 +37,7 @@ viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
 
 
 def selectP(cIdx):
-    return buttonPressed('select', controlsConf.controllers[cIdx], 'mouse', cIdx)
+    return buttonPressed('select', controlsConf.controllers[cIdx], cIdx)
     # return ((mode == 'k') and (viz.mouse.getState() == cConf.controls['select'])) or ((mode == 'vr') and (steamVR_init.controllers[cIdx].getButtonState() == cConf.controls['select']))
 
 
@@ -49,8 +49,12 @@ class Main:
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
         self.GUI = {
-            'gFieldMagnitude': None,
-            'gFieldDirection': None
+            'gameSpeed': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
+            'gField': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
+            'gasDensity': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
+            'springConst': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
+            'damping': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
+            'GUISelector': {'': {'': None}}
         }  # dict of GUIs
         self.diff = []  # scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
@@ -63,14 +67,18 @@ class Main:
         self.rHeld = False  # stores if 'r' is held down
         self.gHeld = False  # stores if 'g' is held down
         self.hHeld = False  # stores if 'h' is held down
+        self.lHeld = False  # stores if 'l' is held down
+        self.keyHeld = []
+        for a in range(26):
+            self.keyHeld.append(False)
         self.GUISelector = False  # stores if the button to summon the GUI selector is held
         self.returnHeld = False  # stores if 'return' is held down
-        self.physicsTime = physicsTime
         self.anim = []
         self.collP = [None, None]
         self.animeScale = [1, 1]
         self.animeScaleSpeed = 0
-        self.animColor = [[0, 0, 0], [0, 0, 0]]
+        self.animeColor = [[0, 0, 0], [0, 0, 0]]
+        self.GUIType = None
 
     def initLists(self):
         for p in range(len(self.points)):
@@ -89,41 +97,52 @@ class Main:
 
     def main(self):
         # pause if 'p' is pressed
-        if (not self.pHeld) and buttonPressed('pause', controlsConf.controllers[1], None, 1):
+        if (not self.pHeld) and buttonPressed('pause', controlsConf.controllers[1], 1):
             self.pause = not self.pause  # reverse the boolean value of self.pause
-            if buttonPressed('pause', controlsConf.controllers[1], None, 1):
+            if buttonPressed('pause', controlsConf.controllers[1], 1):
                 self.pHeld = True
-        elif not buttonPressed('pause', controlsConf.controllers[1], None, 1):
+        elif not buttonPressed('pause', controlsConf.controllers[1], 1):
             self.pHeld = False
 
-        if (not self.gHeld) and buttonPressed('gFieldY', controlsConf.controllers[0], None, 0):
-            if self.GUI['gFieldMagnitude'] is None:
-                self.GUI['gFieldMagnitude'] = myGUI.Slider(1, gField[1], controls.hand[0].cords, 5, 0.15, 15, -15, 'Gravity', controlsConf.controllers[0])
+        # if (not self.gHeld) and buttonPressed('gFieldY', controlsConf.controllers[0], 0):
+        #     if self.GUI['gFieldMono'] is None:
+        #         self.GUI['gFieldMono'] = myGUI.Slider(2, globalVars['gField'][2], controls.hand[0].cords, 5, 0.15, 15, -15, 'Gravity', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+        #     else:
+        #         self.GUI['gFieldMono'].drawn = False
+        #         self.GUI['gFieldMono'].unDraw()
+        #     if buttonPressed('gFieldY', controlsConf.controllers[0], 0):
+        #         self.gHeld = True
+        # elif not buttonPressed('gFieldY', controlsConf.controllers[0], 0):
+        #     self.gHeld = False
+        #
+        # if (not self.hHeld) and buttonPressed('gField', controlsConf.controllers[1], 1):
+        #     if self.GUI['gFieldOmni'] is None:
+        #         self.GUI['gFieldOmni'] = myGUI.Dial(1, globalVars['gField'], controls.hand[1].cords, 5, 0.1, [-15, -15, -15], [15, 15, 15], ['g(x)', 'g(y)', 'g(z)'], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+        #     else:
+        #         self.GUI['gFieldOmni'].drawn = False
+        #         self.GUI['gFieldOmni'].unDraw()
+        #     if buttonPressed('gField', controlsConf.controllers[1], 1):
+        #         self.hHeld = True
+        # elif not buttonPressed('gField', controlsConf.controllers[1], 1):
+        #     self.hHeld = False
+        #
+        if (not self.lHeld) and buttonPressed('GUISelector', controlsConf.controllers[0], 0):
+            if self.GUI['GUISelector'][''][''] is None:
+                self.GUI['GUISelector'][''][''] = myGUI.GUISelector(globalVars, controls.hand[0].cords, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             else:
-                self.GUI['gFieldMagnitude'].unDraw()
-                self.GUI['gFieldMagnitude'] = None
-            if buttonPressed('gFieldY', controlsConf.controllers[0], None, 0):
-                self.gHeld = True
-        elif not buttonPressed('gFieldY', controlsConf.controllers[0], None, 0):
-            self.gHeld = False
-
-        if (not self.hHeld) and buttonPressed('gField', controlsConf.controllers[1], None, 1):
-            if self.GUI['gFieldDirection'] is None:
-                self.GUI['gFieldDirection'] = myGUI.Dial(1, gField, controls.hand[1].cords, 5, 0.1, [-15, -15, -15], [15, 15, 15], ['g(x)', 'g(y)', 'g(z)'], controlsConf.controllers[0])
-            else:
-                self.GUI['gFieldDirection'].unDraw()
-                self.GUI['gFieldDirection'] = None
-            if buttonPressed('gField', controlsConf.controllers[1], None, 1):
-                self.hHeld = True
-        elif not buttonPressed('gField', controlsConf.controllers[1], None, 1):
-            self.hHeld = False
+                self.GUI['GUISelector'][''][''].drawn = False
+                self.GUI['GUISelector'][''][''].unDraw()
+            if buttonPressed('GUISelector', controlsConf.controllers[1], 1):
+                self.lHeld = True
+        elif not buttonPressed('GUISelector', controlsConf.controllers[1], 1):
+            self.lHeld = False
 
         self.dragPoint()  # runs the function that detects if controller is "dragging" a point
 
         for p in range(len(self.points)):
             # if (self.points[p].cords[1] - self.points[p].radius) <= self.gridFloor:
-            # self.points[p].cords[1] = self.gridFloor + self.points[p].radius
-            # self.points[p].oldCords[1] = self.points[p].cords[1]
+            #     self.points[p].cords[1] = self.gridFloor + self.points[p].radius
+            #     self.points[p].oldCords[1] = self.points[p].cords[1]
             # detect collisions with other points
             for po in range(len(self.points)):
                 if (po > p) and (p != po):  # performance optimisation: only go through unique combinations of p and po (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
@@ -164,6 +183,8 @@ class Main:
 
         # update the visuals of joints and constrain points
         for j in range(len(self.joints)):
+            self.joints[j].stiffness = globalVars['springConst']
+            self.joints[j].dampingConst = globalVars['damping']
             self.joints[j].update()
             if not self.pause:
                 self.joints[j].constrain()
@@ -176,17 +197,21 @@ class Main:
         for j in self.joints:
             j.draw()
         for g in self.GUI:
-            if self.GUI[g] is not None:
-                self.GUI[g].draw(controls.camCords)
+            for gu in self.GUI[g]:
+                for gui in self.GUI[g][gu]:
+                    if self.GUI[g][gu][gui] is not None:
+                        self.GUI[g][gu][gui].draw(controls.camCords)
 
     # used to drag points around using pointer/controller
     def dragPoint(self):
-        print(controlsConf.controllers[0].getButtonState(), controlsConf.controllers[1].getButtonState())
+        # print(controlsConf.controllers[0].getButtonState(), controlsConf.controllers[1].getButtonState())
         # print(self.lastP)
-        for c in range(len(controls.hand)):
+        for c in range(controlsConf.controllerAmt):
             for g in self.GUI:
-                if self.GUI[g] is not None:
-                    self.GUI[g].drag(controls.hand[c], selectP(c))
+                for gu in self.GUI[g]:
+                    for gui in self.GUI[g][gu]:
+                        if self.GUI[g][gu][gui] is not None:
+                            self.GUI[g][gu][gui].drag(c, selectP(c))
             for p in range(len(self.points)):
                 if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
                     self.collP[c] = p
@@ -206,17 +231,17 @@ class Main:
                 if self.dragP[c] is not None:
                     controls.anim[c].point = self.points[self.collP[c]]
                     if self.animeScale[c] > (self.points[self.collP[c]].radius / controls.anim[c].sphereRad):
-                        self.animeScaleSpeed -= 0.1 / game.physicsTime
+                        self.animeScaleSpeed -= 0.1 / physicsTime
                         self.animeScale[c] += self.animeScaleSpeed
                         # approximate function for changing color with time based on radius: f(x) = 6 / (time * sqrt(radius * 10))
-                        f = 6 / (game.physicsTime * math.sqrt(self.points[self.collP[c]].radius * 10))
-                        self.animColor[c][0] -= f
-                        self.animColor[c][1] += f
+                        f = 6 / (physicsTime * math.sqrt(self.points[self.collP[c]].radius * 10))
+                        self.animeColor[c][0] -= f
+                        self.animeColor[c][1] += f
                     else:
                         self.animeScale[c] = self.points[self.collP[c]].radius / controls.anim[c].sphereRad
                         controls.anim[c].pause = True
                     controls.anim[c].setScale(self.animeScale[c])
-                    controls.anim[c].setColor(self.animColor[c])
+                    controls.anim[c].setColor(self.animeColor[c])
                 elif not detectCollision(self.points[self.collP[c]].radius, controls.hand[c].radius, self.points[self.collP[c]].cords, controls.hand[c].cords):
                     controls.anim[c].point = controls.hand[c]
                     controls.anim[c].setScale(1)
@@ -227,7 +252,7 @@ class Main:
                     self.animeScale[c] = 1.2 * self.points[self.collP[c]].radius / controls.anim[c].sphereRad
                     self.animeScaleSpeed = 0
                     controls.anim[c].setScale(self.animeScale[c])
-                    self.animColor[c] = [1, 0, 0]
+                    self.animeColor[c] = [1, 0, 0]
                     controls.anim[c].setColor([1, 0, 0])
                     controls.anim[c].pause = False
             else:
@@ -239,7 +264,7 @@ class Main:
                 self.dragP[c] = None
             # recalls the last clicked point to the controller's position
             # if ((mode == 'vr') and (steamVR_init.controllers[c].getButtonState() == recall)) or ((mode == 'k') and viz.key.isDown(recall)):
-            if buttonPressed('recall', controlsConf.controllers[c], None, c):
+            if buttonPressed('recall', controlsConf.controllers[c], c):
                 # allows the force to be used (if True)
                 if theForce and (not self.theForceJoint):
                     self.joints.append(Joint(False, 0, 0.01, None, self.lastP[c], True, c))
@@ -288,15 +313,57 @@ class Main:
             self.points[p].pIdx = p
 
     def updateGUI(self):
-        global gField
         for g in self.GUI:
-            if self.GUI[g] is not None:
-                if g == 'gFieldMagnitude':
-                    self.GUI[g].setVar(gField[self.GUI[g].xyz])
-                    gField[self.GUI[g].xyz] = self.GUI[g].main()
-                elif g == 'gFieldDirection':
-                    self.GUI[g].setVar(gField)
-                    gField = self.GUI[g].main()
+            for gt in self.GUI[g]:
+                for gta in self.GUI[g][gt]:
+                    if self.GUI[g][gt][gta] is not None:
+                        if self.GUI[g][gt][gta].drawn:
+                            if g == 'GUISelector':
+                                self.GUIType = self.GUI[g][gt][gta].main()
+                            else:
+                                if (type(globalVars[g]) is list) and (gt == 'slider'):
+                                    self.GUI[g][gt][gta].setVar(globalVars[g][self.GUI[g][gt][gta].xyz])
+                                    globalVars[g][self.GUI[g][gt][gta].xyz] = self.GUI[g][gt][gta].main()
+                                else:
+                                    self.GUI[g][gt][gta].setVar(globalVars[g])
+                                    globalVars[g] = self.GUI[g][gt][gta].main()
+                        else:
+                            self.GUI[g][gt][gta] = None
+
+        if self.GUIType is not None:
+            if self.GUIType[1][0] == 'Slider':
+                if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] is not None:
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]].unDraw()
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = None
+                if self.GUIType[1][1] == 'X':
+                    xyz = 0
+                elif self.GUIType[1][1] == 'Y':
+                    xyz = 1
+                else:
+                    xyz = 2
+                if type(globalVars[self.GUIType[0]]) is list:  # if the quantity is a vector, xyz effects visuals and direction
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Slider(xyz, globalVars[self.GUIType[0]][xyz], controls.hand[0].cords, 5, 0.15, globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][1], self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                else:  # if the quantity is a scalar, xyz only effects visuals
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Slider(xyz, globalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][1], self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+            elif self.GUIType[1][0] == 'Dial':
+                self.GUIType[1].append(self.GUIType[1][1])
+                if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] is not None:
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]].unDraw()
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = None
+                if self.GUIType[1][1] == '2D':
+                    if self.GUIType[1][2] == 'XZ':
+                        xyz = 0
+                    elif self.GUIType[1][2] == 'XY':
+                        xyz = 1
+                    else:
+                        xyz = 2
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = myGUI.Dial(xyz, globalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, [globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0]], [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]],
+                                                                                                           [controlsConf.controllers[1], controls.hand[1]])
+                elif self.GUIType[1][1] == '3D':
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = myGUI.Dial(0, globalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, [globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0]], [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], self.GUIType[0],
+                                                                                                           [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+
+            self.GUIType = None
 
 
 # class for spheres
@@ -320,7 +387,7 @@ class Point:
         self.volume = (4 / 3) * math.pi * self.radius ** 3
         self.halfArea = 2 * math.pi * self.radius ** 2
         self.mass = self.density * self.volume
-        self.weight = [self.mass * gField[0], self.mass * gField[1], self.mass * gField[2]]
+        self.weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]
         self.gasDrag = [0, 0, 0]
         self.liquidDrag = [0, 0, 0]
         self.gasUpthrust = [0, 0, 0]
@@ -335,7 +402,7 @@ class Point:
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
         self.e = 0.95  # elasticity (WARNING: must be less than 1 (can be closer to 1 as calcRate increases) due to floating point error)
-        self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
+        self.sf = 1  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
@@ -356,13 +423,13 @@ class Point:
         self.volume = 4 / 3 * math.pi * self.radius ** 3
         self.halfArea = 2 * math.pi * self.radius ** 2
         self.mass = density * self.volume
-        self.weight = self.mass * gField
+        self.weight = self.mass * globalVars['gField']
         if self.show:
             self.sphere.remove()
             self.sphere = vizshape.addSphere(radius, slices=pointResolution)
 
     def move(self):
-        self.weight = [self.mass * gField[0], self.mass * gField[1], self.mass * gField[2]]
+        self.weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]
         if not game.pause:
             self.physics()
 
@@ -372,12 +439,12 @@ class Point:
 
         # Verlet integration
         for c in range(3):
-            self.velocity[c] = (self.cords[c] - self.oldCords[c]) * game.physicsTime  # set velocity to change in position
+            self.velocity[c] = (self.cords[c] - self.oldCords[c]) * physicsTime  # set velocity to change in position
         self.oldCords = copy.deepcopy(self.cords)
 
         if not game.pause:
             for v in range(3):
-                self.cords[v] += self.velocity[v] / game.physicsTime  # change coordinates based on velocity
+                self.cords[v] += self.velocity[v] / physicsTime  # change coordinates based on velocity
 
     def draw(self):
         if self.show:
@@ -386,8 +453,8 @@ class Point:
     def physics(self):
         for axis in range(3):
             # add physics here
-            self.gasDrag[axis] = 0.5 * gasDensity * -getSign(self.velocity[axis]) * ((self.velocity[axis] / game.physicsTime) ** 2) * math.pi * (self.radius ** 2)
-            self.gasUpthrust[axis] = -(4 / 3) * math.pi * (self.radius ** 3) * gasDensity * gField[axis]
+            self.gasDrag[axis] = 0.5 * globalVars['gasDensity'] * -getSign(self.velocity[axis]) * ((self.velocity[axis] / physicsTime) ** 2) * math.pi * (self.radius ** 2)
+            self.gasUpthrust[axis] = -(4 / 3) * math.pi * (self.radius ** 3) * globalVars['gasDensity'] * globalVars['gField'][axis]
 
             self.force[axis] = self.gasDrag[axis] + self.liquidDrag[axis] + self.gasUpthrust[axis] + self.liquidUpthrust[axis] + self.weight[axis]
             self.force[axis] += self.constrainForce[axis]  # constraining force added here to prevent points from floating
@@ -423,7 +490,7 @@ class Point:
                 # negative coefficients used for friction here since it always acts in the opposite direction to motion
                 if self.collisionState == 'y':
                     # negative coefficients used for normalForce here since it always acts in the opposite direction to resultant force
-                    # *0.999999 used here to compensate for floating point error
+                    # *0.999999 used here to compensate for floating point error (I hate floating point error)
                     self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
@@ -440,7 +507,7 @@ class Point:
         for axis in range(3):
             self.force[axis] += self.normalForce[axis] + self.friction[axis] + self.impulse[axis]
             self.acc[axis] = self.force[axis] / self.mass  # F = ma, a = F/m
-            self.oldCords[axis] -= self.acc[axis] / (game.physicsTime ** 2)  # divide by time since d(v) = a * d(t)
+            self.oldCords[axis] -= self.acc[axis] / (physicsTime ** 2)  # divide by time since d(v) = a * d(t)
         self.constrainForce = [0, 0, 0]  # reset constrainForce
         # print(self.force)
 
@@ -610,8 +677,8 @@ class Point:
                                         self.oldCords[0] = copy.deepcopy(self.cords[0])
                                         self.oldCords[1] = copy.deepcopy(self.cords[1])
                                         resultP = ((self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2])))
-                                        self.impulse[0] = resultP * game.physicsTime * cos(self.bAngle[2]) * self.e
-                                        self.impulse[1] = resultP * game.physicsTime * sin(self.bAngle[2]) * self.e
+                                        self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
+                                        self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
                                     else:
                                         self.impulse = [0, 0, 0]
                                         self.cords[1] = yCollisionPlane[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))
@@ -622,8 +689,8 @@ class Point:
                                         self.oldCords[0] = copy.deepcopy(self.cords[0])
                                         self.oldCords[1] = copy.deepcopy(self.cords[1])
                                         resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
-                                        self.impulse[0] = resultP * game.physicsTime * cos(self.bAngle[2]) * self.e
-                                        self.impulse[1] = resultP * game.physicsTime * sin(self.bAngle[2]) * self.e
+                                        self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
+                                        self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
                                     else:
                                         self.impulse = [0, 0, 0]
                                         self.cords[0] = xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
@@ -656,7 +723,7 @@ class Point:
                             self.submergedRadius = copy.deepcopy(self.radius)
 
                         for axis in range(3):
-                            self.liquidUpthrust[axis] = b.density * -gField[axis] * self.submergedVolume  # U = pgV
+                            self.liquidUpthrust[axis] = b.density * -globalVars['gField'][axis] * self.submergedVolume  # U = pgV
                             self.liquidDrag[axis] = (0.5 * b.dragConst * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.submergedArea) + (6 * math.pi * b.viscosity * self.submergedRadius * -self.velocity[axis])  # D = 6πμrv + 1/2 cpAv² (Drag = Stokes' law + drag force)
                         # print(self.liquidUpthrust)
 
@@ -867,7 +934,7 @@ class Joint:
                 if self.theForceJoint:
                     self._update[u] = 0.01 * (self.diff[u] * ((self.origLength / self.height) - 1))  # pull points by changing their cords directly rather than force (since it doesn't matter when you use The Force!)
                 self.constrainForce[u] = self.stiffness * (self.diff[u] / self.height) * (self.origLength - self.height)  # check out the maths for this using this link:
-                self.damping[u] = self.dampingConst * abs((self.diff[u] / self.height) * (self.oldHeight - self.height)) * getSign(game.points[self.pOne].velocity[u] - game.points[self.pTwo].velocity[u]) * game.physicsTime  # damping force = damping constant * change in joint length (relative to both points) * relative direction
+                self.damping[u] = self.dampingConst * abs((self.diff[u] / self.height) * (self.oldHeight - self.height)) * getSign(game.points[self.pOne].velocity[u] - game.points[self.pTwo].velocity[u]) * physicsTime  # damping force = damping constant * change in joint length (relative to both points) * relative direction
         # self.stiffness = self.origStiffness * (math.pi * (self.radius ** 2)) / self.origArea  # increase stiffness as length decreases and vice versa as length increases
         for i in range(3):
             if self.theForceJoint:
@@ -1018,7 +1085,7 @@ class CollisionRect:
 game = Main()
 
 # makes a cube using points and joints
-cube = False
+cube = True
 if cube:
     cubeSize = 8
     cubeRes = 3
@@ -1077,9 +1144,9 @@ if cube:
         for jo in range(len(game.points)):
             if (j != jo) and (jo > j):  # performance optimisation: only go through unique combinations of j and jo (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
                 if jo <= 7:
-                    game.joints.append(Joint(True, '', k, j, jo, damping, 69))
+                    game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], 69))
                 else:
-                    game.joints.append(Joint(True, '', k, j, jo, damping, 69))
+                    game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], 69))
     # game.addPoint(Point(0.1, 1000))
 
 sphere = False
@@ -1110,7 +1177,7 @@ if slantedSurface:
         except ValueError:
             continue
 else:
-    game.collisionRect.append(CollisionRect((500, 50, 500), [0, 0, 0], [math.radians(0), math.radians(0), math.radians(0.00001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect((500, 50, 500), [0, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
     # game.collisionRect.append(CollisionRect((50, 50, 50), [0, 30, 0], [math.radians(0), 0, math.radians(30)], 2000, 1, 1, 0.5, 'l'))
     # game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
     # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
