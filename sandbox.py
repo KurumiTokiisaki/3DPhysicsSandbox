@@ -434,9 +434,9 @@ class Point:
     def move(self):
         self.weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]
 
-        self.boxCollision()  # runs collision code
         if not game.pause:
             self.physics()
+        self.boxCollision()  # runs collision code
 
         self.oldVelocity = copy.deepcopy(self.velocity)
 
@@ -698,8 +698,6 @@ class Point:
                                         self.impulse = [0, 0, 0]
                                         self.cords[0] = xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
                                 print(self.impulse, self.bAngle)
-                                # if abs(self.impulse[0]) > 0 or abs(self.impulse[1]) > 0 or abs(self.impulse[2]) > 0:
-                                # print(self.impulse)
                             elif (self.collision[count] == 'front') or (self.collision[count] == 'back'):
                                 if not self.colliding[count]:
                                     self.colliding[count] = True
@@ -1089,7 +1087,7 @@ class CollisionRect:
 game = Main()
 
 # makes a cube using points and joints
-cube = False
+cube = True
 if cube:
     cubeSize = 8
     cubeRes = 3
@@ -1157,17 +1155,22 @@ sphere = False
 if sphere:
     game.addPoint(Point(0.01, 1000, True))
 elif not cube:
-    # pass
     game.addPoint(Point(0.6, 1000, True))
     game.addPoint(Point(0.4, 1000, True))
-    # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cosx(math.radians(30)), 0]
+    # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cos(math.radians(30)), 0]
     # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
+# game.addPoint(Point(0.6, 1000, True))
+# game.addPoint(Point(0.4, 1000, True))
 
 for p in range(len(game.points)):
     game.points[p].cords[1] += 50
     game.points[p].oldCords[1] += 50
-game.points[0].cords[0] += 10
-game.points[0].oldCords[0] += 10
+    game.points[p].cords[0] -= 10
+    game.points[p].oldCords[0] -= 10
+game.points[-1].cords[0] -= 10
+game.points[-1].oldCords[0] -= 10
+game.points[-2].cords[0] -= 10
+game.points[-2].oldCords[0] -= 10
 
 slantedSurface = False
 if slantedSurface:
@@ -1180,7 +1183,7 @@ if slantedSurface:
             game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 's'))
         except ValueError:
             continue
-game.collisionRect.append(CollisionRect((100, 50, 50), [-50, 0, 0], [math.radians(0), math.radians(0), math.radians(1)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+game.collisionRect.append(CollisionRect((100, 50, 50), [-50, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
 game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
 game.collisionRect.append(CollisionRect((100, 50, 50), [170, 0, 0], [math.radians(0), math.radians(0), math.radians(60)], 1000, 10, 1, 0.9, 's'))
 game.collisionRect.append(CollisionRect((50, 50, 50), [280, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
