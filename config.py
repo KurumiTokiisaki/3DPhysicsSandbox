@@ -35,7 +35,7 @@ globalRanges = {
 }
 
 mode = 'k'  # controller mode (keyboard/mouse or VR)
-calcRate = 144  # physics calculations/second (higher number means more accurate physics but lower framerate)
+calcRate = 1440  # physics calculations/second (higher number means more accurate physics but lower framerate)
 physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
 
 # controls for keyboard/VR

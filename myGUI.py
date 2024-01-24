@@ -68,12 +68,12 @@ class Slider:
         self.cDat = [lController[1], rController[1]]  # controller point data
 
     def resetVar(self):  # reset the value of the reference variable to its initial value from when this class was initialized
-        self.pCords[self.xyz] = self.limits[0] + ((self.origVar + abs(self.min)) / self.range) * self.length
+        self.pCords[self.xyz] = self.limits[0] + ((self.origVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
         self.oldPCords = copy.deepcopy(self.pCords)
 
     def setVar(self, var):  # set the reference variable to a specific value
         if (not self.dragging) or (not self.collision):
-            self.pCords[self.xyz] = self.limits[0] + ((var + abs(self.min)) / self.range) * self.length
+            self.pCords[self.xyz] = self.limits[0] + ((var + abs(self.min) * -getSign(self.min)) / self.range) * self.length
 
     def interpolate(self):
         relDist = self.pCords[self.xyz] - self.limits[0]

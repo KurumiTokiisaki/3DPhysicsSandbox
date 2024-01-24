@@ -96,6 +96,8 @@ class Main:
         self.lastP = [len(self.points) - 1, len(self.points) - 2]
 
     def main(self):
+        global physicsTime
+        physicsTime = calcRate * (1 / globalVars['gameSpeed'])
         # pause if 'p' is pressed
         if (not self.pHeld) and buttonPressed('pause', controlsConf.controllers[1], 1):
             self.pause = not self.pause  # reverse the boolean value of self.pause
@@ -178,6 +180,7 @@ class Main:
                         self.points[po].cords[2] += deltaP * cos(normal[1]) * cos(normal[0]) / (self.points[po].mass * calcRate) * multiplier[2]  # * -getSign(vOne[2] - vTwo[2])  # - self.points[po].velocity[2] / calcRate
 
             self.points[p].move()
+            print(self.points[p].velocity[1])
 
         self.getDist()  # cache the distance between each point
 
@@ -234,7 +237,7 @@ class Main:
                         self.animeScaleSpeed -= 0.1 / physicsTime
                         self.animeScale[c] += self.animeScaleSpeed
                         # approximate function for changing color with time based on radius: f(x) = 6 / (time * sqrt(radius * 10))
-                        f = 6 / (physicsTime * math.sqrt(self.points[self.collP[c]].radius * 10))
+                        f = 6 / (renderRate * math.sqrt(self.points[self.collP[c]].radius * 10))
                         self.animeColor[c][0] -= f
                         self.animeColor[c][1] += f
                     else:
@@ -402,7 +405,7 @@ class Point:
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
         self.e = 0.95  # elasticity (WARNING: must be less than 1 (can be closer to 1 as calcRate increases) due to floating point error)
-        self.sf = 1  # surface friction coefficient. set to 'sticky' for infinite value.
+        self.sf = 0  # surface friction coefficient. set to 'sticky' for infinite value.
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
         self.connectedJoint = False
