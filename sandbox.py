@@ -50,7 +50,7 @@ class Main:
         self.joints = []  # list of joints for the whole program
         self.GUI = {
             'gameSpeed': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
-            'gField': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
+            'gField': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'X': None, 'Y': None, 'Z': None}},
             'gasDensity': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'springConst': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'damping': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
@@ -326,7 +326,7 @@ class Main:
                             if g == 'GUISelector':
                                 self.GUIType = self.GUI[g][gt][gta].main()
                             else:
-                                if (type(globalVars[g]) is list) and (gt == 'slider'):
+                                if (type(globalVars[g]) is list) and ((gt == 'slider') or (gt == 'manual')):
                                     self.GUI[g][gt][gta].setVar(globalVars[g][self.GUI[g][gt][gta].xyz])
                                     globalVars[g][self.GUI[g][gt][gta].xyz] = self.GUI[g][gt][gta].main()
                                 else:
@@ -336,6 +336,7 @@ class Main:
                             self.GUI[g][gt][gta] = None
 
         if self.GUIType is not None:
+            print(self.GUIType)
             if self.GUIType[1][0] == 'Slider':
                 if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] is not None:
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]].unDraw()
@@ -367,6 +368,18 @@ class Main:
                 elif self.GUIType[1][1] == '3D':
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = myGUI.Dial(0, globalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, [globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0]], [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], self.GUIType[0],
                                                                                                            [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+            elif self.GUIType[1][0] == 'Manual':
+                if self.GUIType[1][1] == 'X':
+                    xyz = 0
+                elif self.GUIType[1][1] == 'Y':
+                    xyz = 1
+                else:
+                    xyz = 2
+                print(self.GUIType)
+                if type(globalVars[self.GUIType[0]]) is list:
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Manual(xyz, globalVars[self.GUIType[0]][xyz], controls.hand[0].cords, self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                else:
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Manual(xyz, globalVars[self.GUIType[0]], controls.hand[0].cords, self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
 
             self.GUIType = None
 
@@ -506,7 +519,6 @@ class Point:
                     self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
                     self.friction[1] = getSign(self.velocity[1]) * resultF * sin(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
                     self.friction[2] = getSign(self.velocity[2]) * resultF * sin(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
-                    print(sin(self.bAngle[2]))
             count += 1
 
         for axis in range(3):

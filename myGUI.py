@@ -330,8 +330,78 @@ class Dial:
 
 
 class Manual:
-    def __init__(self, referenceVar):
+    def __init__(self, xyz, referenceVar, cords, text, lController, rController):
+        self.xyz = xyz
+        self.drawn = True
+        self.var = referenceVar
+        self.origVar = copy.deepcopy(referenceVar)
+        self.text = text
+        self.cords = cords
+        self.textVar = viz.addText3D('', fontSize=0.1)
+        self.textVar.setPosition(self.cords)
+        self.cObj = [lController[0], rController[0]]
+        self.cDat = [lController[1], rController[1]]
+        self.keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', viz.KEY_BACKSPACE, '-', viz.KEY_RETURN]
+        self.keyHeld = []
+        for k in range(len(self.keys)):
+            self.keyHeld.append(False)
+
+    def main(self):
+        if viz.key.anyDown(self.keys):
+            for n in range(10):
+                if viz.key.isDown(f'{n}'):
+                    if not self.keyHeld[n]:
+                        self.var = float(f'{self.var}{n}')
+                        self.keyHeld[n] = True
+                        break
+                else:
+                    self.keyHeld[n] = False
+            if viz.key.isDown(viz.KEY_BACKSPACE):
+                if not self.keyHeld[10]:
+                    self.keyHeld[10] = True
+                    tempVar = ''
+                    self.var = str(self.var)
+                    if len(self.var) == 1:
+                        tempVar = 0
+                    else:
+                        for i in range(len(self.var) - 1):
+                            tempVar = f'{tempVar}{self.var[i]}'
+                    self.var = float(tempVar)
+                else:
+                    self.keyHeld[10] = False
+            if viz.key.isDown('-'):
+                if not self.keyHeld[11]:
+                    self.keyHeld[11] = True
+                    self.var = -self.var
+                else:
+                    self.keyHeld[11] = False
+
+            if viz.key.isDown(viz.KEY_RETURN):
+                self.drawn = False
+
+        if buttonPressed('reset', self.cObj[0], 0):
+            self.resetVar()
+
+        if not self.drawn:
+            self.unDraw()
+        return self.var
+
+    def drag(self, cIdx, selecting):
         pass
+
+    def draw(self, camCords):
+        self.textVar.message(f'{self.text}\n{round(self.var, 4)}')
+        angle, pos = camAnglePos(camCords, self.cords, 0)
+        self.textVar.setEuler(angle)
+
+    def setVar(self, var):
+        self.var = var
+
+    def resetVar(self):
+        self.var = self.origVar
+
+    def unDraw(self):
+        self.textVar.remove()
 
 
 class CircleAnim:
@@ -442,9 +512,15 @@ class GUISelector:
                         self.unDraw()
                         self.selectGUI(GUItypes)
                     elif self.stage == 'GUISelection':
-                        self.GUI.append(list(self.GUIs.keys())[p])
-                        self.unDraw()
-                        self.selectGUI(self.GUIs[list(self.GUIs.keys())[p]])
+                        if (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
+                            self.GUI.append(list(self.GUIs.keys())[p])
+                            self.GUI.append('def')
+                            self.stage = 'complete'
+                            break
+                        else:
+                            self.GUI.append(list(self.GUIs.keys())[p])
+                            self.unDraw()
+                            self.selectGUI(self.GUIs[list(self.GUIs.keys())[p]])
                     break
         else:
             self.sHeld = False
