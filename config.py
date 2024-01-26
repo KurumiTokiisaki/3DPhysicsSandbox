@@ -28,6 +28,15 @@ globalVars = {
     'friction': 0  # global frictional force coefficient. set to 'sticky' for infinite value.
 }
 
+defaultGlobalVars = {
+    'gameSpeed': 1,  # game speed factor
+    'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
+    'gasDensity': 0,  # density of all gases
+    'springConst': 2500,  # global spring constant (make negative to break the sandbox)
+    'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
+    'friction': 0  # global frictional force coefficient. set to 'sticky' for infinite value.
+}
+
 globalRanges = {
     'gameSpeed': [5, 0.1],  # [max, min]
     'gField': [15, -15],

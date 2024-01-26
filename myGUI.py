@@ -8,12 +8,13 @@ from globalFunctions import *
 
 
 class Slider:
-    def __init__(self, xyz, referenceVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
+    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
         self.type = 'slider'
         self.drawn = True
         self.xyz = xyz
         self.var = referenceVar
         self.origVar = referenceVar
+        self.globalOrigVar = globalDefaultVar
         self.cords = copy.deepcopy(cords)
         self.length = length
         self.limits = [self.cords[self.xyz] - (self.length / 2), cords[self.xyz] + (self.length / 2)]  # x/y/z (depending on the value of self.xyz) cords of both ends of the slider
@@ -66,9 +67,14 @@ class Slider:
         self.resetVar()
         self.cObj = [lController[0], rController[0]]  # controller objects
         self.cDat = [lController[1], rController[1]]  # controller point data
+        self.timePressed = 0
+        self.resetHeld = 0
 
-    def resetVar(self):  # reset the value of the reference variable to its initial value from when this class was initialized
-        self.pCords[self.xyz] = self.limits[0] + ((self.origVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
+    def resetVar(self, *args):  # reset the value of the reference variable to its initial value from when this class was initialized
+        if args:
+            self.pCords[self.xyz] = self.limits[0] + ((self.globalOrigVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
+        else:
+            self.pCords[self.xyz] = self.limits[0] + ((self.origVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
         self.oldPCords = copy.deepcopy(self.pCords)
 
     def setVar(self, var):  # set the reference variable to a specific value
@@ -88,8 +94,18 @@ class Slider:
                 self.pCords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
 
     def main(self):
-        if buttonPressed('reset', self.cObj[0], 0):
-            self.resetVar()
+        if self.timePressed <= 0.25:
+            self.timePressed += 1 / calcRate
+        if buttonPressed('reset', self.cObj, 0):
+            if not self.resetHeld:
+                self.resetHeld = True
+                if self.timePressed > 0.25:
+                    self.resetVar()
+                else:
+                    self.resetVar('hard')
+                self.timePressed = 0
+        else:
+            self.resetHeld = False
 
         for c in range(2):
             if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
@@ -103,7 +119,7 @@ class Slider:
             self.pCords[self.xyz] = copy.deepcopy(self.limits[1])
             self.oldPCords[self.xyz] = copy.deepcopy(self.pCords[self.xyz])
 
-        self.oldPCords[self.xyz] += 1.5 * getSign(self.pVelocity[self.xyz]) / (calcRate ** 2)  # adds some drag on the slider
+        self.oldPCords[self.xyz] += 0.015 * getSign(self.pVelocity[self.xyz]) / calcRate  # adds some drag on the slider
 
         if (abs(self.pVelocity[self.xyz]) < (10 ** -4)) and (not self.collision or not self.dragging):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
             self.oldPCords[self.xyz] = copy.deepcopy(self.pCords[self.xyz])
@@ -167,12 +183,13 @@ class XSymbol:
 
 
 class Dial:
-    def __init__(self, xyz, referenceVar, cords, cRad, pointRadius, mini, maxi, text, lController, rController):
+    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, cRad, pointRadius, mini, maxi, text, lController, rController):
         self.type = 'dial'
         self.drawn = True
         self.xyz = xyz
         self.var = referenceVar
         self.origVar = copy.deepcopy(referenceVar)
+        self.globalOrigVar = globalDefaultVar
         self.cRad = cRad
         self.cords = copy.deepcopy(cords)
         self.min = []
@@ -217,14 +234,24 @@ class Dial:
         self.closeButton = XSymbol(0.5, [self.cords[0], self.cords[1] + self.cRad + 0.5, self.cords[2]])
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
+        self.timePressed = 0
+        self.resetHeld = False
 
-    def resetVar(self):
-        if self.tDim:
-            for axis in range(3):
-                self.p.cords[axis] = self.cords[axis] - (self.origVar[axis] / self.range[axis]) * self.cRad * 2
+    def resetVar(self, *args):
+        if args:
+            if self.tDim:
+                for axis in range(3):
+                    self.p.cords[axis] = self.cords[axis] - (self.globalOrigVar[axis] / self.range[axis]) * self.cRad * 2
+            else:
+                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (self.globalOrigVar[self.axes[0]] / self.range[0]) * self.cRad * 2
+                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (self.globalOrigVar[self.axes[1]] / self.range[1]) * self.cRad * 2
         else:
-            self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (self.origVar[self.axes[0]] / self.range[0]) * self.cRad * 2
-            self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (self.origVar[self.axes[1]] / self.range[1]) * self.cRad * 2
+            if self.tDim:
+                for axis in range(3):
+                    self.p.cords[axis] = self.cords[axis] - (self.origVar[axis] / self.range[axis]) * self.cRad * 2
+            else:
+                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (self.origVar[self.axes[0]] / self.range[0]) * self.cRad * 2
+                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (self.origVar[self.axes[1]] / self.range[1]) * self.cRad * 2
         self.p.oldCords = copy.deepcopy(self.p.cords)
 
     def setVar(self, var):
@@ -242,8 +269,8 @@ class Dial:
             self.collision = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
             if self.collision:
                 if not self.tDim:
-                    self.p.cords[0] = copy.deepcopy(self.cDat[cIdx].cords[0])
-                    self.p.cords[1] = copy.deepcopy(self.cDat[cIdx].cords[1])
+                    self.p.cords[self.axes[0]] = copy.deepcopy(self.cDat[cIdx].cords[0])
+                    self.p.cords[self.axes[1]] = copy.deepcopy(self.cDat[cIdx].cords[1])
                 else:
                     self.p.cords = copy.deepcopy(self.cDat[cIdx].cords)
 
@@ -256,8 +283,18 @@ class Dial:
             self.var[self.axes[dim]] = -self.min[dim] - (self.range[dim] * ratio[dim])
 
     def main(self):
+        if self.timePressed <= 0.25:
+            self.timePressed += 1 / calcRate
         if buttonPressed('reset', self.cObj, 0):
-            self.resetVar()
+            if not self.resetHeld:
+                self.resetHeld = True
+                if self.timePressed > 0.25:
+                    self.resetVar()
+                else:
+                    self.resetVar('hard')
+                self.timePressed = 0
+        else:
+            self.resetHeld = False
 
         for c in range(2):
             if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
@@ -269,13 +306,13 @@ class Dial:
 
         if not self.tDim:
             movingAngle = getAbsTwoDAngle([0, 0], [self.p.velocity[self.axes[0]], self.p.velocity[self.axes[1]]])
-            self.p.oldCords[self.axes[0]] += 1.25 * getSign(self.p.velocity[self.axes[0]]) * sin(movingAngle) / (calcRate ** 2)  # adds some drag on the dial
-            self.p.oldCords[self.axes[1]] += 1.25 * getSign(self.p.velocity[self.axes[1]]) * cos(movingAngle) / (calcRate ** 2)
+            self.p.oldCords[self.axes[0]] += 0.015 * getSign(self.p.velocity[self.axes[0]]) * sin(movingAngle) / calcRate  # adds some drag on the dial
+            self.p.oldCords[self.axes[1]] += 0.015 * getSign(self.p.velocity[self.axes[1]]) * cos(movingAngle) / calcRate
         else:
             movingAngle = getAbsThreeDAngle([0, 0, 0], self.p.velocity, 'y')
-            self.p.oldCords[0] += 1.25 * getSign(self.p.velocity[0]) * cos(movingAngle[1]) * sin(movingAngle[0]) / (calcRate ** 2)  # adds some drag on the dial
-            self.p.oldCords[1] += 1.25 * getSign(self.p.velocity[1]) * sin(movingAngle[1]) / (calcRate ** 2)
-            self.p.oldCords[2] += 1.25 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / (calcRate ** 2)
+            self.p.oldCords[0] += 0.015 * getSign(self.p.velocity[0]) * cos(movingAngle[1]) * sin(movingAngle[0]) / calcRate  # adds some drag on the dial
+            self.p.oldCords[1] += 0.015 * getSign(self.p.velocity[1]) * sin(movingAngle[1]) / calcRate
+            self.p.oldCords[2] += 0.015 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / calcRate
 
         for axis in range(len(self.var)):
             if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging or not self.collision):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
@@ -324,17 +361,19 @@ class Dial:
         self.p.point.remove()
         if self.anim is not None:
             self.anim.unDraw()
-        self.circle[0].remove()
+        else:
+            self.circle[0].remove()
         self.textFront.remove()
         self.closeButton.unDraw()
 
 
 class Manual:
-    def __init__(self, xyz, referenceVar, cords, text, lController, rController):
+    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, text, lController, rController):
         self.xyz = xyz
         self.drawn = True
         self.var = referenceVar
         self.origVar = copy.deepcopy(referenceVar)
+        self.globalOrigVar = globalDefaultVar
         self.text = text
         self.cords = cords
         self.textVar = viz.addText3D('', fontSize=0.1)
@@ -345,8 +384,23 @@ class Manual:
         self.keyHeld = []
         for k in range(len(self.keys)):
             self.keyHeld.append(False)
+        self.timePressed = 0
+        self.resetHeld = False
 
     def main(self):
+        if self.timePressed <= 0.25:
+            self.timePressed += 1 / calcRate
+        if buttonPressed('reset', self.cObj, 0):
+            if not self.resetHeld:
+                self.resetHeld = True
+                if self.timePressed > 0.25:
+                    self.resetVar()
+                else:
+                    self.resetVar('hard')
+                self.timePressed = 0
+        else:
+            self.resetHeld = False
+
         if viz.key.anyDown(self.keys):
             for n in range(10):
                 if viz.key.isDown(f'{n}'):
@@ -379,9 +433,6 @@ class Manual:
             if viz.key.isDown(viz.KEY_RETURN):
                 self.drawn = False
 
-        if buttonPressed('reset', self.cObj[0], 0):
-            self.resetVar()
-
         if not self.drawn:
             self.unDraw()
         return self.var
@@ -397,8 +448,11 @@ class Manual:
     def setVar(self, var):
         self.var = var
 
-    def resetVar(self):
-        self.var = self.origVar
+    def resetVar(self, *args):
+        if args:
+            self.var = self.globalOrigVar
+        else:
+            self.var = self.origVar
 
     def unDraw(self):
         self.textVar.remove()
