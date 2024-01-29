@@ -8,7 +8,49 @@ from direct.showbase.ShowBase import ShowBase
 from direct.actor.Actor import Actor
 from panda3d.core import MeshDrawer2D
 from direct.showbase.ShowBaseGlobal import globalClock
-from globalFunctions import *
+
+
+# get the scalar distance between 2 coordinates
+def distance(cordOne, cordTwo):
+    diff = [0, 0, 0]
+    for d in range(3):
+        diff[d] = cordOne[d] - cordTwo[d]
+    return math.sqrt(diff[0] ** 2 + diff[1] ** 2 + diff[2] ** 2)
+
+
+def getThreeDAngle(cordOne, cordTwo, xyz):
+    diff = [0, 0, 0]
+    for d in range(3):
+        diff[d] = cordOne[d] - cordTwo[d]
+
+    # change order of angular calcs when calculating angles relative to x, y, or z
+    # by default, it will be x
+    if (not xyz) or (xyz == 'x'):
+        diffIdx = [2, 1, 0]
+    elif xyz == 'y':
+        diffIdx = [0, 2, 1]
+    elif xyz == 'z':
+        diffIdx = [0, 1, 2]
+
+    if diff[diffIdx[1]] != 0:
+        pitch = math.atan(diff[diffIdx[0]] / diff[diffIdx[1]])  # relative angle from x to z
+    else:
+        pitch = math.pi / 2
+    if (diff[diffIdx[0]] != 0) or (diff[diffIdx[1]] != 0):
+        yaw = math.atan(diff[diffIdx[2]] / math.sqrt(diff[diffIdx[1]] ** 2 + diff[diffIdx[0]] ** 2))  # relative angle from y to x/z
+    else:
+        yaw = math.pi / 2
+
+    return [pitch, yaw, 0]
+
+
+def getAbsTwoDAngle(cordOne, cordTwo):
+    diff = [0, 0]
+    for d in range(2):
+        diff[d] = abs(cordOne[d] - cordTwo[d])
+    if diff[1] == 0:
+        return math.pi / 2
+    return math.atan(diff[0] / diff[1])
 
 
 class Main(ShowBase):
@@ -77,6 +119,7 @@ class Point(Actor):
 
     def physics(self):
         self.circularMotion(hadronCollider)
+        self.force = copy.deepcopy(self.circularForce)
 
         self.acceleration = self.force / self.mass
         for axis in range(3):
@@ -96,8 +139,10 @@ class Point(Actor):
         radius = distance(c.cords, self.cords)
         resultV = math.sqrt(self.velocity[0] ** 2 + self.velocity[1] ** 2 + self.velocity[2] ** 2)
         resultF = self.mass * (resultV ** 2) / radius
-        angle = getThreeDAngle(c.cords, self.cords, 'y')
-        self.circularForce[0] = resultF * sin(angle[0]) * cos(angle[1])
+        # angle = getThreeDAngle(c.cords, self.cords, 'y')
+        angle = getAbsTwoDAngle(c.cords, self.cords)
+        self.circularForce[0] = resultF * math.sin(angle)  # * math.cos(angle[1])
+        self.circularForce[1] = resultF * math.cos(angle)
 
     def updateSize(self):
         self.set_scale(self.radius)
@@ -113,7 +158,7 @@ class Collider:
 
 game = Main()
 
-game.createPoint(1, Vec3(0, 100, 0), Vec3(0, 100, 0))
+game.createPoint(1, Vec3(0, 10, 0), Vec3(-0.01, 10, 0))
 hadronCollider = Collider(69, 10, 1)
 # game.createPoint(2, Vec3(-33, 100, 0), Vec3(-33, 100, 0))
 

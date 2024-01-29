@@ -41,13 +41,13 @@ globalRanges = {
     'gameSpeed': [5, 0.1],  # [max, min]
     'gField': [15, -15],
     'gasDensity': [10000, 0],
-    'springConst': [5000, 0],
+    'springConst': [10000, 0],
     'damping': [2, 0],
     'friction': [2, 0]
 }
 
 mode = 'k'  # controller mode (keyboard/mouse or VR)
-calcRate = 165  # physics calculations/second (higher number means more accurate physics but lower framerate)
+calcRate = 500  # physics calculations/second (higher number means more accurate physics but lower framerate)
 physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
 
 # controls for keyboard/VR

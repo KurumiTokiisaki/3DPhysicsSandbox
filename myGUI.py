@@ -12,9 +12,9 @@ class Slider:
         self.type = 'slider'
         self.drawn = True
         self.xyz = xyz
-        self.var = referenceVar
-        self.origVar = referenceVar
-        self.globalOrigVar = globalDefaultVar
+        self.var = float(referenceVar)
+        self.origVar = copy.deepcopy(float(referenceVar))
+        self.globalOrigVar = float(globalDefaultVar)
         self.cords = copy.deepcopy(cords)
         self.length = length
         self.limits = [self.cords[self.xyz] - (self.length / 2), cords[self.xyz] + (self.length / 2)]  # x/y/z (depending on the value of self.xyz) cords of both ends of the slider
@@ -78,6 +78,7 @@ class Slider:
         self.oldPCords = copy.deepcopy(self.pCords)
 
     def setVar(self, var):  # set the reference variable to a specific value
+        var = float(var)
         if (not self.dragging) or (not self.collision):
             self.pCords[self.xyz] = self.limits[0] + ((var + abs(self.min) * -getSign(self.min)) / self.range) * self.length
 
@@ -187,9 +188,9 @@ class Dial:
         self.type = 'dial'
         self.drawn = True
         self.xyz = xyz
-        self.var = referenceVar
-        self.origVar = copy.deepcopy(referenceVar)
-        self.globalOrigVar = globalDefaultVar
+        self.var = float(referenceVar)
+        self.origVar = copy.deepcopy(float(referenceVar))
+        self.globalOrigVar = float(globalDefaultVar)
         self.cRad = cRad
         self.cords = copy.deepcopy(cords)
         self.min = []
@@ -255,6 +256,8 @@ class Dial:
         self.p.oldCords = copy.deepcopy(self.p.cords)
 
     def setVar(self, var):
+        for v in range(len(var)):
+            var[v] = float(var[v])
         if (not self.dragging) or (not self.collision):
             if self.tDim:
                 for axis in range(3):
@@ -371,23 +374,30 @@ class Manual:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, text, lController, rController):
         self.xyz = xyz
         self.drawn = True
-        self.var = referenceVar
-        self.origVar = copy.deepcopy(referenceVar)
-        self.globalOrigVar = globalDefaultVar
+        self.var = float(referenceVar)
+        self.origVar = copy.deepcopy(float(referenceVar))
+        self.globalOrigVar = float(globalDefaultVar)
         self.text = text
-        self.cords = cords
+        self.cords = copy.deepcopy(cords)
         self.textVar = viz.addText3D('', fontSize=0.1)
+        self.indicator = viz.addText3D('', fontSize=0.1)
+        self.spacing = '|'
+        self.spaces = 0
         self.textVar.setPosition(self.cords)
+        self.indicator.setPosition(self.cords[0], self.cords[1] - 0.1, self.cords[2])  # offset the indicator to be on the same line as self.var
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
-        self.keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', viz.KEY_BACKSPACE, '-', viz.KEY_RETURN]
+        self.keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', viz.KEY_BACKSPACE, '-', viz.KEY_RETURN, viz.KEY_RIGHT, viz.KEY_LEFT]
         self.keyHeld = []
         for k in range(len(self.keys)):
             self.keyHeld.append(False)
         self.timePressed = 0
+        self.offset = 0
+        self.decIdx = 0
         self.resetHeld = False
 
     def main(self):
+        print(str(self.var)[int(self.spaces / 2) - 1])
         if self.timePressed <= 0.25:
             self.timePressed += 1 / calcRate
         if buttonPressed('reset', self.cObj, 0):
@@ -401,51 +411,87 @@ class Manual:
         else:
             self.resetHeld = False
 
+        for k in range(len(self.keys)):
+            if not viz.key.isDown(self.keys[k]):
+                self.keyHeld[k] = False
         if viz.key.anyDown(self.keys):
             for n in range(10):
                 if viz.key.isDown(f'{n}'):
                     if not self.keyHeld[n]:
-                        self.var = float(f'{self.var}{n}')
                         self.keyHeld[n] = True
+                        self.var = str(self.var)
+                        tempStr = ''
+                        for c in range(len(self.var) + 1):
+                            if c == int(self.spaces / 2):
+                                tempStr = f'{tempStr}{n}'
+                            if c < len(self.var):
+                                tempStr = f'{tempStr}{self.var[c]}'
+                        self.var = float(tempStr)
+                        print(self.var, tempStr)
+                        self.spaces += 2
                         break
-                else:
-                    self.keyHeld[n] = False
-            if viz.key.isDown(viz.KEY_BACKSPACE):
+            if viz.key.isDown(self.keys[10]):
                 if not self.keyHeld[10]:
                     self.keyHeld[10] = True
-                    tempVar = ''
                     self.var = str(self.var)
-                    if len(self.var) == 1:
-                        tempVar = 0
+                    tempStr = ''
+                    if self.var[int(self.spaces / 2) - 1] != '.':
+                        for c in range(len(self.var)):
+                            if c != (int(self.spaces / 2) - 1):
+                                tempStr = f'{tempStr}{self.var[c]}'
                     else:
-                        for i in range(len(self.var) - 1):
-                            tempVar = f'{tempVar}{self.var[i]}'
-                    self.var = float(tempVar)
-                else:
-                    self.keyHeld[10] = False
-            if viz.key.isDown('-'):
+                        tempStr = self.var
+                    if len(self.spacing) > 1:
+                        self.spaces -= 2
+                    self.var = float(tempStr)
+
+            if viz.key.isDown(self.keys[11]):
                 if not self.keyHeld[11]:
                     self.keyHeld[11] = True
                     self.var = -self.var
-                else:
-                    self.keyHeld[11] = False
 
-            if viz.key.isDown(viz.KEY_RETURN):
+            if viz.key.isDown(self.keys[12]):
                 self.drawn = False
+            for c in range(len(str(self.var))):
+                if str(self.var)[c] == '.':
+                    self.decIdx = c
+            if viz.key.isDown(self.keys[13]):
+                if not self.keyHeld[13]:
+                    self.keyHeld[13] = True
+                    self.spaces += 2
+            if viz.key.isDown(self.keys[14]):
+                if not self.keyHeld[14]:
+                    self.keyHeld[14] = True
+                    if len(self.spacing) > 1:
+                        self.spaces -= 2
+
+            if int(self.spaces / 2) >= self.decIdx:
+                self.offset = -1
+            else:
+                self.offset = 0
+            tempStr = ''
+            for s in range(self.spaces + self.offset):
+                tempStr = f' {tempStr}'
+            tempStr = f'{tempStr}|'
+            self.spacing = tempStr
 
         if not self.drawn:
             self.unDraw()
+
         return self.var
 
     def drag(self, cIdx, selecting):
         pass
 
     def draw(self, camCords):
-        self.textVar.message(f'{self.text}\n{round(self.var, 4)}')
+        self.textVar.message(f'{self.text}\n{self.var}')
+        self.indicator.message(f'{self.spacing}')
         angle, pos = camAnglePos(camCords, self.cords, 0)
         self.textVar.setEuler(angle)
+        self.indicator.setEuler(angle)  # fix this later
 
     def setVar(self, var):
+        var = float(var)
         self.var = var
 
     def resetVar(self, *args):
@@ -456,6 +502,7 @@ class Manual:
 
     def unDraw(self):
         self.textVar.remove()
+        self.indicator.remove()
 
 
 class CircleAnim:
