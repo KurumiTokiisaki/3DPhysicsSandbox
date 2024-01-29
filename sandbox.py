@@ -48,7 +48,7 @@ class Main:
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
-        self.GUI = {
+        self.GUI = {  # dict of all GUIs
             'gameSpeed': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'gField': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'X': None, 'Y': None, 'Z': None}},
             'gasDensity': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
@@ -56,7 +56,7 @@ class Main:
             'damping': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'friction': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'GUISelector': {'': {'': None}}
-        }  # dict of GUIs
+        }
         self.diff = []  # scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
         self.dragP = [None, None]  # last clicked point index
@@ -74,15 +74,18 @@ class Main:
             self.keyHeld.append(False)
         self.GUISelector = False  # stores if the button to summon the GUI selector is held
         self.returnHeld = False  # stores if 'return' is held down
+        self.selectHeld = False
         self.anim = []
         self.collP = [None, None]
         self.animeScale = [1, 1]
         self.animeScaleSpeed = 0
         self.animeColor = [[0, 0, 0], [0, 0, 0]]
         self.GUIType = None
+        self.clickTime = [0, 0]
 
     def initLists(self):
         for p in range(len(self.points)):
+            self.GUI.update({p: {'slider': {'radius': None, 'density': None}, 'manual': {'radius': None, 'density': None}}})
             for _ in range(len(self.collisionRect)):
                 self.points[p].collision.append('')
                 self.points[p].lastCollision.append('')
@@ -209,9 +212,12 @@ class Main:
 
     # used to drag points around using pointer/controller
     def dragPoint(self):
-        # print(controlsConf.controllers[0].getButtonState(), controlsConf.controllers[1].getButtonState())
-        # print(self.lastP)
+        if mode == 'vr':
+            print(controlsConf.controllers[0].getButtonState(), controlsConf.controllers[1].getButtonState())  # prints the current button being pressed for each controller
+
         for c in range(controlsConf.controllerAmt):
+            if self.clickTime[c] <= 0.25:
+                self.clickTime[c] += 1 / calcRate
             for g in self.GUI:
                 for gu in self.GUI[g]:
                     for gui in self.GUI[g][gu]:
@@ -221,6 +227,19 @@ class Main:
                 if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
                     self.collP[c] = p
                     if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
+                        # if buttonPressed('select', controlsConf.controllers[c], c):
+                        if not self.selectHeld:
+                            self.selectHeld = True
+                            if self.clickTime[c] < 0.25:
+                                cords = controls.hand[c].cords
+                                if self.GUI[p]['slider']['radius'] is None:
+                                    self.GUI[p]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].radius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, 1, 0.1, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                if self.GUI[p]['slider']['density'] is None:
+                                    self.GUI[p]['slider']['density'] = myGUI.Slider(0, self.points[p].density, self.points[p].radius, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                    self.GUI[p]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
+                                    self.GUI[p]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                            else:
+                                self.clickTime[c] = 0
                         if self.dragP[c] is None:  # used to set the drag variables if they are not already set
                             self.dragP[c] = p
                             if self.lastP[c] != p:
@@ -229,6 +248,8 @@ class Main:
                                         self.lastP[c] = p
                                 else:
                                     self.lastP[c] = p
+                    else:
+                        self.selectHeld = False
             if self.dragP[c] is not None:
                 self.points[self.dragP[c]].cords = copy.deepcopy(controls.hand[c].cords)  # set the point position to the controller (that grabbed that point)'s position
             # unique animation for selecting points
@@ -326,12 +347,20 @@ class Main:
                             if g == 'GUISelector':
                                 self.GUIType = self.GUI[g][gt][gta].main()
                             else:
-                                if (type(globalVars[g]) is list) and ((gt == 'slider') or (gt == 'manual')):
-                                    self.GUI[g][gt][gta].setVar(globalVars[g][self.GUI[g][gt][gta].xyz])
-                                    globalVars[g][self.GUI[g][gt][gta].xyz] = self.GUI[g][gt][gta].main()
+                                if type(g) is not int:
+                                    if (type(globalVars[g]) is list) and ((gt == 'slider') or (gt == 'manual')):
+                                        self.GUI[g][gt][gta].setVar(globalVars[g][self.GUI[g][gt][gta].xyz])
+                                        globalVars[g][self.GUI[g][gt][gta].xyz] = self.GUI[g][gt][gta].main()
+                                    else:
+                                        self.GUI[g][gt][gta].setVar(globalVars[g])
+                                        globalVars[g] = self.GUI[g][gt][gta].main()
                                 else:
-                                    self.GUI[g][gt][gta].setVar(globalVars[g])
-                                    globalVars[g] = self.GUI[g][gt][gta].main()
+                                    if gta == 'radius':
+                                        self.GUI[g][gt][gta].setVar(self.points[g].radius)
+                                        self.points[g].setRadiusDensity(self.GUI[g][gt][gta].main(), self.points[g].density)
+                                    elif gta == 'density':
+                                        self.GUI[g][gt][gta].setVar(self.points[g].density)
+                                        self.points[g].setRadiusDensity(self.points[g].radius, self.GUI[g][gt][gta].main())
                         else:
                             self.GUI[g][gt][gta] = None
 
@@ -440,11 +469,12 @@ class Point:
 
     def setRadiusDensity(self, radius, density):
         self.radius = radius
+        self.density = density
         self.diameter = self.radius * 2
         self.volume = 4 / 3 * math.pi * self.radius ** 3
         self.halfArea = 2 * math.pi * self.radius ** 2
-        self.mass = density * self.volume
-        self.weight = self.mass * globalVars['gField']
+        self.mass = self.density * self.volume
+        self.weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]
         if self.show:
             self.sphere.remove()
             self.sphere = vizshape.addSphere(radius, slices=pointResolution)

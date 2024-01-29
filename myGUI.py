@@ -5,7 +5,7 @@ import random
 import viz
 import vizshape
 from globalFunctions import *
-
+mode = 'vr'
 
 class Slider:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
@@ -393,25 +393,37 @@ class Manual:
         self.collP = []
         self.keypadTexts = []
         if mode == 'vr':
+            # add & display variable information
             self.textVarPos = [self.cords[0] + 1, self.cords[1] + 1, self.cords[2]]
             self.boxes.append(vizshape.addBox())
             self.boxPos.append([self.cords[0] + 1, self.cords[1] - 3, self.cords[2]])
-            self.keypadTexts.append(viz.addText3D('0', fontSize=0.1))
+            self.keypadTexts.append(viz.addText3D('0', fontSize=0.2))
+
+            # add & display the number keys
             for y in range(3):
                 for x in range(3):
                     self.boxes.append(vizshape.addBox())
                     self.boxPos.append([self.cords[0] + x, self.cords[1] - y, self.cords[2]])
-                    self.keypadTexts.append(viz.addText3D(f'{(x + 1) * (y + 1)}', fontSize=0.1))
+                    self.keypadTexts.append(viz.addText3D(f'{(y * 3) + (x + 1)}', fontSize=0.2))
+
+            # add & display the forward/back keys
             for b in range(2):
                 self.boxes.append(vizshape.addBox())
                 self.boxPos.append([self.cords[0] + (b * 2), self.cords[1] + 1, self.cords[2]])
                 if b == 0:
-                    self.keypadTexts.append(viz.addText3D('<-', fontSize=0.1))
+                    self.keypadTexts.append(viz.addText3D('<-', fontSize=0.2))
                 elif b == 1:
-                    self.keypadTexts.append(viz.addText3D('->', fontSize=0.1))
+                    self.keypadTexts.append(viz.addText3D('->', fontSize=0.2))
+
+            # add & display the delete key
             self.boxes.append(vizshape.addBox())
             self.boxPos.append([self.cords[0] + 2, self.cords[1] - 3, self.cords[2]])
-            self.keypadTexts.append(viz.addText3D('DEL', fontSize=0.1))
+            self.keypadTexts.append(viz.addText3D('DEL', fontSize=0.2))
+
+            # add & display the negative key
+            self.boxes.append(vizshape.addBox())
+            self.boxPos.append([self.cords[0], self.cords[1] - 3, self.cords[2]])
+            self.keypadTexts.append(viz.addText3D('-', fontSize=0.2))
 
             for b in range(len(self.boxes)):
                 self.boxes[b].alpha(0.3)
@@ -433,20 +445,20 @@ class Manual:
         for k in range(len(self.keys)):
             self.keyHeld.append(False)
         self.timePressed = 0
-        self.offset = 0
+        self.offset = [0, 0]
         self.decIdx = 0
         self.resetHeld = False
         self.selecting = False
         self.sHeld = True
         self.collision = False
         self.selectionIdx = None
-        self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete']
+        self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete', '-']
 
     def addToVar(self, number):
         self.var = str(self.var)
         tempStr = ''
         for c in range(len(self.var) + 1):
-            if c == int(self.spaces / 2):
+            if c == (int(self.spaces / 2) + self.offset[1]):
                 tempStr = f'{tempStr}{number}'
             if c < len(self.var):
                 tempStr = f'{tempStr}{self.var[c]}'
@@ -457,7 +469,7 @@ class Manual:
     def removeFromVar(self):
         self.var = str(self.var)
         tempStr = ''
-        if self.var[int(self.spaces / 2) - 1] != '.':
+        if (self.var[int(self.spaces / 2) - 1] != '.') and (self.var[int(self.spaces / 2) - 1] != '-'):
             for c in range(len(self.var)):
                 if c != (int(self.spaces / 2) - 1):
                     tempStr = f'{tempStr}{self.var[c]}'
@@ -468,10 +480,11 @@ class Manual:
         self.var = float(tempStr)
 
     def main(self):
-        for c in range(2):
-            if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
-                self.unDraw()
-                self.drawn = False
+        if mode == 'vr':
+            for c in range(2):
+                if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
+                    self.unDraw()
+                    self.drawn = False
 
         if self.timePressed <= 0.25:
             self.timePressed += 1 / calcRate
@@ -490,9 +503,14 @@ class Manual:
             if str(self.var)[c] == '.':
                 self.decIdx = c
         if int(self.spaces / 2) >= self.decIdx:
-            self.offset = -1
+            self.offset[0] = -1
         else:
-            self.offset = 0
+            self.offset[0] = 0
+
+        if str(self.var)[0] == '-':
+            self.offset[1] = 1
+        else:
+            self.offset[1] = 0
 
         if mode == 'k':
             for k in range(len(self.keys)):
@@ -524,7 +542,7 @@ class Manual:
                 if viz.key.isDown(self.keys[14]):
                     if not self.keyHeld[14]:
                         self.keyHeld[14] = True
-                        if len(self.spacing) > 1:
+                        if self.spaces > 1:
                             self.spaces -= 2
 
         else:
@@ -534,15 +552,17 @@ class Manual:
                 if selection == 'right':
                     self.spaces += 2
                 elif selection == 'left':
-                    if len(self.spacing) > 1:
+                    if self.spaces > 1:
                         self.spaces -= 2
                 elif selection == 'delete':
                     self.removeFromVar()
+                elif selection == '-':
+                    self.var = -self.var
                 else:
                     self.addToVar(selection)
 
         tempStr = ''
-        for s in range(self.spaces + self.offset):
+        for s in range(self.spaces + self.offset[0] + self.offset[1]):
             tempStr = f' {tempStr}'
         tempStr = f'{tempStr}|'
         self.spacing = tempStr
