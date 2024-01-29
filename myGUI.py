@@ -5,7 +5,7 @@ import random
 import viz
 import vizshape
 from globalFunctions import *
-mode = 'vr'
+
 
 class Slider:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
@@ -463,7 +463,6 @@ class Manual:
             if c < len(self.var):
                 tempStr = f'{tempStr}{self.var[c]}'
         self.var = float(tempStr)
-        print(self.var, tempStr)
         self.spaces += 2
 
     def removeFromVar(self):
@@ -547,7 +546,6 @@ class Manual:
 
         else:
             if self.selectionIdx is not None:
-                print(self.selections[self.selectionIdx])
                 selection = self.selections[self.selectionIdx]
                 if selection == 'right':
                     self.spaces += 2
