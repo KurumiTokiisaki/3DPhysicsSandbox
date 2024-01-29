@@ -38,7 +38,6 @@ viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
 
 def selectP(cIdx):
     return buttonPressed('select', controlsConf.controllers[cIdx], cIdx)
-    # return ((mode == 'k') and (viz.mouse.getState() == cConf.controls['select'])) or ((mode == 'vr') and (steamVR_init.controllers[cIdx].getButtonState() == cConf.controls['select']))
 
 
 # Main class for main.py
@@ -423,7 +422,8 @@ class Point:
         self.radius = radius
         self.diameter = self.radius * 2
         if self.show:
-            self.sphere = vizshape.addSphere(radius, slices=pointResolution)  # vizard object for sphere
+            self.sphere = vizshape.addSphere(1, slices=pointResolution)  # vizard object for sphere
+            self.sphere.setScale([self.radius, self.radius, self.radius])
         self.cords = [0, 0, 0]
         self.oldCords = [0, 0, 0]  # coordinate position from last frame
         self.velocity = [0, 0, 0]
@@ -476,8 +476,7 @@ class Point:
         self.mass = self.density * self.volume
         self.weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]
         if self.show:
-            self.sphere.remove()
-            self.sphere = vizshape.addSphere(radius, slices=pointResolution)
+            self.sphere.setScale([self.radius, self.radius, self.radius])
 
     def move(self):
         self.weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]
