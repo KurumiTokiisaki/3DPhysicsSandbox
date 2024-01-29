@@ -176,6 +176,10 @@ class XSymbol:
         for c in range(len(self.X)):
             self.X[c].setPosition(self.cords)
 
+    def setAngle(self, angle):
+        self.X[0].setEuler(angle[0] + 90, angle[1] + 45, angle[2])
+        self.X[1].setEuler(angle[0] + 90, angle[1] + 135, angle[2])
+
     def unDraw(self):
         self.X[0].remove()
         self.X[1].remove()
@@ -188,8 +192,10 @@ class Dial:
         self.type = 'dial'
         self.drawn = True
         self.xyz = xyz
-        self.var = float(referenceVar)
-        self.origVar = copy.deepcopy(float(referenceVar))
+        self.var = []
+        for v in referenceVar:
+            self.var.append(float(v))
+        self.origVar = copy.deepcopy(self.var)
         self.globalOrigVar = float(globalDefaultVar)
         self.cRad = cRad
         self.cords = copy.deepcopy(cords)
@@ -373,6 +379,8 @@ class Dial:
 class Manual:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, text, lController, rController):
         self.xyz = xyz
+        self.cObj = [lController[0], rController[0]]
+        self.cDat = [lController[1], rController[1]]
         self.drawn = True
         self.var = float(referenceVar)
         self.origVar = copy.deepcopy(float(referenceVar))
@@ -380,24 +388,91 @@ class Manual:
         self.text = text
         self.cords = copy.deepcopy(cords)
         self.textVar = viz.addText3D('', fontSize=0.1)
+        self.boxes = []
+        self.boxPos = []
+        self.collP = []
+        self.keypadTexts = []
+        if mode == 'vr':
+            self.textVarPos = [self.cords[0] + 1, self.cords[1] + 1, self.cords[2]]
+            self.boxes.append(vizshape.addBox())
+            self.boxPos.append([self.cords[0] + 1, self.cords[1] - 3, self.cords[2]])
+            self.keypadTexts.append(viz.addText3D('0', fontSize=0.1))
+            for y in range(3):
+                for x in range(3):
+                    self.boxes.append(vizshape.addBox())
+                    self.boxPos.append([self.cords[0] + x, self.cords[1] - y, self.cords[2]])
+                    self.keypadTexts.append(viz.addText3D(f'{(x + 1) * (y + 1)}', fontSize=0.1))
+            for b in range(2):
+                self.boxes.append(vizshape.addBox())
+                self.boxPos.append([self.cords[0] + (b * 2), self.cords[1] + 1, self.cords[2]])
+                if b == 0:
+                    self.keypadTexts.append(viz.addText3D('<-', fontSize=0.1))
+                elif b == 1:
+                    self.keypadTexts.append(viz.addText3D('->', fontSize=0.1))
+            self.boxes.append(vizshape.addBox())
+            self.boxPos.append([self.cords[0] + 2, self.cords[1] - 3, self.cords[2]])
+            self.keypadTexts.append(viz.addText3D('DEL', fontSize=0.1))
+
+            for b in range(len(self.boxes)):
+                self.boxes[b].alpha(0.3)
+                self.boxes[b].setPosition(self.boxPos[b])
+                self.keypadTexts[b].setPosition(self.boxPos[b])
+                self.collP.append(Point(0.5 - self.cDat[1].radius, False))
+                self.collP[b].cords = self.boxPos[b]
+
+            self.closeButton = XSymbol(0.5, self.textVarPos)
+        else:
+            self.textVarPos = self.cords
         self.indicator = viz.addText3D('', fontSize=0.1)
         self.spacing = '|'
         self.spaces = 0
-        self.textVar.setPosition(self.cords)
-        self.indicator.setPosition(self.cords[0], self.cords[1] - 0.1, self.cords[2])  # offset the indicator to be on the same line as self.var
-        self.cObj = [lController[0], rController[0]]
-        self.cDat = [lController[1], rController[1]]
+        self.indicator.setPosition(self.textVarPos[0], self.textVarPos[1] - 0.1, self.textVarPos[2])  # offset the indicator to be on the same line as self.var
         self.keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', viz.KEY_BACKSPACE, '-', viz.KEY_RETURN, viz.KEY_RIGHT, viz.KEY_LEFT]
         self.keyHeld = []
+        self.textVar.setPosition(self.textVarPos)
         for k in range(len(self.keys)):
             self.keyHeld.append(False)
         self.timePressed = 0
         self.offset = 0
         self.decIdx = 0
         self.resetHeld = False
+        self.selecting = False
+        self.sHeld = True
+        self.collision = False
+        self.selectionIdx = None
+        self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete']
+
+    def addToVar(self, number):
+        self.var = str(self.var)
+        tempStr = ''
+        for c in range(len(self.var) + 1):
+            if c == int(self.spaces / 2):
+                tempStr = f'{tempStr}{number}'
+            if c < len(self.var):
+                tempStr = f'{tempStr}{self.var[c]}'
+        self.var = float(tempStr)
+        print(self.var, tempStr)
+        self.spaces += 2
+
+    def removeFromVar(self):
+        self.var = str(self.var)
+        tempStr = ''
+        if self.var[int(self.spaces / 2) - 1] != '.':
+            for c in range(len(self.var)):
+                if c != (int(self.spaces / 2) - 1):
+                    tempStr = f'{tempStr}{self.var[c]}'
+        else:
+            tempStr = self.var
+        if len(self.spacing) > 1:
+            self.spaces -= 2
+        self.var = float(tempStr)
 
     def main(self):
-        print(str(self.var)[int(self.spaces / 2) - 1])
+        for c in range(2):
+            if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
+                self.unDraw()
+                self.drawn = False
+
         if self.timePressed <= 0.25:
             self.timePressed += 1 / calcRate
         if buttonPressed('reset', self.cObj, 0):
@@ -411,69 +486,66 @@ class Manual:
         else:
             self.resetHeld = False
 
-        for k in range(len(self.keys)):
-            if not viz.key.isDown(self.keys[k]):
-                self.keyHeld[k] = False
-        if viz.key.anyDown(self.keys):
-            for n in range(10):
-                if viz.key.isDown(f'{n}'):
-                    if not self.keyHeld[n]:
-                        self.keyHeld[n] = True
-                        self.var = str(self.var)
-                        tempStr = ''
-                        for c in range(len(self.var) + 1):
-                            if c == int(self.spaces / 2):
-                                tempStr = f'{tempStr}{n}'
-                            if c < len(self.var):
-                                tempStr = f'{tempStr}{self.var[c]}'
-                        self.var = float(tempStr)
-                        print(self.var, tempStr)
+        for c in range(len(str(self.var))):
+            if str(self.var)[c] == '.':
+                self.decIdx = c
+        if int(self.spaces / 2) >= self.decIdx:
+            self.offset = -1
+        else:
+            self.offset = 0
+
+        if mode == 'k':
+            for k in range(len(self.keys)):
+                if not viz.key.isDown(self.keys[k]):
+                    self.keyHeld[k] = False
+            if viz.key.anyDown(self.keys):
+                for n in range(10):
+                    if viz.key.isDown(f'{n}'):
+                        if not self.keyHeld[n]:
+                            self.keyHeld[n] = True
+                            self.addToVar(n)
+                            break
+                if viz.key.isDown(self.keys[10]):
+                    if not self.keyHeld[10]:
+                        self.keyHeld[10] = True
+                        self.removeFromVar()
+
+                if viz.key.isDown(self.keys[11]):
+                    if not self.keyHeld[11]:
+                        self.keyHeld[11] = True
+                        self.var = -self.var
+
+                if viz.key.isDown(self.keys[12]):
+                    self.drawn = False
+                if viz.key.isDown(self.keys[13]):
+                    if not self.keyHeld[13]:
+                        self.keyHeld[13] = True
                         self.spaces += 2
-                        break
-            if viz.key.isDown(self.keys[10]):
-                if not self.keyHeld[10]:
-                    self.keyHeld[10] = True
-                    self.var = str(self.var)
-                    tempStr = ''
-                    if self.var[int(self.spaces / 2) - 1] != '.':
-                        for c in range(len(self.var)):
-                            if c != (int(self.spaces / 2) - 1):
-                                tempStr = f'{tempStr}{self.var[c]}'
-                    else:
-                        tempStr = self.var
-                    if len(self.spacing) > 1:
-                        self.spaces -= 2
-                    self.var = float(tempStr)
+                if viz.key.isDown(self.keys[14]):
+                    if not self.keyHeld[14]:
+                        self.keyHeld[14] = True
+                        if len(self.spacing) > 1:
+                            self.spaces -= 2
 
-            if viz.key.isDown(self.keys[11]):
-                if not self.keyHeld[11]:
-                    self.keyHeld[11] = True
-                    self.var = -self.var
-
-            if viz.key.isDown(self.keys[12]):
-                self.drawn = False
-            for c in range(len(str(self.var))):
-                if str(self.var)[c] == '.':
-                    self.decIdx = c
-            if viz.key.isDown(self.keys[13]):
-                if not self.keyHeld[13]:
-                    self.keyHeld[13] = True
+        else:
+            if self.selectionIdx is not None:
+                print(self.selections[self.selectionIdx])
+                selection = self.selections[self.selectionIdx]
+                if selection == 'right':
                     self.spaces += 2
-            if viz.key.isDown(self.keys[14]):
-                if not self.keyHeld[14]:
-                    self.keyHeld[14] = True
+                elif selection == 'left':
                     if len(self.spacing) > 1:
                         self.spaces -= 2
+                elif selection == 'delete':
+                    self.removeFromVar()
+                else:
+                    self.addToVar(selection)
 
-            if int(self.spaces / 2) >= self.decIdx:
-                self.offset = -1
-            else:
-                self.offset = 0
-            tempStr = ''
-            for s in range(self.spaces + self.offset):
-                tempStr = f' {tempStr}'
-            tempStr = f'{tempStr}|'
-            self.spacing = tempStr
+        tempStr = ''
+        for s in range(self.spaces + self.offset):
+            tempStr = f' {tempStr}'
+        tempStr = f'{tempStr}|'
+        self.spacing = tempStr
 
         if not self.drawn:
             self.unDraw()
@@ -481,14 +553,36 @@ class Manual:
         return self.var
 
     def drag(self, cIdx, selecting):
-        pass
+        if mode == 'vr':
+            self.selecting = selecting
+            if self.selecting:
+                if not self.sHeld:
+                    self.sHeld = True
+                    for p in range(len(self.collP)):
+                        self.collision = detectCollision(self.cDat[cIdx].radius, self.collP[p].radius, self.cDat[cIdx].cords, self.collP[p].cords)
+                        if self.collision:
+                            self.selectionIdx = p
+                else:
+                    self.selectionIdx = None
+            else:
+                self.sHeld = False
 
     def draw(self, camCords):
         self.textVar.message(f'{self.text}\n{self.var}')
         self.indicator.message(f'{self.spacing}')
-        angle, pos = camAnglePos(camCords, self.cords, 0)
-        self.textVar.setEuler(angle)
-        self.indicator.setEuler(angle)  # fix this later
+        if mode == 'vr':
+            self.textVarPos = [camCords[0], camCords[1], camCords[2] + 1]
+            self.textVar.setPosition(self.textVarPos)
+            self.indicator.setPosition(self.textVarPos[0], self.textVarPos[1] - 0.1, self.textVarPos[2])
+            angle, pos = camAnglePos(camCords, self.closeButton.cords, 0)
+            self.closeButton.setAngle(angle)
+        else:
+            angle, pos = camAnglePos(camCords, self.textVarPos, 0)
+            self.textVar.setEuler(angle)
+            self.indicator.setEuler(angle)  # fix this later
+        for b in range(len(self.boxPos)):
+            angle, pos = camAnglePos(camCords, self.boxPos[b], 0)
+            self.keypadTexts[b].setEuler(angle)
 
     def setVar(self, var):
         var = float(var)
@@ -501,8 +595,14 @@ class Manual:
             self.var = self.origVar
 
     def unDraw(self):
-        self.textVar.remove()
+        if mode == 'vr':
+            self.closeButton.unDraw()
         self.indicator.remove()
+        self.textVar.remove()
+        for t in self.keypadTexts:
+            t.remove()
+        for b in self.boxes:
+            b.remove()
 
 
 class CircleAnim:

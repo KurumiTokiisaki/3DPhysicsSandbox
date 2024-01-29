@@ -348,7 +348,8 @@ class Main:
                 else:
                     xyz = 2
                 if type(globalVars[self.GUIType[0]]) is list:  # if the quantity is a vector, xyz effects visuals and direction
-                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Slider(xyz, globalVars[self.GUIType[0]][xyz], defaultGlobalVars[self.GUIType[0]][xyz], controls.hand[0].cords, 5, 0.15, globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][1], self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Slider(xyz, globalVars[self.GUIType[0]][xyz], defaultGlobalVars[self.GUIType[0]][xyz], controls.hand[0].cords, 5, 0.15, globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][1], self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]],
+                                                                                                             [controlsConf.controllers[1], controls.hand[1]])
                 else:  # if the quantity is a scalar, xyz only effects visuals
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Slider(xyz, globalVars[self.GUIType[0]], defaultGlobalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][1], self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             elif self.GUIType[1][0] == 'Dial':
@@ -363,10 +364,12 @@ class Main:
                         xyz = 1
                     else:
                         xyz = 2
-                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = myGUI.Dial(xyz, globalVars[self.GUIType[0]], defaultGlobalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, [globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0]], [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]],
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = myGUI.Dial(xyz, globalVars[self.GUIType[0]], defaultGlobalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, [globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0]], [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], self.GUIType[0],
+                                                                                                           [controlsConf.controllers[0], controls.hand[0]],
                                                                                                            [controlsConf.controllers[1], controls.hand[1]])
                 elif self.GUIType[1][1] == '3D':
-                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = myGUI.Dial(0, globalVars[self.GUIType[0]], defaultGlobalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, [globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0]], [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], self.GUIType[0],
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][2]] = myGUI.Dial(0, globalVars[self.GUIType[0]], defaultGlobalVars[self.GUIType[0]], controls.hand[0].cords, 5, 0.15, [globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0], globalRanges[self.GUIType[0]][0]],
+                                                                                                           [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], self.GUIType[0],
                                                                                                            [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             elif self.GUIType[1][0] == 'Manual':
                 if self.GUIType[1][1] == 'X':
@@ -428,6 +431,7 @@ class Point:
         self.movingAngle = [0, 0, 0]  # direction of movement
         self.collisionState = ''
         self.bAngle = [0, 0, 0]  # stores angle of b.angle
+        self.collAngle = [0, 0, 0]  # angle of collision point
         self.colliding = []
         self.pIdx = ''
         self.submergedVolume = 0
@@ -483,21 +487,21 @@ class Point:
                 self.bAngle = copy.deepcopy(b.angle)  # assigns collisionRect angle to local variable, so it can be changed (for the sake of calculation) without changing the collisionRect's angle itself
 
                 resultF = 0
-                if (self.collision[count] == 'top') or (self.collision[count] == 'bottom'):
+                if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
                     # check out this link to see why these if statements are used here, as well as the math:
                     if (self.force[0] * self.multiplier[count]) > 0:
                         resultF += abs(self.force[0] * math.sin(self.bAngle[2]))
                     if (self.force[1] * self.multiplier[count]) < 0:
                         resultF += abs(self.force[1] * math.cos(self.bAngle[2]))
 
-                elif (self.collision[count] == 'right') or (self.collision[count] == 'left'):
+                elif (self.lastCollision[count] == 'right') or (self.lastCollision[count] == 'left'):
                     self.bAngle[2] -= math.pi / 2
                     if (self.force[0] * self.multiplier[count]) < 0:
                         resultF += abs(self.force[0] * math.sin(self.bAngle[2]))
                     if (self.force[1] * self.multiplier[count]) < 0:
                         resultF += abs(self.force[1] * math.cos(self.bAngle[2]))
 
-                elif (self.collision[count] == 'front') or (self.collision[count] == 'back'):
+                elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
                     if (self.force[2] * self.multiplier[count]) < 0:
                         resultF += abs(self.force[2])
                     self.normalForce[2] = resultF * self.multiplier[count] * 0.999999
@@ -508,17 +512,17 @@ class Point:
                 if self.collisionState == 'y':
                     # negative coefficients used for normalForce here since it always acts in the opposite direction to resultant force
                     # *0.999999 used here to compensate for floating point error (I hate floating point error)
-                    self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                    self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                    self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
-                    self.friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[1]))
-                    self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[1]))
+                    self.normalForce[0] = -resultF * sin(self.collAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[1] = resultF * cos(self.collAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[2] = -resultF * sin(self.collAngle[0]) * self.multiplier[count] * 0.999999
+                    self.friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.collAngle[2]) * self.sf * sin(abs(self.movingAngle[1]))
+                    self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.collAngle[2]) * self.sf * cos(abs(self.movingAngle[1]))
                 elif self.collisionState == 'x':
-                    self.normalForce[0] = -resultF * sin(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                    self.normalForce[1] = resultF * cos(self.bAngle[2]) * self.multiplier[count] * 0.999999
-                    self.normalForce[2] = -resultF * sin(self.bAngle[0]) * self.multiplier[count] * 0.999999
-                    self.friction[1] = getSign(self.velocity[1]) * resultF * sin(self.bAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
-                    self.friction[2] = getSign(self.velocity[2]) * resultF * sin(self.bAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
+                    self.normalForce[0] = -resultF * sin(self.collAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[1] = resultF * cos(self.collAngle[2]) * self.multiplier[count] * 0.999999
+                    self.normalForce[2] = -resultF * sin(self.collAngle[0]) * self.multiplier[count] * 0.999999
+                    self.friction[1] = getSign(self.velocity[1]) * resultF * sin(self.collAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
+                    self.friction[2] = getSign(self.velocity[2]) * resultF * sin(self.collAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
             count += 1
 
         for axis in range(3):
@@ -674,6 +678,7 @@ class Point:
             if (self.vertexState == '') and (self.collision[count] != '') and self.cubeCollisionCalc[count]:
                 if (self.collision[count] == 'right') or (self.collision[count] == 'left'):
                     self.bAngle[2] -= math.pi / 2  # shift angle by 90° since perpendicular surfaces to the collision rect (left & right) are, well... perpendicular (to top & bottom). reason this is subtraction is because all movement is reversed since it's, well... perpendicular.
+                self.collAngle = copy.deepcopy(self.bAngle)
                 if abs(math.degrees(self.bAngle[2])) < 45:
                     self.collisionState = 'y'
                 else:
@@ -747,10 +752,10 @@ class Point:
             # detect collisions between points and edges on a collision rect (cuboid)
             elif (self.vertexState != '') and (minDist <= (distance(b.vertex[vertexIdx[0]], b.vertex[vertexIdx[1]]))):
                 if b.type == 's':
+                    i = [0, 0, 0]
                     if str(self.sf) == 'sticky':
                         self.cords = self.oldCords
                     else:
-                        sinCos = 'sin'
                         if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
                             i = [2, 1, 0]
 
@@ -760,23 +765,24 @@ class Point:
                         elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
                             i = [1, 0, 2]
 
-                        collisionPoint = self.cords[0] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]]['y'], b.vertex[vertexIdx[0]][i[0]]
-                        self.angle = getThreeDAngle(collisionPoint, self.cords, self.vertexState)
+                        if abs(math.degrees(self.bAngle[2])) < 45:
+                            self.collisionState = 'y'
+                            collisionPoint = self.cords[0] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
+                        else:
+                            self.collisionState = 'x'
+                            collisionPoint = self.cords[1] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
+
+                        # self.angle = getThreeDAngle(collisionPoint, self.cords, self.vertexState)
                         # angle = getTwoDAngle([self.cords[i[1]], self.cords[i[0]]], [b.vertex[vertexIdx[0]][i[1]], b.vertex[vertexIdx[0]][i[0]]])
-                        resultV = math.sqrt(self.oldVelocity[i[0]] ** 2 + self.oldVelocity[i[1]] ** 2)
-                        resultF = math.sqrt(self.force[i[0]] ** 2 + self.force[i[1]] ** 2)
-                        self.reboundVelocity[i[0]], self.reboundVelocity[i[1]], self.reboundVelocity[i[2]] = edgeBounce(resultV, self.angle, self.e, -1)
-                        self.cords[i[0]] += self.multiplier[count] * self.reboundVelocity[i[0]]
-                        self.oldCords[i[1]] = yCollisionPlane[self.lastCollision[count]]['y'] + (self.radius * cos(self.angle[0]))
-                        self.cords[i[1]] = yCollisionPlane[self.lastCollision[count]]['y'] + ((self.radius * cos(self.angle[0])) + self.reboundVelocity[i[1]])
-                        self.cords[i[2]] += self.multiplier[count] * self.reboundVelocity[i[2]]
-                        if sinCos == 'sin':
-                            self.normalForce[i[0]] = resultF * sin(self.angle[0]) * self.multiplier[count]  # getSign used here as a result of testing
-                            self.normalForce[i[2]] = -resultF * sin(self.bAngle[2]) * self.multiplier[count]
-                        elif sinCos == 'cos':
-                            self.normalForce[i[0]] = resultF * cos(self.angle[0]) * self.multiplier[count]
-                            self.normalForce[i[2]] = -resultF * cos(self.bAngle[2]) * self.multiplier[count]
-                        # print(self.reboundVelocity, self.normalForce, angle)
+                        # resultV = math.sqrt(self.oldVelocity[i[0]] ** 2 + self.oldVelocity[i[1]] ** 2)
+                        # self.reboundVelocity[i[0]], self.reboundVelocity[i[1]], self.reboundVelocity[i[2]] = edgeBounce(resultV, self.angle, self.e, -1)
+                        # self.cords[i[0]] += self.multiplier[count] * self.reboundVelocity[i[0]]
+                        # self.oldCords[i[1]] = yCollisionPlane[self.lastCollision[count]]['y'] + (self.radius * cos(self.angle[0]))
+                        self.collAngle = getThreeDAngle(collisionPoint, self.cords, 'y')
+                        self.cords[i[1]] = yCollisionPlane[self.lastCollision[count]][self.collisionState] + (self.radius * sin(self.collAngle[0]))
+                        self.oldCords[i[1]] = copy.deepcopy(self.cords[i[1]])
+                        # self.cords[i[2]] += self.multiplier[count] * self.reboundVelocity[i[2]]
+                        print(self.normalForce, self.collAngle)
 
                 elif b.type == 'l':
                     pass
