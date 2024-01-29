@@ -81,6 +81,7 @@ class Main:
         self.animeColor = [[0, 0, 0], [0, 0, 0]]
         self.GUIType = None
         self.clickTime = [0, 0]
+        self.relPos = [0, 0, 0]
 
     def initLists(self):
         for p in range(len(self.points)):
@@ -229,8 +230,10 @@ class Main:
                         # if buttonPressed('select', controlsConf.controllers[c], c):
                         if not self.selectHeld:
                             self.selectHeld = True
+                            for axis in range(3):
+                                self.relPos[axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
+                            cords = controls.hand[c].cords
                             if self.clickTime[c] < 0.25:
-                                cords = controls.hand[c].cords
                                 if self.GUI[p]['slider']['radius'] is None:
                                     self.GUI[p]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].radius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, 1, 0.1, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                                 if self.GUI[p]['slider']['density'] is None:
@@ -250,7 +253,8 @@ class Main:
                     else:
                         self.selectHeld = False
             if self.dragP[c] is not None:
-                self.points[self.dragP[c]].cords = copy.deepcopy(controls.hand[c].cords)  # set the point position to the controller (that grabbed that point)'s position
+                for axis in range(3):
+                    self.points[self.dragP[c]].cords[axis] = controls.hand[c].cords[axis] + self.relPos[axis]  # set the point position to the controller that grabbed said point's position
             # unique animation for selecting points
             if self.collP[c] is not None:
                 if self.dragP[c] is not None:
