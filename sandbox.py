@@ -17,7 +17,7 @@ import copy
 
 from globalFunctions import *
 import myGUI
-
+ 
 # Vizard window initialization
 viz.setMultiSample(4)  # FSAA (Full Screen Anti-Alaiasing)
 viz.fov(90)
@@ -31,7 +31,7 @@ elif mode == 'k':
     if fullscreen:
         viz.window.setFullscreen()
 
-controls = controlsConf.Main()
+controls = controlsConf.Main()  
 
 viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
 
@@ -73,7 +73,7 @@ class Main:
             self.keyHeld.append(False)
         self.GUISelector = False  # stores if the button to summon the GUI selector is held
         self.returnHeld = False  # stores if 'return' is held down
-        self.selectHeld = False
+        self.selectHeld = [False, False]
         self.anim = []
         self.collP = [None, None]
         self.animeScale = [1, 1]
@@ -133,9 +133,9 @@ class Main:
         # elif not buttonPressed('gField', controlsConf.controllers[1], 1):
         #     self.hHeld = False
         #
-        if (not self.lHeld) and buttonPressed('GUISelector', controlsConf.controllers[0], 0):
+        if (not self.lHeld) and buttonPressed('GUISelector', controlsConf.controllers[1], 1):
             if self.GUI['GUISelector'][''][''] is None:
-                self.GUI['GUISelector'][''][''] = myGUI.GUISelector(globalVars, controls.hand[0].cords, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                self.GUI['GUISelector'][''][''] = myGUI.GUISelector(globalVars, controls.hand[1].cords, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             else:
                 self.GUI['GUISelector'][''][''].drawn = False
                 self.GUI['GUISelector'][''][''].unDraw()
@@ -228,8 +228,8 @@ class Main:
                     self.collP[c] = p
                     if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
                         # if buttonPressed('select', controlsConf.controllers[c], c):
-                        if not self.selectHeld:
-                            self.selectHeld = True
+                        if not self.selectHeld[c]:
+                            self.selectHeld[c] = True
                             for axis in range(3):
                                 self.relPos[c][axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
                             cords = controls.hand[c].cords
@@ -257,7 +257,7 @@ class Main:
                                 else:
                                     self.lastP[c] = p
                     else:
-                        self.selectHeld = False
+                        self.selectHeld[c] = False
             if self.dragP[c] is not None:
                 for axis in range(3):
                     self.points[self.dragP[c]].cords[axis] = controls.hand[c].cords[axis] + self.relPos[c][axis]  # set the point position to the controller that grabbed said point's position

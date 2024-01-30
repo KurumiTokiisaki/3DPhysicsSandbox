@@ -28,7 +28,7 @@ class Slider:
         self.oldPCords = copy.deepcopy(self.pCords)
         self.pVelocity = [0, 0, 0]
         self.textFront = viz.addText3D('', fontSize=0.1)
-        self.textOffset = 0.2
+        self.textOffset = 0.1
         self.collision = False
         self.dragging = False
         self.text = viz.addText3D(f'{text}', fontSize=0.2)
@@ -67,8 +67,8 @@ class Slider:
         self.resetVar()
         self.cObj = [lController[0], rController[0]]  # controller objects
         self.cDat = [lController[1], rController[1]]  # controller point data
-        self.timePressed = 0
-        self.resetHeld = 0
+        self.timePressed = [0, 0]
+        self.resetHeld = [0, 0]
 
     def resetVar(self, *args):  # reset the value of the reference variable to its initial value from when this class was initialized
         if args:
@@ -95,20 +95,19 @@ class Slider:
                 self.pCords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
 
     def main(self):
-        if self.timePressed <= 0.25:
-            self.timePressed += 1 / calcRate
-        if buttonPressed('reset', self.cObj, 0):
-            if not self.resetHeld:
-                self.resetHeld = True
-                if self.timePressed > 0.25:
-                    self.resetVar()
-                else:
-                    self.resetVar('hard')
-                self.timePressed = 0
-        else:
-            self.resetHeld = False
-
         for c in range(2):
+            if self.timePressed[c] <= 0.25:
+                self.timePressed[c] += 1 / calcRate
+            if buttonPressed('reset', self.cObj[c], c):
+                if not self.resetHeld[c]:
+                    self.resetHeld[c] = True
+                    if self.timePressed[c] > 0.25:
+                        self.resetVar()
+                    else:
+                        self.resetVar('hard')
+                    self.timePressed[c] = 0
+            else:
+                self.resetHeld[c] = False
             if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
                 self.unDraw()
                 self.drawn = False
@@ -136,7 +135,7 @@ class Slider:
 
     def draw(self, camCords):
         self.pointer.setPosition(self.pCords)
-        angle, pos = camAnglePos(camCords, self.pCords, self.pRad ** (1 / 3))
+        angle, pos = camAnglePos(camCords, self.pCords, self.pRad)
         self.textFront.setEuler(angle)
         self.textFront.setPosition(pos)
         self.textFront.message(f'{round(self.var, 4)}')
@@ -196,7 +195,7 @@ class Dial:
         for v in referenceVar:
             self.var.append(float(v))
         self.origVar = copy.deepcopy(self.var)
-        self.globalOrigVar = float(globalDefaultVar)
+        self.globalOrigVar = copy.deepcopy(self.origVar)
         self.cRad = cRad
         self.cords = copy.deepcopy(cords)
         self.min = []
@@ -241,8 +240,8 @@ class Dial:
         self.closeButton = XSymbol(0.5, [self.cords[0], self.cords[1] + self.cRad + 0.5, self.cords[2]])
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
-        self.timePressed = 0
-        self.resetHeld = False
+        self.timePressed = [0, 0]
+        self.resetHeld = [False, False]
 
     def resetVar(self, *args):
         if args:
@@ -292,20 +291,19 @@ class Dial:
             self.var[self.axes[dim]] = -self.min[dim] - (self.range[dim] * ratio[dim])
 
     def main(self):
-        if self.timePressed <= 0.25:
-            self.timePressed += 1 / calcRate
-        if buttonPressed('reset', self.cObj, 0):
-            if not self.resetHeld:
-                self.resetHeld = True
-                if self.timePressed > 0.25:
-                    self.resetVar()
-                else:
-                    self.resetVar('hard')
-                self.timePressed = 0
-        else:
-            self.resetHeld = False
-
         for c in range(2):
+            if self.timePressed[c] <= 0.25:
+                self.timePressed[c] += 1 / calcRate
+            if buttonPressed('reset', self.cObj[c], c):
+                if not self.resetHeld[c]:
+                    self.resetHeld[c] = True
+                    if self.timePressed[c] > 0.25:
+                        self.resetVar()
+                    else:
+                        self.resetVar('hard')
+                    self.timePressed[c] = 0
+            else:
+                self.resetHeld[c] = False
             if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
                 self.unDraw()
                 self.drawn = False
@@ -456,10 +454,10 @@ class Manual:
         self.textVar.setPosition(self.textVarPos)
         for k in range(len(self.keys)):
             self.keyHeld.append(False)
-        self.timePressed = 0
+        self.timePressed = [0, 0]
         self.offset = [0, 0]
         self.decIdx = 0
-        self.resetHeld = False
+        self.resetHeld = [False, False]
         self.selecting = [False, False]
         self.sHeld = [True, True]
         self.collision = [False, False]
@@ -493,11 +491,14 @@ class Manual:
 
     def main(self):
         if mode == 'vr':
+            controllerCount = 2
             for c in range(2):
-                if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
-                    self.unDraw()
-                    self.drawn = False
+                if self.selecting[c]:
+                    if detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
+                        self.unDraw()
+                        self.drawn = False
         else:
+            controllerCount = 1
             if self.selecting[0]:
                 if not self.sHeld[0]:
                     self.sHeld[0] = True
@@ -512,18 +513,19 @@ class Manual:
             else:
                 self.sHeld[0] = False
 
-        if self.timePressed <= 0.25:
-            self.timePressed += 1 / calcRate
-        if buttonPressed('reset', self.cObj, 0):
-            if not self.resetHeld:
-                self.resetHeld = True
-                if self.timePressed > 0.25:
-                    self.resetVar()
-                else:
-                    self.resetVar('hard')
-                self.timePressed = 0
-        else:
-            self.resetHeld = False
+        for c in range(controllerCount):
+            if self.timePressed[c] <= 0.25:
+                self.timePressed[c] += 1 / calcRate
+            if buttonPressed('reset', self.cObj[c], c):
+                if not self.resetHeld[c]:
+                    self.resetHeld[c] = True
+                    if self.timePressed[c] > 0.25:
+                        self.resetVar()
+                    else:
+                        self.resetVar('hard')
+                    self.timePressed[c] = 0
+            else:
+                self.resetHeld[c] = False
 
         if mode == 'vr':
             for c in range(2):
@@ -722,9 +724,9 @@ class GUISelector:
         self.drawn = True
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
-        self.selecting = False
-        self.sHeld = False
-        self.collision = False
+        self.selecting = [False, False]
+        self.sHeld = [False, False]
+        self.collision = [False, False]
         self.var = None
         self.GUI = []
         self.stage = 'varSelection'
@@ -753,12 +755,12 @@ class GUISelector:
             self.textObj[b].setPosition([self.collP[b].cords[0] - len(self.text[b]) / 35, self.collP[b].cords[1], self.collP[b].cords[2]])
 
     def drag(self, cIdx, selecting):
-        self.selecting = selecting
+        self.selecting[cIdx] = selecting
         if selecting:
             for p in range(len(self.collP)):
-                self.collision = detectCollision(self.cDat[cIdx].radius, self.collP[p].radius, self.cDat[cIdx].cords, self.collP[p].cords)
-                if self.collision and (not self.sHeld):
-                    self.sHeld = True
+                self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.collP[p].radius, self.cDat[cIdx].cords, self.collP[p].cords)
+                if self.collision[cIdx] and (not self.sHeld[cIdx]):
+                    self.sHeld[cIdx] = True
                     if self.stage == 'varSelection':
                         self.var = list(self.GUIs.keys())[p]
                         self.unDraw()
@@ -775,7 +777,7 @@ class GUISelector:
                             self.selectGUI(self.GUIs[list(self.GUIs.keys())[p]])
                     break
         else:
-            self.sHeld = False
+            self.sHeld[cIdx] = False
 
     def selectGUI(self, dictionary):
         if dictionary is not None:

@@ -19,8 +19,8 @@ minCamSpeed = 10 / renderRate
 maxCamSpeed = minCamSpeed * 2
 
 # degrees of freedom to prevent joystick drift
-freedomDegrees = 0.3
-yFreedomDegrees = 0.3
+freedomDegrees = 0.5
+yFreedomDegrees = 0.5
 # gets the HMD's controllers
 controllers = [steamvr.getControllerList()[0], steamvr.getControllerList()[1]]
 hmd = hmdConfig.getSensor()

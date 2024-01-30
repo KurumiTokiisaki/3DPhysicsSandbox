@@ -5,7 +5,7 @@ fullscreen = True
 handRadius = 0.1  # radius of each hand
 gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
 gConst = -9.81  # gravitational field constant
-renderRate = 165  # render rate (lower for performance)
+renderRate = 90  # render rate (lower for performance)
 collisionTolerance = 0  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
 collisionCalcTolerance = 0.1  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
 jointResolution = 3  # lower to increase performance
@@ -46,9 +46,10 @@ globalRanges = {
     'friction': [2, 0]
 }
 
-mode = 'k'  # controller mode (keyboard/mouse or VR)
+mode = 'vr'  # controller mode (keyboard/mouse or VR)
 calcRate = 165  # physics calculations/second (higher number means more accurate physics but lower framerate)
 physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
+touchPad = 0
 
 # controls for keyboard/VR
 if mode == 'k':
@@ -63,12 +64,12 @@ if mode == 'k':
     }
 elif mode == 'vr':
     controls = {
-        'select': [20, 4],
-        'recall': [24, 24],
-        'reset': [18, 2],
-        'pause': [10, 10],
-        'gFieldY': [23, 7],
-        'gField': [18, 2],
-        'GUISelector': None
+        'select': [4, 4 + touchPad],
+        'recall': [24, 24 + touchPad],
+        'reset': [1, None],
+        'pause': [10, 10 + touchPad],
+        'gFieldY': [7, 7 + touchPad],
+        'gField': [2, 2 + touchPad],
+        'GUISelector': [None, 1 + touchPad]
     }
-touchPad = 16
+
