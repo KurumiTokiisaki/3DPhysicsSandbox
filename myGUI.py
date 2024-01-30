@@ -395,6 +395,8 @@ class Manual:
         if mode == 'vr':
             # add & display variable information
             self.textVarPos = [self.cords[0] + 1, self.cords[1] + 1, self.cords[2]]
+
+            # add & display the '0' number key
             self.boxes.append(vizshape.addBox())
             self.boxPos.append([self.cords[0] + 1, self.cords[1] - 3, self.cords[2]])
             self.keypadTexts.append(viz.addText3D('0', fontSize=0.2))
@@ -425,6 +427,16 @@ class Manual:
             self.boxPos.append([self.cords[0], self.cords[1] - 3, self.cords[2]])
             self.keypadTexts.append(viz.addText3D('-', fontSize=0.2))
 
+            # add & display the reset key
+            self.boxes.append(vizshape.addBox())
+            self.boxPos.append([self.cords[0], self.cords[1] - 4, self.cords[2]])
+            self.keypadTexts.append(viz.addText3D('Reset', fontSize=0.2))
+
+            # add and display the hard reset key
+            self.boxes.append(vizshape.addBox())
+            self.boxPos.append([self.cords[0] + 2, self.cords[1] - 4, self.cords[2]])
+            self.keypadTexts.append(viz.addText3D('Hard\nReset', fontSize=0.2))
+
             for b in range(len(self.boxes)):
                 self.boxes[b].alpha(0.3)
                 self.boxes[b].setPosition(self.boxPos[b])
@@ -448,11 +460,11 @@ class Manual:
         self.offset = [0, 0]
         self.decIdx = 0
         self.resetHeld = False
-        self.selecting = False
-        self.sHeld = True
-        self.collision = False
-        self.selectionIdx = None
-        self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete', '-']
+        self.selecting = [False, False]
+        self.sHeld = [True, True]
+        self.collision = [False, False]
+        self.selectionIdx = [None, None]
+        self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete', '-', 'reset', 'hardReset']
         self.activePoint = None
 
     def addToVar(self, number):
@@ -486,9 +498,9 @@ class Manual:
                     self.unDraw()
                     self.drawn = False
         else:
-            if self.selecting:
-                if not self.sHeld:
-                    self.sHeld = True
+            if self.selecting[0]:
+                if not self.sHeld[0]:
+                    self.sHeld[0] = True
                     if detectCollision(self.cDat[0].radius, 0.2, self.cDat[0].cords, self.cords):
                         if self.activePoint is None:
                             self.activePoint = vizshape.addSphere(0.1)
@@ -498,7 +510,7 @@ class Manual:
                             self.activePoint.remove()
                             self.activePoint = None
             else:
-                self.sHeld = False
+                self.sHeld[0] = False
 
         if self.timePressed <= 0.25:
             self.timePressed += 1 / calcRate
@@ -513,21 +525,27 @@ class Manual:
         else:
             self.resetHeld = False
 
-        if self.activePoint is not None:
-            for c in range(len(str(self.var))):
-                if str(self.var)[c] == '.':
-                    self.decIdx = c
-            if int(self.spaces / 2) >= self.decIdx:
-                self.offset[0] = -1
-            else:
-                self.offset[0] = 0
-
-            if str(self.var)[0] == '-':
-                self.offset[1] = 1
-            else:
-                self.offset[1] = 0
-
-            if mode == 'k':
+        if mode == 'vr':
+            for c in range(2):
+                if self.selectionIdx[c] is not None:
+                    selection = self.selections[self.selectionIdx[c]]
+                    if selection == 'right':
+                        self.spaces += 2
+                    elif selection == 'left':
+                        if self.spaces > 1:
+                            self.spaces -= 2
+                    elif selection == 'delete':
+                        self.removeFromVar()
+                    elif selection == '-':
+                        self.var = -self.var
+                    elif selection == 'reset':
+                        self.resetVar()
+                    elif selection == 'hardReset':
+                        self.resetVar('hard')
+                    else:
+                        self.addToVar(selection)
+        elif mode == 'k':
+            if self.activePoint is not None:
                 for k in range(len(self.keys)):
                     if not viz.key.isDown(self.keys[k]):
                         self.keyHeld[k] = False
@@ -560,26 +578,23 @@ class Manual:
                             if self.spaces > 1:
                                 self.spaces -= 2
 
-            else:
-                if self.selectionIdx is not None:
-                    selection = self.selections[self.selectionIdx]
-                    if selection == 'right':
-                        self.spaces += 2
-                    elif selection == 'left':
-                        if self.spaces > 1:
-                            self.spaces -= 2
-                    elif selection == 'delete':
-                        self.removeFromVar()
-                    elif selection == '-':
-                        self.var = -self.var
-                    else:
-                        self.addToVar(selection)
+        for c in range(len(str(self.var))):
+            if str(self.var)[c] == '.':
+                self.decIdx = c
+        if int(self.spaces / 2) >= self.decIdx:
+            self.offset[0] = -1
+        else:
+            self.offset[0] = 0
+        if str(self.var)[0] == '-':
+            self.offset[1] = 1
+        else:
+            self.offset[1] = 0
 
-            tempStr = ''
-            for s in range(self.spaces + self.offset[0] + self.offset[1]):
-                tempStr = f' {tempStr}'
-            tempStr = f'{tempStr}|'
-            self.spacing = tempStr
+        tempStr = ''
+        for s in range(self.spaces + self.offset[0] + self.offset[1]):
+            tempStr = f' {tempStr}'
+        tempStr = f'{tempStr}|'
+        self.spacing = tempStr
 
         if not self.drawn:
             self.unDraw()
@@ -587,19 +602,19 @@ class Manual:
         return self.var
 
     def drag(self, cIdx, selecting):
-        self.selecting = selecting
+        self.selecting[cIdx] = selecting
         if mode == 'vr':
-            if self.selecting:
-                if not self.sHeld:
-                    self.sHeld = True
+            if self.selecting[cIdx]:
+                if not self.sHeld[cIdx]:
+                    self.sHeld[cIdx] = True
                     for p in range(len(self.collP)):
-                        self.collision = detectCollision(self.cDat[cIdx].radius, self.collP[p].radius, self.cDat[cIdx].cords, self.collP[p].cords)
-                        if self.collision:
-                            self.selectionIdx = p
+                        self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.collP[p].radius, self.cDat[cIdx].cords, self.collP[p].cords)
+                        if self.collision[cIdx]:
+                            self.selectionIdx[cIdx] = p
                 else:
-                    self.selectionIdx = None
+                    self.selectionIdx[cIdx] = None
             else:
-                self.sHeld = False
+                self.sHeld[cIdx] = False
 
     def draw(self, camCords):
         self.textVar.message(f'{self.text}\n{self.var}')
