@@ -43,7 +43,7 @@ def selectP(cIdx):
 # Main class for main.py
 class Main:
     def __init__(self):
-        # vizshape.addGrid()
+        # vizshape.addGrid()  # used for testing
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
@@ -81,7 +81,7 @@ class Main:
         self.animeColor = [[0, 0, 0], [0, 0, 0]]
         self.GUIType = None
         self.clickTime = [0, 0]
-        self.relPos = [0, 0, 0]
+        self.relPos = [[0, 0, 0], [0, 0, 0]]
 
     def initLists(self):
         for p in range(len(self.points)):
@@ -231,15 +231,21 @@ class Main:
                         if not self.selectHeld:
                             self.selectHeld = True
                             for axis in range(3):
-                                self.relPos[axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
+                                self.relPos[c][axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
                             cords = controls.hand[c].cords
                             if self.clickTime[c] < 0.25:
                                 if self.GUI[p]['slider']['radius'] is None:
-                                    self.GUI[p]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].radius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, 1, 0.1, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                    if mode == 'vr':
+                                        self.GUI[p]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, 1, 0.1, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                    else:
+                                        self.GUI[p]['slider']['radius'] = myGUI.Manual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                                 if self.GUI[p]['slider']['density'] is None:
-                                    self.GUI[p]['slider']['density'] = myGUI.Slider(0, self.points[p].density, self.points[p].radius, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                    self.GUI[p]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
-                                    self.GUI[p]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                                    if mode == 'vr':
+                                        self.GUI[p]['slider']['density'] = myGUI.Slider(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                        self.GUI[p]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
+                                        self.GUI[p]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                                    else:
+                                        self.GUI[p]['slider']['density'] = self.GUI[p]['slider']['density'] = myGUI.Manual(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                             else:
                                 self.clickTime[c] = 0
                         if self.dragP[c] is None:  # used to set the drag variables if they are not already set
@@ -254,7 +260,7 @@ class Main:
                         self.selectHeld = False
             if self.dragP[c] is not None:
                 for axis in range(3):
-                    self.points[self.dragP[c]].cords[axis] = controls.hand[c].cords[axis] + self.relPos[axis]  # set the point position to the controller that grabbed said point's position
+                    self.points[self.dragP[c]].cords[axis] = controls.hand[c].cords[axis] + self.relPos[c][axis]  # set the point position to the controller that grabbed said point's position
             # unique animation for selecting points
             if self.collP[c] is not None:
                 if self.dragP[c] is not None:
@@ -424,6 +430,7 @@ class Point:
     def __init__(self, radius, density, show):
         self.show = show
         self.radius = radius
+        self.origRadius = radius
         self.diameter = self.radius * 2
         if self.show:
             self.sphere = vizshape.addSphere(1, slices=pointResolution)  # vizard object for sphere
@@ -438,6 +445,7 @@ class Point:
         self.normalForce = [0, 0, 0]  # here's how I'll calculate this: https://drive.google.com/file/d/1ES6T8RilTcE5Pu7Zhdxfo6R6hvvsViAT/view?usp=drive_link
         self.acc = [0, 0, 0]
         self.density = density
+        self.origDensity = density
         self.volume = (4 / 3) * math.pi * self.radius ** 3
         self.halfArea = 2 * math.pi * self.radius ** 2
         self.mass = self.density * self.volume

@@ -453,6 +453,7 @@ class Manual:
         self.collision = False
         self.selectionIdx = None
         self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete', '-']
+        self.activePoint = None
 
     def addToVar(self, number):
         self.var = str(self.var)
@@ -484,6 +485,20 @@ class Manual:
                 if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
                     self.unDraw()
                     self.drawn = False
+        else:
+            if self.selecting:
+                if not self.sHeld:
+                    self.sHeld = True
+                    if detectCollision(self.cDat[0].radius, 0.2, self.cDat[0].cords, self.cords):
+                        if self.activePoint is None:
+                            self.activePoint = vizshape.addSphere(0.1)
+                            self.activePoint.setPosition(self.cords[0], self.cords[1] + 0.2, self.cords[2])
+                            self.activePoint.color([1, 0.1, 0.1])
+                        else:
+                            self.activePoint.remove()
+                            self.activePoint = None
+            else:
+                self.sHeld = False
 
         if self.timePressed <= 0.25:
             self.timePressed += 1 / calcRate
@@ -498,72 +513,73 @@ class Manual:
         else:
             self.resetHeld = False
 
-        for c in range(len(str(self.var))):
-            if str(self.var)[c] == '.':
-                self.decIdx = c
-        if int(self.spaces / 2) >= self.decIdx:
-            self.offset[0] = -1
-        else:
-            self.offset[0] = 0
+        if self.activePoint is not None:
+            for c in range(len(str(self.var))):
+                if str(self.var)[c] == '.':
+                    self.decIdx = c
+            if int(self.spaces / 2) >= self.decIdx:
+                self.offset[0] = -1
+            else:
+                self.offset[0] = 0
 
-        if str(self.var)[0] == '-':
-            self.offset[1] = 1
-        else:
-            self.offset[1] = 0
+            if str(self.var)[0] == '-':
+                self.offset[1] = 1
+            else:
+                self.offset[1] = 0
 
-        if mode == 'k':
-            for k in range(len(self.keys)):
-                if not viz.key.isDown(self.keys[k]):
-                    self.keyHeld[k] = False
-            if viz.key.anyDown(self.keys):
-                for n in range(10):
-                    if viz.key.isDown(f'{n}'):
-                        if not self.keyHeld[n]:
-                            self.keyHeld[n] = True
-                            self.addToVar(n)
-                            break
-                if viz.key.isDown(self.keys[10]):
-                    if not self.keyHeld[10]:
-                        self.keyHeld[10] = True
-                        self.removeFromVar()
+            if mode == 'k':
+                for k in range(len(self.keys)):
+                    if not viz.key.isDown(self.keys[k]):
+                        self.keyHeld[k] = False
+                if viz.key.anyDown(self.keys):
+                    for n in range(10):
+                        if viz.key.isDown(f'{n}'):
+                            if not self.keyHeld[n]:
+                                self.keyHeld[n] = True
+                                self.addToVar(n)
+                                break
+                    if viz.key.isDown(self.keys[10]):
+                        if not self.keyHeld[10]:
+                            self.keyHeld[10] = True
+                            self.removeFromVar()
 
-                if viz.key.isDown(self.keys[11]):
-                    if not self.keyHeld[11]:
-                        self.keyHeld[11] = True
-                        self.var = -self.var
+                    if viz.key.isDown(self.keys[11]):
+                        if not self.keyHeld[11]:
+                            self.keyHeld[11] = True
+                            self.var = -self.var
 
-                if viz.key.isDown(self.keys[12]):
-                    self.drawn = False
-                if viz.key.isDown(self.keys[13]):
-                    if not self.keyHeld[13]:
-                        self.keyHeld[13] = True
+                    if viz.key.isDown(self.keys[12]):
+                        self.drawn = False
+                    if viz.key.isDown(self.keys[13]):
+                        if not self.keyHeld[13]:
+                            self.keyHeld[13] = True
+                            self.spaces += 2
+                    if viz.key.isDown(self.keys[14]):
+                        if not self.keyHeld[14]:
+                            self.keyHeld[14] = True
+                            if self.spaces > 1:
+                                self.spaces -= 2
+
+            else:
+                if self.selectionIdx is not None:
+                    selection = self.selections[self.selectionIdx]
+                    if selection == 'right':
                         self.spaces += 2
-                if viz.key.isDown(self.keys[14]):
-                    if not self.keyHeld[14]:
-                        self.keyHeld[14] = True
+                    elif selection == 'left':
                         if self.spaces > 1:
                             self.spaces -= 2
+                    elif selection == 'delete':
+                        self.removeFromVar()
+                    elif selection == '-':
+                        self.var = -self.var
+                    else:
+                        self.addToVar(selection)
 
-        else:
-            if self.selectionIdx is not None:
-                selection = self.selections[self.selectionIdx]
-                if selection == 'right':
-                    self.spaces += 2
-                elif selection == 'left':
-                    if self.spaces > 1:
-                        self.spaces -= 2
-                elif selection == 'delete':
-                    self.removeFromVar()
-                elif selection == '-':
-                    self.var = -self.var
-                else:
-                    self.addToVar(selection)
-
-        tempStr = ''
-        for s in range(self.spaces + self.offset[0] + self.offset[1]):
-            tempStr = f' {tempStr}'
-        tempStr = f'{tempStr}|'
-        self.spacing = tempStr
+            tempStr = ''
+            for s in range(self.spaces + self.offset[0] + self.offset[1]):
+                tempStr = f' {tempStr}'
+            tempStr = f'{tempStr}|'
+            self.spacing = tempStr
 
         if not self.drawn:
             self.unDraw()
@@ -571,8 +587,8 @@ class Manual:
         return self.var
 
     def drag(self, cIdx, selecting):
+        self.selecting = selecting
         if mode == 'vr':
-            self.selecting = selecting
             if self.selecting:
                 if not self.sHeld:
                     self.sHeld = True
@@ -621,6 +637,8 @@ class Manual:
             t.remove()
         for b in self.boxes:
             b.remove()
+        if self.activePoint is not None:
+            self.activePoint.remove()
 
 
 class CircleAnim:
