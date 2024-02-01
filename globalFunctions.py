@@ -229,4 +229,4 @@ def buttonPressed(button, *args):  # gets the button currently being pressed
         else:
             return viz.key.isDown(controls[button])
     elif mode == 'vr':
-        return args[0].getButtonState() == controls[button][args[1]]
+        return (args[0].getButtonState() % touchpad) == controls[button][args[1]]  # this value is modulo in case the sensitive controllers detect that the touchpad is being tapped

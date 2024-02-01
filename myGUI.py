@@ -6,6 +6,10 @@ import viz
 import vizshape
 from globalFunctions import *
 
+controllerCount = 1
+if mode == 'vr':
+    controllerCount = 2
+
 
 class Slider:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
@@ -192,10 +196,12 @@ class Dial:
         self.drawn = True
         self.xyz = xyz
         self.var = []
+        self.globalOrigVar = []
         for v in referenceVar:
             self.var.append(float(v))
         self.origVar = copy.deepcopy(self.var)
-        self.globalOrigVar = copy.deepcopy(self.origVar)
+        for v in globalDefaultVar:
+            self.globalOrigVar.append(float(v))
         self.cRad = cRad
         self.cords = copy.deepcopy(cords)
         self.min = []
@@ -231,7 +237,7 @@ class Dial:
             self.axes = [0, 1, 2]
         self.text = text
         self.textFront = viz.addText3D('', fontSize=0.15)
-        self.collision = False
+        self.collision = [False, False]
         self.dragging = False
         self.anim = None
         if self.tDim:
@@ -263,19 +269,20 @@ class Dial:
     def setVar(self, var):
         for v in range(len(var)):
             var[v] = float(var[v])
-        if (not self.dragging) or (not self.collision):
-            if self.tDim:
-                for axis in range(3):
-                    self.p.cords[axis] = self.cords[axis] - (var[axis] / self.range[axis]) * self.cRad * 2
-            else:
-                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (var[self.axes[0]] / self.range[0]) * self.cRad * 2
-                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (var[self.axes[1]] / self.range[1]) * self.cRad * 2
+        for c in range(controllerCount):
+            if (not self.dragging) or (not self.collision[c]):
+                if self.tDim:
+                    for axis in range(3):
+                        self.p.cords[axis] = self.cords[axis] - (var[axis] / self.range[axis]) * self.cRad * 2
+                else:
+                    self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (var[self.axes[0]] / self.range[0]) * self.cRad * 2
+                    self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (var[self.axes[1]] / self.range[1]) * self.cRad * 2
 
     def drag(self, cIdx, dragging):
         self.dragging = dragging
         if dragging:
-            self.collision = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
-            if self.collision:
+            self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
+            if self.collision[cIdx]:
                 if not self.tDim:
                     self.p.cords[self.axes[0]] = copy.deepcopy(self.cDat[cIdx].cords[0])
                     self.p.cords[self.axes[1]] = copy.deepcopy(self.cDat[cIdx].cords[1])
@@ -322,8 +329,9 @@ class Dial:
             self.p.oldCords[2] += 0.015 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / calcRate
 
         for axis in range(len(self.var)):
-            if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging or not self.collision):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
-                self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
+            for c in range(controllerCount):
+                if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging or not self.collision[c]):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
+                    self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
 
         # Verlet integration
         for axis in range(3):
@@ -491,14 +499,12 @@ class Manual:
 
     def main(self):
         if mode == 'vr':
-            controllerCount = 2
             for c in range(2):
                 if self.selecting[c]:
                     if detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
                         self.unDraw()
                         self.drawn = False
         else:
-            controllerCount = 1
             if self.selecting[0]:
                 if not self.sHeld[0]:
                     self.sHeld[0] = True

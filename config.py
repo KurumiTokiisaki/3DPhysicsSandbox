@@ -5,7 +5,7 @@ fullscreen = True
 handRadius = 0.1  # radius of each hand
 gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
 gConst = -9.81  # gravitational field constant
-renderRate = 90  # render rate (lower for performance)
+renderRate = 165  # render rate (lower for performance)
 collisionTolerance = 0  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
 collisionCalcTolerance = 0.1  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
 jointResolution = 3  # lower to increase performance
@@ -25,7 +25,8 @@ globalVars = {
     'gasDensity': 0,  # density of all gases
     'springConst': 2500,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
-    'friction': 0  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'friction': 0,  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'strain': 10  # global maximum strain before breaking point
 }
 
 defaultGlobalVars = {
@@ -34,6 +35,7 @@ defaultGlobalVars = {
     'gasDensity': 0,  # density of all gases
     'springConst': 2500,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
+    'strain': 10,  # global frictional force coefficient. set to 'sticky' for infinite value.
     'friction': 0  # global frictional force coefficient. set to 'sticky' for infinite value.
 }
 
@@ -43,13 +45,14 @@ globalRanges = {
     'gasDensity': [10000, 0],
     'springConst': [10000, 0],
     'damping': [2, 0],
+    'strain': [100, 2],
     'friction': [2, 0]
 }
 
-mode = 'vr'  # controller mode (keyboard/mouse or VR)
-calcRate = 165  # physics calculations/second (higher number means more accurate physics but lower framerate)
-physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than framerate or smaller than 60)
-touchPad = 0
+mode = 'k'  # controller mode (keyboard/mouse or VR)
+calcRate = 165  # physics calculations/second (higher number means more accurate physics but lower performance)
+physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than frame-rate or smaller than 60)
+touchpad = 16
 
 # controls for keyboard/VR
 if mode == 'k':
@@ -64,12 +67,12 @@ if mode == 'k':
     }
 elif mode == 'vr':
     controls = {
-        'select': [4, 4 + touchPad],
-        'recall': [24, 24 + touchPad],
-        'reset': [1, None],
-        'pause': [10, 10 + touchPad],
-        'gFieldY': [7, 7 + touchPad],
-        'gField': [2, 2 + touchPad],
-        'GUISelector': [None, 1 + touchPad]
+        'select': [4, 4],  # trigger
+        'recall': [6, 6],  # click the touchpad
+        'reset': [1, None],  # left menu
+        'pause': [10, 10],  # (find this out)
+        'gFieldY': [7, 7],
+        'gField': [2, 2],
+        'GUISelector': [None, 1]
     }
 
