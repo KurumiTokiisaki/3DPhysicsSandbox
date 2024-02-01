@@ -13,6 +13,8 @@ pointResolution = 10  # lower to increase performance
 theForce = False  # when True, "recalling" points causes them to float slowly to you
 jointRadius = 0.015  # radius of all joints
 animSpeed = 1 / renderRate  # speed of animations
+minRadius = 0.05  # minimum radius of points
+maxRadius = 2  # maximum radius of points
 GUItypes = {
     'Slider': {'X': None, 'Y': None, 'Z': None},
     'Dial': {'2D': {'XY': None, 'YZ': None, 'XZ': None}, '3D': None},
@@ -22,8 +24,8 @@ GUItypes = {
 globalVars = {
     'gameSpeed': 1,  # game speed factor
     'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
-    'gasDensity': 0,  # density of all gases
-    'springConst': 2500,  # global spring constant (make negative to break the sandbox)
+    'gasDensity': 1.293,  # density of all gases
+    'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
     'friction': 0,  # global frictional force coefficient. set to 'sticky' for infinite value.
     'strain': 10  # global maximum strain before breaking point
@@ -33,10 +35,10 @@ defaultGlobalVars = {
     'gameSpeed': 1,  # game speed factor
     'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
     'gasDensity': 0,  # density of all gases
-    'springConst': 2500,  # global spring constant (make negative to break the sandbox)
+    'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
-    'strain': 10,  # global frictional force coefficient. set to 'sticky' for infinite value.
-    'friction': 0  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'friction': 0,  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'strain': 10,  # global maximum strain before breaking point
 }
 
 globalRanges = {
@@ -45,7 +47,7 @@ globalRanges = {
     'gasDensity': [10000, 0],
     'springConst': [10000, 0],
     'damping': [2, 0],
-    'strain': [100, 2],
+    'strain': [50, 5],
     'friction': [2, 0]
 }
 
@@ -75,4 +77,3 @@ elif mode == 'vr':
         'gField': [2, 2],
         'GUISelector': [None, 1]
     }
-

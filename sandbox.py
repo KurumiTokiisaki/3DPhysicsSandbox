@@ -96,6 +96,7 @@ class Main:
             for _ in range(len(self.points)):
                 self.diff[p].append(0)
         self.lastP = [len(self.points) - 1, len(self.points) - 2]
+        self.updateJointConnections()
 
     def updateLists(self):
         self.GUI.update({len(self.points) - 1: {'slider': {'radius': None, 'density': None}, 'manual': {'radius': None, 'density': None}}})
@@ -112,6 +113,15 @@ class Main:
             self.diff[p].append(0)
         for p in range(len(self.points)):
             self.diff[-1].append(0)
+        self.updateJointConnections()
+
+    def updateJointConnections(self):
+        for p in range(len(self.points)):
+            tempInt = 0
+            for j in self.joints:
+                if (j.pOne == p) or (j.pTwo == p):
+                    tempInt += 1
+            self.points[p].jointConnections = tempInt
 
     def main(self):
         global physicsTime  # must be globalised since gameSpeed can be changed by the user from the GUI selector
@@ -230,7 +240,7 @@ class Main:
                             if self.clickTime[c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the density and radius of the double-clicked point
                                 if self.GUI[p]['slider']['radius'] is None:  # only summon if GUI is empty
                                     if mode == 'vr':
-                                        self.GUI[p]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, 1, 0.1, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                        self.GUI[p]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, maxRadius, minRadius, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                                     else:
                                         self.GUI[p]['slider']['radius'] = myGUI.Manual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                                 if self.GUI[p]['slider']['density'] is None:  # only summon if GUI is empty
@@ -421,6 +431,7 @@ class Main:
 # class for spheres
 class Point:
     def __init__(self, radius, density, show, *pointCollisions):
+        self.jointConnections = 0  # number of connected joints
         self.show = show
         self.radius = radius
         self.origRadius = radius
@@ -963,7 +974,8 @@ class Joint:
     # update the position and appearance of the joint
     def update(self):
         if self.height >= (self.origLength * self.maxStrain):
-            self.snap()
+            pass
+            # self.snap()  # MASSIVE WIP
 
         if self.theForceJoint:
             self.diff = displacement(controls.hand[self.cIdx].cords, game.points[self.pTwo].cords)
@@ -1007,30 +1019,44 @@ class Joint:
 
     # break the joint after extending a specified distance
     def snap(self):
-        game.points.append(Point(game.points[self.pOne].radius, game.points[self.pOne].density, True, self.pOne))
-        # game.points[self.pOne].setRadiusDensity(game.points[self.pOne].radius / 2, game.points[self.pOne].density)
-        game.points[self.pOne].pointCollisions = [len(game.points) - 1]
-        game.points[-1].cords = copy.deepcopy(self.cords)
-        game.points[-1].oldCords = copy.deepcopy(self.cords)
-        game.joints.append(Joint(True, self.origLength / 2, self.stiffness, self.pOne, len(game.points) - 1, self.dampingConst, self.maxStrain * 2))  # maxStrain is increased since whenever materials break, since they pass their elastic limit in reality
-        game.points[self.pOne].cloth = self.pOne * len(game.points)  # unique cloth key
-        game.points[-1].cloth = self.pOne * len(game.points)
-        game.updateLists()
+        # radius cannot be less than 0.05 due to floating point error
+        if (game.points[self.pOne].jointConnections <= 2) and (game.points[self.pTwo].jointConnections <= 2):
+            pass
+        else:
+            if (game.points[self.pOne].radius / 2) < minRadius:
+                pointRad = minRadius
+            else:
+                pointRad = game.points[self.pOne].radius / 2
+            game.points.append(Point(pointRad, game.points[self.pOne].density, True, self.pOne))
+            game.points[self.pOne].setRadiusDensity(pointRad, game.points[self.pOne].density)
+            game.points[self.pOne].pointCollisions = [len(game.points) - 1]
+            game.points[-1].cords = copy.deepcopy(self.cords)
+            game.points[-1].oldCords = copy.deepcopy(self.cords)
+            game.joints.append(Joint(True, self.origLength * 2, self.stiffness / 16, self.pOne, len(game.points) - 1, self.dampingConst, self.maxStrain * 2))  # maxStrain is increased since whenever materials break, since they pass their elastic limit in reality
+            game.points[self.pOne].cloth = self.pOne * len(game.points)  # unique cloth key
+            game.points[-1].cloth = self.pOne * len(game.points)
+            game.updateLists()
 
-        game.points.append(Point(game.points[self.pTwo].radius, game.points[self.pTwo].density, True, self.pTwo))
-        # game.points[self.pTwo].setRadiusDensity(game.points[self.pTwo].radius / 2, game.points[self.pTwo].density)
-        self.pOne = len(game.points) - 1
-        game.points[-1].cords = copy.deepcopy(self.cords)
-        game.points[-1].oldCords = copy.deepcopy(game.points[-1].cords)
-        game.points[self.pTwo].pointCollisions = [len(game.points) - 1]
-        self.origLength = self.origLength / 2
-        self.diff = [0, 0, 0]
-        self.height = copy.deepcopy(self.origLength)
-        self.oldHeight = copy.deepcopy(self.height)
-        self.maxStrain *= 2
-        game.points[self.pTwo].cloth = self.pTwo * len(game.points)  # unique cloth key
-        game.points[-1].cloth = self.pTwo * len(game.points)
-        game.updateLists()
+            if (game.points[self.pTwo].radius / 2) < minRadius:
+                pointRad = minRadius
+            else:
+                pointRad = game.points[self.pTwo].radius / 2
+            self.stiffness /= 16
+            game.points.append(Point(pointRad, game.points[self.pTwo].density, True, self.pTwo))
+            game.points[self.pTwo].setRadiusDensity(pointRad, game.points[self.pTwo].density)
+            self.pOne = len(game.points) - 1
+            game.points[-1].cords = copy.deepcopy(self.cords)
+            game.points[-1].oldCords = copy.deepcopy(game.points[-1].cords)
+            game.points[self.pTwo].pointCollisions = [len(game.points) - 1]
+            # self.origLength *= self.maxStrain
+            self.origLength *= 2
+            self.diff = [0, 0, 0]
+            self.height = copy.deepcopy(self.origLength)
+            self.oldHeight = copy.deepcopy(self.height)
+            self.maxStrain *= 2
+            game.points[self.pTwo].cloth = self.pTwo * len(game.points)  # unique cloth key
+            game.points[-1].cloth = self.pTwo * len(game.points)
+            game.updateLists()
 
 
 class CollisionRect:
