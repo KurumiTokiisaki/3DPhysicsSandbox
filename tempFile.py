@@ -1,2 +1,4 @@
-﻿myFloat = '8129.069'
-print(float(myFloat))
+﻿myDict = {}
+myDict.update({'whee': []})
+myDict.update({'puu': []})
+print(myDict)

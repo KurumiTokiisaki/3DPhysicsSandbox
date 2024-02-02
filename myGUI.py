@@ -99,7 +99,7 @@ class Slider:
                 self.pCords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
 
     def main(self):
-        for c in range(2):
+        for c in range(controllerCount):
             if self.timePressed[c] <= 0.25:
                 self.timePressed[c] += 1 / calcRate
             if buttonPressed('reset', self.cObj[c], c):
@@ -298,7 +298,7 @@ class Dial:
             self.var[self.axes[dim]] = -self.min[dim] - (self.range[dim] * ratio[dim])
 
     def main(self):
-        for c in range(2):
+        for c in range(controllerCount):
             if self.timePressed[c] <= 0.25:
                 self.timePressed[c] += 1 / calcRate
             if buttonPressed('reset', self.cObj[c], c):
@@ -499,7 +499,7 @@ class Manual:
 
     def main(self):
         if mode == 'vr':
-            for c in range(2):
+            for c in range(controllerCount):
                 if self.selecting[c]:
                     if detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
                         self.unDraw()
@@ -534,7 +534,7 @@ class Manual:
                 self.resetHeld[c] = False
 
         if mode == 'vr':
-            for c in range(2):
+            for c in range(controllerCount):
                 if self.selectionIdx[c] is not None:
                     selection = self.selections[self.selectionIdx[c]]
                     if selection == 'right':
@@ -770,7 +770,12 @@ class GUISelector:
                     if self.stage == 'varSelection':
                         self.var = list(self.GUIs.keys())[p]
                         self.unDraw()
-                        self.selectGUI(GUItypes)
+                        if self.var == 'Tutorials':
+                            self.selectGUI(tutorialNames)
+                        elif self.var == 'cloths':
+                            self.selectGUI(clothNames)
+                        else:
+                            self.selectGUI(GUItypes)
                     elif self.stage == 'GUISelection':
                         if (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
                             self.GUI.append(list(self.GUIs.keys())[p])
@@ -818,3 +823,51 @@ class GUISelector:
         self.text = []
         self.textObj = []
         self.collP = []
+
+
+class Tutorial:
+    def __init__(self, cords, sizeXYZ, text, boldTextList, lController, rController):
+        self.drawn = True
+        self.cords = cords
+        self.size = sizeXYZ
+        self.text = text
+        self.stage = 0
+        self.textObj = viz.addText3D(f'{self.text[self.stage]}', fontSize=0.1)
+        self.boltText = boldTextList
+        self.closeButton = XSymbol(0.5, [self.cords[0] + self.size[0] / 1.9, self.cords[1] + self.size[1] / 1.9, self.cords[2]])
+        self.box = vizshape.addFrustum([1, 1, 1, 1, 1, 1])
+        self.arrows = [vizshape.addArrow(0.1), vizshape.addArrow(0.1)]  # left arrow, right arrow
+        self.arrows[0].setPosition(self.cords[0] - self.size[0], self.cords[1], self.cords[2])
+        self.arrows[1].setPosition(self.cords[0] + self.size[0], self.cords[1], self.cords[2])
+        self.textObj.setPosition(self.cords)
+        self.cObj = [lController[0], rController[0]]
+        self.cDat = [lController[1], rController[1]]
+
+    def drag(self, cIdx, selecting):
+        if selecting:
+            for a in range(2):
+                if detectCollision(self.cDat[cIdx].radius, 0.1, self.cDat[cIdx].cords, self.arrows[a].getPosition()):
+                    if a == 0:
+                        if (self.stage - 1) > len(self.text):
+                            self.stage -= 1
+                    elif a == 1:
+                        if self.stage >= (len(self.text) - 1):
+                            self.stage = 0
+                        else:
+                            self.stage += 1
+                    self.textObj.message(f'{self.text[self.stage]}')
+
+    def main(self):
+        for c in range(controllerCount):
+            if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
+                self.unDraw()
+                self.drawn = False
+
+    def draw(self, camCords):
+        pass
+
+    def unDraw(self):
+        self.textObj.remove()
+        self.closeButton.unDraw()
+        for a in self.arrows:
+            a.remove()

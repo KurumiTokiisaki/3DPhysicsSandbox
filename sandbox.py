@@ -47,6 +47,7 @@ class Main:
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
+        self.texts = []
         self.GUI = {  # dictionary of all GUIs and their possible forms (dimensions, axes, etc.)
             'gameSpeed': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'gField': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'X': None, 'Y': None, 'Z': None}},
@@ -55,7 +56,8 @@ class Main:
             'damping': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'friction': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
             'strain': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'def': None}},
-            'GUISelector': {'': {'': None}}  # this has empty strings since the GUI selector has only one possible form
+            'GUISelector': {'': {'': None}},  # this has empty strings since the GUI selector has only one possible form
+            'Tutorials': {'': {}}
         }
         self.diff = []  # cache variable to store the scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
@@ -78,6 +80,11 @@ class Main:
         self.GUIType = None  # holds the return value of GUISelector to create relevant GUI(s)
         self.clickTime = [0, 0]  # stores time since 'select' was pressed for both controllers in order for double-click detection
         self.relPos = [[0, 0, 0], [0, 0, 0]]  # stores the relative position of selected points with either controller
+        self.clothData = {}
+        # self.cloths = {}
+        self.tutorialTexts = {}
+        # self.tutorialNames = {}
+        self.importTutorials()
 
     # initialize all the lists that depend on self.points and self.collisionRect
     def initLists(self):
@@ -97,6 +104,7 @@ class Main:
                 self.diff[p].append(0)
         self.lastP = [len(self.points) - 1, len(self.points) - 2]
         self.updateJointConnections()
+        self.updateCloths()
 
     def updateLists(self):
         self.GUI.update({len(self.points) - 1: {'slider': {'radius': None, 'density': None}, 'manual': {'radius': None, 'density': None}}})
@@ -114,6 +122,56 @@ class Main:
         for p in range(len(self.points)):
             self.diff[-1].append(0)
         self.updateJointConnections()
+        self.updateCloths()
+
+    # put the indexes of all points into a list
+    def updateCloths(self):
+        global clothNames
+        for p in range(len(self.points)):
+            if self.points[p].cloth == '':
+                clothNames.update({f'{p}': None})
+                self.clothData.update({f'{p}': [p]})
+            elif self.clothData.get(self.points[p].cloth) is None:
+                clothNames.update({self.points[p].cloth: None})
+                self.clothData.update({self.points[p].cloth: []})
+            if (self.points[p].cloth != '') and (not checkInList(self.clothData[self.points[p].cloth], p)):
+                self.clothData[self.points[p].cloth].append(p)
+        # cloths = self.cloths
+
+    def importTutorials(self):
+        global tutorialNames
+        f = open('tutorialTexts', 'r')
+        tutors = f.read().splitlines()
+        self.tutorialTexts.update({'tutorialName': ['contents']})
+        tutorialNames.update({'tutorialName': None})
+        self.GUI['Tutorials'][''].update({'tutorialName': None})
+        print(self.GUI)
+        f.close()
+
+    def tpCloth(self, cloth, cords, c, tpType):
+        cordDiff = []
+        if tpType == 'cloth':
+            pIdx = self.clothData[cloth][0]
+            self.points[pIdx].cords = copy.deepcopy(controls.hand[c].cords)
+            for co in range(3):
+                cordDiff.append(self.points[pIdx].cords[co] - self.points[pIdx].oldCords[co])
+            if cloth != '':
+                for p in self.clothData[f'{cloth}']:
+                    if p != pIdx:
+                        for cor in range(3):
+                            self.points[p].cords[cor] += cordDiff[cor]
+                            self.points[p].oldCords[cor] += cordDiff[cor]
+            self.points[pIdx].oldCords = copy.deepcopy(cords)
+        elif tpType == 'point':
+            for co in range(3):
+                cordDiff.append(self.points[cloth].cords[co] - self.points[cloth].oldCords[co])
+            if self.points[cloth].cloth != '':
+                for p in self.clothData[f'{self.points[cloth].cloth}']:
+                    if p != self.lastP[c]:
+                        for cor in range(3):
+                            self.points[p].cords[cor] += cordDiff[cor]
+                            self.points[p].oldCords[cor] += cordDiff[cor]
+            self.points[cloth].oldCords = copy.deepcopy(cords)
 
     def updateJointConnections(self):
         for p in range(len(self.points)):
@@ -311,15 +369,16 @@ class Main:
                 elif not theForce:
                     self.points[self.lastP[c]].cords = copy.deepcopy(controls.hand[c].cords)
                     if not self.rHeld:
-                        cordDiff = []
-                        for co in range(3):
-                            cordDiff.append(self.points[self.lastP[c]].cords[co] - self.points[self.lastP[c]].oldCords[co])
-                        for po in range(len(self.points)):
-                            if (po != self.lastP[c]) and (self.points[po].cloth == self.points[self.lastP[c]].cloth) and (self.points[self.lastP[c]].cloth != ''):
-                                for cor in range(3):
-                                    self.points[po].cords[cor] += cordDiff[cor]
-                                    self.points[po].oldCords[cor] += cordDiff[cor]
-                        self.points[self.lastP[c]].oldCords = copy.deepcopy(controls.hand[c].cords)
+                        # cordDiff = []
+                        # for co in range(3):
+                        #     cordDiff.append(self.points[self.lastP[c]].cords[co] - self.points[self.lastP[c]].oldCords[co])
+                        # for po in range(len(self.points)):
+                        #     if (po != self.lastP[c]) and (self.points[po].cloth == self.points[self.lastP[c]].cloth) and (self.points[self.lastP[c]].cloth != ''):
+                        #         for cor in range(3):
+                        #             self.points[po].cords[cor] += cordDiff[cor]
+                        #             self.points[po].oldCords[cor] += cordDiff[cor]
+                        # self.points[self.lastP[c]].oldCords = copy.deepcopy(controls.hand[c].cords)
+                        self.tpCloth(self.lastP[c], self.points[self.lastP[c]].cords, c, 'point')
                         self.rHeld = True
             # remove the force joint after recall is no longer active
             elif self.theForceJoint:
@@ -363,9 +422,11 @@ class Main:
                                     if (type(globalVars[g]) is list) and ((gt == 'slider') or (gt == 'manual')):
                                         self.GUI[g][gt][gta].setVar(globalVars[g][self.GUI[g][gt][gta].xyz])
                                         globalVars[g][self.GUI[g][gt][gta].xyz] = self.GUI[g][gt][gta].main()
-                                    else:
+                                    elif g != 'Tutorials':
                                         self.GUI[g][gt][gta].setVar(globalVars[g])
                                         globalVars[g] = self.GUI[g][gt][gta].main()
+                                    else:
+                                        self.GUI[g][gt][gta].main()
                                 else:
                                     if gta == 'radius':
                                         self.GUI[g][gt][gta].setVar(self.points[g].radius)
@@ -378,7 +439,12 @@ class Main:
 
         if self.GUIType is not None:
             print(self.GUIType)
-            if self.GUIType[1][0] == 'Slider':
+            if self.GUIType[0] == 'cloths':
+                self.tpCloth(self.GUIType[1][0], controls.hand[0].cords, 0, 'cloth')
+            elif self.GUIType[0] == 'Tutorials':
+                if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is None:
+                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [1, 1, 1], self.tutorialTexts[self.GUIType[1][0]], [], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+            elif self.GUIType[1][0] == 'Slider':
                 if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] is not None:
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]].unDraw()
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = None
@@ -735,7 +801,7 @@ class Point:
                 if self.cubeCollision[count]:
                     if b.type == 's':
                         if str(self.sf) == 'sticky':
-                            self.cords = self.oldCords  # "stick" cords to oldCords
+                            self.cords = copy.deepcopy(self.oldCords)  # "stick" cords to oldCords
                         else:
                             if (self.collision[count] == 'top') or (self.collision[count] == 'right') or (self.collision[count] == 'bottom') or (self.collision[count] == 'left'):  # colliding with top/right/bottom/left plane
                                 # check out this link to see why I need the logic below:
@@ -800,25 +866,26 @@ class Point:
             # detect collisions between points and edges on a collision rect (cuboid)
             elif (self.vertexState != '') and (minDist <= (distance(b.vertex[vertexIdx[0]], b.vertex[vertexIdx[1]]))):
                 if b.type == 's':
-                    i = [0, 0, 0]
+                    # i = [0, 0, 0]
                     if str(self.sf) == 'sticky':
-                        self.cords = self.oldCords
+                        self.cords = copy.deepcopy(self.oldCords)
                     else:
-                        if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
-                            i = [2, 1, 0]
+                        self.cords = copy.deepcopy(self.oldCords)
+                        # if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
+                        #     i = [2, 1, 0]
+                        #
+                        # elif (self.lastCollision[count] == 'left') or (self.lastCollision[count] == 'right'):
+                        #     i = [2, 0, 1]
+                        #
+                        # elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
+                        #     i = [1, 0, 2]
 
-                        elif (self.lastCollision[count] == 'left') or (self.lastCollision[count] == 'right'):
-                            i = [2, 0, 1]
-
-                        elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
-                            i = [1, 0, 2]
-
-                        if abs(math.degrees(self.bAngle[2])) < 45:
-                            self.collisionState = 'y'
-                            collisionPoint = self.cords[0] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
-                        else:
-                            self.collisionState = 'x'
-                            collisionPoint = self.cords[1] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
+                        # if abs(math.degrees(self.bAngle[2])) < 45:
+                        #     self.collisionState = 'y'
+                        #     collisionPoint = self.cords[0] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
+                        # else:
+                        #     self.collisionState = 'x'
+                        #     collisionPoint = self.cords[1] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
 
                         # self.angle = getThreeDAngle(collisionPoint, self.cords, self.vertexState)
                         # angle = getTwoDAngle([self.cords[i[1]], self.cords[i[0]]], [b.vertex[vertexIdx[0]][i[1]], b.vertex[vertexIdx[0]][i[0]]])
@@ -826,11 +893,11 @@ class Point:
                         # self.reboundVelocity[i[0]], self.reboundVelocity[i[1]], self.reboundVelocity[i[2]] = edgeBounce(resultV, self.angle, self.e, -1)
                         # self.cords[i[0]] += self.multiplier[count] * self.reboundVelocity[i[0]]
                         # self.oldCords[i[1]] = yCollisionPlane[self.lastCollision[count]]['y'] + (self.radius * cos(self.angle[0]))
-                        self.collAngle = getThreeDAngle(collisionPoint, self.cords, 'y')
-                        self.cords[i[1]] = yCollisionPlane[self.lastCollision[count]][self.collisionState] + (self.radius * sin(self.collAngle[0]))
-                        self.oldCords[i[1]] = copy.deepcopy(self.cords[i[1]])
+                        # self.collAngle = getThreeDAngle(collisionPoint, self.cords, 'y')
+                        # self.cords[i[1]] = yCollisionPlane[self.lastCollision[count]][self.collisionState] + (self.radius * sin(self.collAngle[0]))
+                        # self.oldCords[i[1]] = copy.deepcopy(self.cords[i[1]])
                         # self.cords[i[2]] += self.multiplier[count] * self.reboundVelocity[i[2]]
-                        print(self.normalForce, self.collAngle)
+                        # print(self.normalForce, self.collAngle)
 
                 elif b.type == 'l':
                     pass
@@ -840,77 +907,78 @@ class Point:
             # detect collisions between points and vertices (corners) on a collision rect (cuboid)
             elif (self.collision[count] == '') and (self.vertexState == '') and (distance(b.vertex[vertexIdx], self.cords) <= self.radius):
                 if str(self.sf) == 'sticky':
-                    self.cords = self.oldCords
+                    self.cords = copy.deepcopy(self.oldCords)
                 else:
-                    resultF = math.sqrt(self.force[0] ** 2 + self.force[1] ** 2 + self.force[2] ** 2)
-                    resultV = math.sqrt(self.oldVelocity[0] ** 2 + self.oldVelocity[1] ** 2 + self.oldVelocity[2] ** 2)
-
-                    # nMultiplier was obtained through testing
-                    if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
-                        self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'y')
-                        if (vertexIdx == 0) or (vertexIdx == 1) or (vertexIdx == 6) or (vertexIdx == 3):
-                            pMultiplier = [-1, -1]
-                            nMultiplier = [1, 1]
-                        elif (vertexIdx == 4) or (vertexIdx == 5) or (vertexIdx == 2) or (vertexIdx == 7):
-                            pMultiplier = [1, 1]
-                            nMultiplier = [-1, -1]
-                        if self.lastCollision[count] == 'top':
-                            yMultiplier = -1
-                        elif self.lastCollision[count] == 'bottom':
-                            yMultiplier = 1
-
-                        self.reboundVelocity[0], self.reboundVelocity[1], self.reboundVelocity[2] = vertexBounce(resultV, self.angle, self.e)
-                        self.cords[0] += pMultiplier[0] * self.reboundVelocity[0]
-                        self.cords[1] = self.oldCords[1] + self.reboundVelocity[1] * yMultiplier
-                        self.cords[2] += pMultiplier[1] * self.reboundVelocity[2]
-                        self.normalForce[0] = nMultiplier[0] * resultF * cos(self.angle[1]) * sin(self.angle[0]) * -yMultiplier
-                        self.normalForce[2] = nMultiplier[1] * resultF * cos(self.angle[1]) * cos(self.angle[0]) * -yMultiplier
-
-                    elif (self.lastCollision[count] == 'left') or (self.lastCollision[count] == 'right'):
-                        self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'x')
-                        if (vertexIdx == 1) or (vertexIdx == 4) or (vertexIdx == 6) or (vertexIdx == 7):
-                            pMultiplier = [1, 1]
-                            if (vertexIdx == 6) or (vertexIdx == 7):
-                                nMultiplier = [-1, -1]
-                            elif (vertexIdx == 1) or (vertexIdx == 4):
-                                nMultiplier = [1, 1]
-                        elif (vertexIdx == 2) or (vertexIdx == 3) or (vertexIdx == 0) or (vertexIdx == 5):
-                            pMultiplier = [-1, -1]
-                            if (vertexIdx == 0) or (vertexIdx == 5):
-                                nMultiplier = [1, 1]
-                            elif (vertexIdx == 2) or (vertexIdx == 3):
-                                nMultiplier = [-1, -1]
-                        if self.lastCollision[count] == 'left':
-                            yMultiplier = 1
-                        elif self.lastCollision[count] == 'right':
-                            yMultiplier = -1
-
-                        self.reboundVelocity[2], self.reboundVelocity[0], self.reboundVelocity[1] = vertexBounce(resultV, self.angle, self.e)
-                        self.cords[1] += pMultiplier[0] * self.reboundVelocity[1]
-                        self.cords[0] = self.oldCords[0] + self.reboundVelocity[0] * yMultiplier
-                        self.cords[2] += pMultiplier[1] * self.reboundVelocity[2]
-                        self.normalForce[1] = nMultiplier[0] * resultF * cos(self.angle[1]) * cos(self.angle[0])
-                        self.normalForce[2] = nMultiplier[1] * resultF * cos(self.angle[1]) * sin(self.angle[0])
-
-                    elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
-                        self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'z')
-                        if (vertexIdx == 0) or (vertexIdx == 1) or (vertexIdx == 3) or (vertexIdx == 6):
-                            pMultiplier = [-1, -1]
-                            nMultiplier = [-1, -1]
-                        elif (vertexIdx == 7) or (vertexIdx == 2) or (vertexIdx == 4) or (vertexIdx == 5):
-                            pMultiplier = [1, 1]
-                            nMultiplier = [1, 1]
-                        if self.lastCollision[count] == 'front':
-                            yMultiplier = -1
-                        elif self.lastCollision[count] == 'back':
-                            yMultiplier = 1
-
-                        self.reboundVelocity[0], self.reboundVelocity[2], self.reboundVelocity[1] = vertexBounce(resultV, self.angle, self.e)
-                        self.cords[0] += pMultiplier[0] * self.reboundVelocity[0]
-                        self.cords[2] = self.oldCords[2] + self.reboundVelocity[2] * yMultiplier
-                        self.cords[1] += pMultiplier[1] * self.reboundVelocity[1]
-                        self.normalForce[0] = nMultiplier[0] * resultF * cos(self.angle[1]) * sin(self.angle[0]) * yMultiplier
-                        self.normalForce[1] = nMultiplier[1] * resultF * cos(self.angle[1]) * cos(self.angle[0]) * yMultiplier
+                    self.cords = copy.deepcopy(self.oldCords)
+                    # resultF = math.sqrt(self.force[0] ** 2 + self.force[1] ** 2 + self.force[2] ** 2)
+                    # resultV = math.sqrt(self.oldVelocity[0] ** 2 + self.oldVelocity[1] ** 2 + self.oldVelocity[2] ** 2)
+                    #
+                    # # nMultiplier was obtained through testing
+                    # if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
+                    #     self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'y')
+                    #     if (vertexIdx == 0) or (vertexIdx == 1) or (vertexIdx == 6) or (vertexIdx == 3):
+                    #         pMultiplier = [-1, -1]
+                    #         nMultiplier = [1, 1]
+                    #     elif (vertexIdx == 4) or (vertexIdx == 5) or (vertexIdx == 2) or (vertexIdx == 7):
+                    #         pMultiplier = [1, 1]
+                    #         nMultiplier = [-1, -1]
+                    #     if self.lastCollision[count] == 'top':
+                    #         yMultiplier = -1
+                    #     elif self.lastCollision[count] == 'bottom':
+                    #         yMultiplier = 1
+                    #
+                    #     self.reboundVelocity[0], self.reboundVelocity[1], self.reboundVelocity[2] = vertexBounce(resultV, self.angle, self.e)
+                    #     self.cords[0] += pMultiplier[0] * self.reboundVelocity[0]
+                    #     self.cords[1] = self.oldCords[1] + self.reboundVelocity[1] * yMultiplier
+                    #     self.cords[2] += pMultiplier[1] * self.reboundVelocity[2]
+                    #     self.normalForce[0] = nMultiplier[0] * resultF * cos(self.angle[1]) * sin(self.angle[0]) * -yMultiplier
+                    #     self.normalForce[2] = nMultiplier[1] * resultF * cos(self.angle[1]) * cos(self.angle[0]) * -yMultiplier
+                    #
+                    # elif (self.lastCollision[count] == 'left') or (self.lastCollision[count] == 'right'):
+                    #     self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'x')
+                    #     if (vertexIdx == 1) or (vertexIdx == 4) or (vertexIdx == 6) or (vertexIdx == 7):
+                    #         pMultiplier = [1, 1]
+                    #         if (vertexIdx == 6) or (vertexIdx == 7):
+                    #             nMultiplier = [-1, -1]
+                    #         elif (vertexIdx == 1) or (vertexIdx == 4):
+                    #             nMultiplier = [1, 1]
+                    #     elif (vertexIdx == 2) or (vertexIdx == 3) or (vertexIdx == 0) or (vertexIdx == 5):
+                    #         pMultiplier = [-1, -1]
+                    #         if (vertexIdx == 0) or (vertexIdx == 5):
+                    #             nMultiplier = [1, 1]
+                    #         elif (vertexIdx == 2) or (vertexIdx == 3):
+                    #             nMultiplier = [-1, -1]
+                    #     if self.lastCollision[count] == 'left':
+                    #         yMultiplier = 1
+                    #     elif self.lastCollision[count] == 'right':
+                    #         yMultiplier = -1
+                    #
+                    #     self.reboundVelocity[2], self.reboundVelocity[0], self.reboundVelocity[1] = vertexBounce(resultV, self.angle, self.e)
+                    #     self.cords[1] += pMultiplier[0] * self.reboundVelocity[1]
+                    #     self.cords[0] = self.oldCords[0] + self.reboundVelocity[0] * yMultiplier
+                    #     self.cords[2] += pMultiplier[1] * self.reboundVelocity[2]
+                    #     self.normalForce[1] = nMultiplier[0] * resultF * cos(self.angle[1]) * cos(self.angle[0])
+                    #     self.normalForce[2] = nMultiplier[1] * resultF * cos(self.angle[1]) * sin(self.angle[0])
+                    #
+                    # elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
+                    #     self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'z')
+                    #     if (vertexIdx == 0) or (vertexIdx == 1) or (vertexIdx == 3) or (vertexIdx == 6):
+                    #         pMultiplier = [-1, -1]
+                    #         nMultiplier = [-1, -1]
+                    #     elif (vertexIdx == 7) or (vertexIdx == 2) or (vertexIdx == 4) or (vertexIdx == 5):
+                    #         pMultiplier = [1, 1]
+                    #         nMultiplier = [1, 1]
+                    #     if self.lastCollision[count] == 'front':
+                    #         yMultiplier = -1
+                    #     elif self.lastCollision[count] == 'back':
+                    #         yMultiplier = 1
+                    #
+                    #     self.reboundVelocity[0], self.reboundVelocity[2], self.reboundVelocity[1] = vertexBounce(resultV, self.angle, self.e)
+                    #     self.cords[0] += pMultiplier[0] * self.reboundVelocity[0]
+                    #     self.cords[2] = self.oldCords[2] + self.reboundVelocity[2] * yMultiplier
+                    #     self.cords[1] += pMultiplier[1] * self.reboundVelocity[1]
+                    #     self.normalForce[0] = nMultiplier[0] * resultF * cos(self.angle[1]) * sin(self.angle[0]) * yMultiplier
+                    #     self.normalForce[1] = nMultiplier[1] * resultF * cos(self.angle[1]) * cos(self.angle[0]) * yMultiplier
 
                     # print(self.lastCollision[count], math.degrees(angle[0]), math.degrees(angle[1]), vertexIdx[0])
                 # collidingB.append(b)
@@ -961,6 +1029,7 @@ class Joint:
         self.constrainForce = [0, 0, 0]
         self._update = [0, 0, 0]
         self.damping = [0, 0, 0]
+        self.dampingCoef = 1
         if self.show:
             self.cylinder = vizshape.addCylinder(1, self.radius, slices=jointResolution)  # make the joint visible if shown
         self.volume = math.pi * (self.radius ** 2) * self.height
@@ -1004,11 +1073,12 @@ class Joint:
     # constrain points connected to this joint
     def constrain(self):
         if (self.height != self.origLength) and (self.height != 0):
+            # self.dampingCoef = 1 + (self.height / self.origLength)
             for u in range(3):
                 if self.theForceJoint:
                     self._update[u] = 0.01 * (self.diff[u] * ((self.origLength / self.height) - 1))  # pull points by changing their cords directly rather than force (since it doesn't matter when you use The Force!)
                 self.constrainForce[u] = self.stiffness * (self.diff[u] / self.height) * (self.origLength - self.height)  # check out the maths for this using this link:
-                self.damping[u] = self.dampingConst * abs((self.diff[u] / self.height) * (self.oldHeight - self.height)) * getSign(game.points[self.pOne].velocity[u] - game.points[self.pTwo].velocity[u]) * physicsTime  # damping force = damping constant * change in joint length (relative to both points) * relative direction
+                self.damping[u] = self.dampingCoef * self.dampingConst * abs((self.diff[u] / self.height) * (self.oldHeight - self.height)) * getSign(game.points[self.pOne].velocity[u] - game.points[self.pTwo].velocity[u]) * physicsTime  # damping force = damping constant * change in joint length (relative to both points) * relative direction
         # self.stiffness = self.origStiffness * (math.pi * (self.radius ** 2)) / self.origArea  # increase stiffness as length decreases and vice versa as length increases
         for i in range(3):
             if self.theForceJoint:
@@ -1032,7 +1102,7 @@ class Joint:
             game.points[self.pOne].pointCollisions = [len(game.points) - 1]
             game.points[-1].cords = copy.deepcopy(self.cords)
             game.points[-1].oldCords = copy.deepcopy(self.cords)
-            game.joints.append(Joint(True, self.origLength * 2, self.stiffness / 16, self.pOne, len(game.points) - 1, self.dampingConst, self.maxStrain * 2))  # maxStrain is increased since whenever materials break, since they pass their elastic limit in reality
+            game.joints.append(Joint(True, self.origLength * 2, self.stiffness / 8, self.pOne, len(game.points) - 1, self.dampingConst, self.maxStrain * 2))  # maxStrain is increased since whenever materials break, since they pass their elastic limit in reality
             game.points[self.pOne].cloth = self.pOne * len(game.points)  # unique cloth key
             game.points[-1].cloth = self.pOne * len(game.points)
             game.updateLists()
@@ -1041,7 +1111,7 @@ class Joint:
                 pointRad = minRadius
             else:
                 pointRad = game.points[self.pTwo].radius / 2
-            self.stiffness /= 16
+            self.stiffness /= 8
             game.points.append(Point(pointRad, game.points[self.pTwo].density, True, self.pTwo))
             game.points[self.pTwo].setRadiusDensity(pointRad, game.points[self.pTwo].density)
             self.pOne = len(game.points) - 1

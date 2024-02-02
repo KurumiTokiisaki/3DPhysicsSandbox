@@ -21,6 +21,9 @@ GUItypes = {
     'Manual': {'X': None, 'Y': None, 'Z': None}
 }
 
+tutorialNames = {}
+clothNames = {}
+
 globalVars = {
     'gameSpeed': 1,  # game speed factor
     'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
@@ -28,7 +31,9 @@ globalVars = {
     'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
     'friction': 0,  # global frictional force coefficient. set to 'sticky' for infinite value.
-    'strain': 10  # global maximum strain before breaking point
+    'strain': 2,  # global maximum strain before breaking point
+    'Tutorials': None,  # only here for summoning tutorials
+    'cloths': None  # only here for summoning cloths
 }
 
 defaultGlobalVars = {
