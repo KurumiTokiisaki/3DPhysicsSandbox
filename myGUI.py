@@ -834,12 +834,15 @@ class Tutorial:
         self.cords = cords
         self.text = text
         maxLen = math.floor((sizeXZ[0] - offset * 2) * jetBrainsFontSize / textSize)
-        print(maxLen)
         textList = []
         for t in range(len(self.text)):
-            textList.append(['\n'])
             self.text[t] = self.text[t].split()
+            textList.append(['\n'])
             for w in range(len(self.text[t])):
+                if self.text[t][w].find('###') != -1:
+                    for _ in range(3):
+                        self.text[t][w] = removeFromStr(self.text[t][w], 0)
+                    self.text[t][w] = controls[self.text[t][w]]
                 if (len(textList[-1][-1]) + len(self.text[t][w])) > maxLen:
                     textList[-1].append('\n')
                 if textList[-1][-1] != '\n':
@@ -851,7 +854,7 @@ class Tutorial:
             self.text.append('')
             for c in range(len(textList[t])):
                 self.text[-1] = f'{self.text[-1]}{listToStr(textList[t][c])}'
-        print(textList)
+        # print(textList)
         self.size = [sizeXZ[0], offset * 3 + getMaxLen(textList) * textSize, sizeXZ[1]]
         self.stage = 0
         self.stageDisplay = viz.addText3D('', fontSize=textSize)
@@ -890,13 +893,13 @@ class Tutorial:
         else:
             self.sHeld[cIdx] = False
         if mode == 'k':
-            if viz.key.isDown(viz.KEY_RIGHT):
+            if viz.key.isDown(viz.KEY_LEFT):
                 if not self.lClickHeld[0]:
                     self.lClickHeld[0] = True
                     self.stage -= 1
             else:
                 self.lClickHeld[0] = False
-            if viz.key.isDown(viz.KEY_LEFT):
+            if viz.key.isDown(viz.KEY_RIGHT):
                 if not self.lClickHeld[1]:
                     self.lClickHeld[1] = True
                     self.stage += 1

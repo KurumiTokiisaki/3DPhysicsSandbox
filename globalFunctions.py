@@ -251,3 +251,15 @@ def getMaxLen(listIn):
         if len(l) > maxLen:
             maxLen = len(l)
     return maxLen
+
+
+# remove a character from a string at a specified index
+def removeFromStr(string, popIdx):
+    strArray = []
+    for c in string:
+        strArray.append(c)
+    strArray.pop(popIdx)
+    modifiedStr = ''
+    for i in strArray:
+        modifiedStr = f'{modifiedStr}{i}'
+    return modifiedStr

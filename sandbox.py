@@ -43,7 +43,7 @@ def selectP(cIdx):
 # Main class for main.py
 class Main:
     def __init__(self):
-        # commented code below used for testing
+        # commented code below used for testinglsd
         # vizshape.addGrid()
         # vizshape.addGrid(axis=vizshape.AXIS_X)
         # vizshape.addBox((1, 0.01, 1)).setPosition(0, 0, 0)
@@ -165,8 +165,8 @@ class Main:
                 tNames.append(tempStr)
             else:
                 tTexts[-1].append(l)
-        print(tNames, tTexts)
         for t in range(len(tNames)):
+            tNames[t] = tNames[t].replace('newLine', '\n')  # solution from Python Discord, credit goes to lordtyrionlannister "Saul Goodman"
             self.tutorialTexts.update({tNames[t]: tTexts[t]})  # update local information about the tutorial
             tutorialNames.update({tNames[t]: None})  # update the global value of tutorialNames for use in myGUI.GUISelector
             self.GUI['Tutorials'][''].update({tNames[t]: None})  # update local value of tutorials in self.GUI
@@ -463,7 +463,7 @@ class Main:
                             self.GUI[g][gt][gta] = None
 
         if self.GUIType is not None:
-            print(self.GUIType)
+            # print(self.GUIType)
             if self.GUIType[0] == 'cloths':
                 self.tpCloth(self.GUIType[1][0], controls.hand[0].cords, 0, 'cloth')
             elif self.GUIType[0] == 'Tutorials':
@@ -510,7 +510,7 @@ class Main:
                     xyz = 1
                 else:
                     xyz = 2
-                print(self.GUIType)
+                # print(self.GUIType)
                 if type(globalVars[self.GUIType[0]]) is list:
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Manual(xyz, globalVars[self.GUIType[0]][xyz], defaultGlobalVars[self.GUIType[0]][xyz], controls.hand[0].cords, self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                 else:

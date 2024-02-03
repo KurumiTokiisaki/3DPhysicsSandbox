@@ -1,5 +1,7 @@
----Controls (Keyboard/Mouse)
+---Introduction
 Use the left/right arrow keys to navigate through these tutorials.
-Use WASD to move around and move the mouse to look around.
----asdnkjadsnkjdaskjdas
-The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog.
+Welcome to Faiz's Mod, a Physics Sandbox in which you are a God who controls all!
+---ControlsnewLine(Keyboard/Mouse)
+Press ' W/A/S/D ' to move around and move the mouse to look around.
+Left-click to select points while God's Hand intersects with them. Keep left-click held to drag them around, and release to throw them!
+Press ' ###pause ' to pause the Physics simulation, ' ###recall ' to teleport the last selected point to God's Hand.
