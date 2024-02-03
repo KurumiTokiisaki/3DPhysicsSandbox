@@ -10,6 +10,8 @@ controllerCount = 1
 if mode == 'vr':
     controllerCount = 2
 
+jetBrainsFontSize = 1.69  # font size of 1.69 equates to 1 unit of distance per character in Vizard
+
 
 class Slider:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
@@ -826,48 +828,93 @@ class GUISelector:
 
 
 class Tutorial:
-    def __init__(self, cords, sizeXYZ, text, boldTextList, lController, rController):
+    def __init__(self, cords, sizeXYZ, text, boldTextList, textSize, lController, rController):
+        offset = 0.15
         self.drawn = True
         self.cords = cords
         self.size = sizeXYZ
         self.text = text
+        maxLen = math.floor((sizeXYZ[0] - offset * 2) * jetBrainsFontSize / textSize)
+        print(maxLen)
+        textList = []
+        for t in range(len(self.text)):
+            textList.append([])
+            for c in range(len(self.text[t])):
+                if (c % maxLen) == 0:
+                    textList[-1].append(['\n'])
+                textList[-1][-1].append(self.text[t][c])
+        self.text = []
+        for t in range(len(textList)):
+            self.text.append('')
+            for c in range(len(textList[t])):
+                self.text[-1] = f'{self.text[-1]}{listToStr(textList[t][c])}'
+        print(self.text)
         self.stage = 0
-        self.textObj = viz.addText3D(f'{self.text[self.stage]}', fontSize=0.1)
+        self.textObj = viz.addText3D('', fontSize=textSize)
         self.boltText = boldTextList
         self.closeButton = XSymbol(0.5, [self.cords[0] + self.size[0] / 1.9, self.cords[1] + self.size[1] / 1.9, self.cords[2]])
-        self.box = vizshape.addFrustum([1, 1, 1, 1, 1, 1])
+        self.closeButton.setAngle((0, 90, 0))
+        self.box = vizshape.addBox(sizeXYZ)
+        self.box.setPosition(cords)
+        self.box.alpha(0.1)
         self.arrows = [vizshape.addArrow(0.1), vizshape.addArrow(0.1)]  # left arrow, right arrow
-        self.arrows[0].setPosition(self.cords[0] - self.size[0], self.cords[1], self.cords[2])
-        self.arrows[1].setPosition(self.cords[0] + self.size[0], self.cords[1], self.cords[2])
-        self.textObj.setPosition(self.cords)
+        self.arrows[0].setPosition(self.cords[0] - 0.5 - self.size[0] / 2, self.cords[1], self.cords[2])
+        self.arrows[0].setEuler(-90, 0, 0)
+        self.arrows[0].setScale((5, 5, 5))
+        self.arrows[1].setPosition(self.cords[0] + 0.5 + self.size[0] / 2, self.cords[1], self.cords[2])
+        self.arrows[1].setEuler(90, 0, 0)
+        self.arrows[1].setScale((5, 5, 5))
+        self.textObj.setPosition(self.cords[0] + offset - self.size[0] / 2, self.cords[1] - offset + self.size[1] / 2, self.cords[2])
+        self.textObj.font("JetBrainsMono-2.304\\fonts\\ttf\\JetBrainsMono-Medium.ttf")  # JetBrains Mono is NOT my own work! The authors and OFL are in JetBrainsMono-2.304
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
+        self.sHeld = [False, False]
+        self.lClickHeld = [False, False]
 
     def drag(self, cIdx, selecting):
         if selecting:
-            for a in range(2):
-                if detectCollision(self.cDat[cIdx].radius, 0.1, self.cDat[cIdx].cords, self.arrows[a].getPosition()):
-                    if a == 0:
-                        if (self.stage - 1) > len(self.text):
+            if not self.sHeld[cIdx]:
+                self.sHeld[cIdx] = True
+                for a in range(2):
+                    if detectCollision(self.cDat[cIdx].radius, 0.3, self.cDat[cIdx].cords, self.arrows[a].getPosition()):
+                        if a == 0:
                             self.stage -= 1
-                    elif a == 1:
-                        if self.stage >= (len(self.text) - 1):
-                            self.stage = 0
-                        else:
+                        elif a == 1:
                             self.stage += 1
-                    self.textObj.message(f'{self.text[self.stage]}')
+        else:
+            self.sHeld[cIdx] = False
+        if mode == 'k':
+            if viz.key.isDown(viz.KEY_RIGHT):
+                if not self.lClickHeld[0]:
+                    self.lClickHeld[0] = True
+                    self.stage -= 1
+            else:
+                self.lClickHeld[0] = False
+            if viz.key.isDown(viz.KEY_LEFT):
+                if not self.lClickHeld[1]:
+                    self.lClickHeld[1] = True
+                    self.stage += 1
+            else:
+                self.lClickHeld[1] = False
+        if self.stage < 0:
+            self.stage = len(self.text) - 1
+        elif self.stage > (len(self.text) - 1):
+            self.stage = 0
 
     def main(self):
         for c in range(controllerCount):
             if buttonPressed('select', self.cObj[c], c) and detectCollision(self.cDat[c].radius, self.closeButton.radius, self.cDat[c].cords, self.closeButton.cords):
-                self.unDraw()
                 self.drawn = False
 
+        if not self.drawn:
+            self.unDraw()
+
     def draw(self, camCords):
-        pass
+        self.textObj.message(f'{self.text[self.stage]}')
 
     def unDraw(self):
         self.textObj.remove()
         self.closeButton.unDraw()
+        self.box.remove()
         for a in self.arrows:
             a.remove()

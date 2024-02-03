@@ -43,7 +43,7 @@ def selectP(cIdx):
 # Main class for main.py
 class Main:
     def __init__(self):
-        # vizshape.addGrid()  # used for testing
+        vizshape.addGrid()  # used for testing
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
@@ -105,6 +105,9 @@ class Main:
         self.lastP = [len(self.points) - 1, len(self.points) - 2]
         self.updateJointConnections()
         self.updateCloths()
+        # below is the code I used to get the relative size of the JetBrains font to the game scene
+        # myT = viz.addText3D('abcd', fontSize=1.69 / 4)  # OBSERVATION: font size of 1.69 has the width of 1 unit
+        # myT.font("JetBrainsMono-2.304\\fonts\\ttf\\JetBrainsMono-Medium.ttf")
 
     def updateLists(self):
         self.GUI.update({len(self.points) - 1: {'slider': {'radius': None, 'density': None}, 'manual': {'radius': None, 'density': None}}})
@@ -139,13 +142,29 @@ class Main:
         # cloths = self.cloths
 
     def importTutorials(self):
-        global tutorialNames
+        # global tutorialNames
         f = open('tutorialTexts', 'r')
         tutors = f.read().splitlines()
-        self.tutorialTexts.update({'tutorialName': ['contents']})
-        tutorialNames.update({'tutorialName': None})
-        self.GUI['Tutorials'][''].update({'tutorialName': None})
-        print(self.GUI)
+        tNames = []
+        tTexts = []
+        for l in tutors:
+            if l.find('---') != -1:
+                tTexts.append([])
+                tempList = list(l)
+                for _ in range(3):
+                    tempList.pop(0)
+                tempStr = ''
+                for c in tempList:
+                    tempStr = f'{tempStr}{c}'
+                tNames.append(tempStr)
+            else:
+                tTexts[-1].append(l)
+        print(tNames, tTexts)
+        for t in range(len(tNames)):
+            self.tutorialTexts.update({tNames[t]: tTexts[t]})  # update local information about the tutorial
+            tutorialNames.update({tNames[t]: None})  # update the global value of tutorialNames for use in myGUI.GUISelector
+            self.GUI['Tutorials'][''].update({tNames[t]: None})  # update local value of tutorials in self.GUI
+        print(self.GUI['Tutorials'])
         f.close()
 
     def tpCloth(self, cloth, cords, c, tpType):
@@ -443,7 +462,7 @@ class Main:
                 self.tpCloth(self.GUIType[1][0], controls.hand[0].cords, 0, 'cloth')
             elif self.GUIType[0] == 'Tutorials':
                 if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is None:
-                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [1, 1, 1], self.tutorialTexts[self.GUIType[1][0]], [], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [5, 5, 0.2], self.tutorialTexts[self.GUIType[1][0]], [], 0.2, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             elif self.GUIType[1][0] == 'Slider':
                 if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] is not None:
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]].unDraw()
@@ -1162,7 +1181,7 @@ class CollisionRect:
         sizeMultiplier = [0.5, 0.5, 0.5]
         multiplier = 1
         self.vertexAngle = math.atan(self.size[1] / self.size[0])
-        print(math.degrees(self.vertexAngle))
+        # print(math.degrees(self.vertexAngle))
         for v in range(8):
             if (v == 1) or (v == 5):
                 sizeMultiplier[0] = -sizeMultiplier[0]
@@ -1259,7 +1278,7 @@ class CollisionRect:
             'y': my
         }
 
-        print(self.vertex)
+        # print(self.vertex)
         # print(self.vertexAngle)
 
 

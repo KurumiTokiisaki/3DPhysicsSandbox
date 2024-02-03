@@ -234,3 +234,11 @@ def buttonPressed(button, *args):  # gets the button currently being pressed
 
 def checkInList(arr, value):
     return value in arr
+
+
+# convert a list to a string
+def listToStr(listIn):
+    tempStr = ''
+    for l in listIn:
+        tempStr = f'{tempStr}{l}'
+    return tempStr
