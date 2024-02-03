@@ -835,20 +835,23 @@ class Tutorial:
         self.size = sizeXYZ
         self.text = text
         maxLen = math.floor((sizeXYZ[0] - offset * 2) * jetBrainsFontSize / textSize)
-        print(maxLen)
         textList = []
         for t in range(len(self.text)):
-            textList.append([])
-            for c in range(len(self.text[t])):
-                if (c % maxLen) == 0:
-                    textList[-1].append(['\n'])
-                textList[-1][-1].append(self.text[t][c])
+            textList.append(['\n'])
+            self.text[t] = self.text[t].split()
+            for w in range(len(self.text[t])):
+                if (w + 1) < len(self.text[t]):
+                    if (len(textList[-1][-1]) + len(self.text[t][w + 1])) > maxLen:
+                        textList[-1].append('\n')
+                if textList[-1][-1] != '\n':
+                    textList[-1][-1] = f'{textList[-1][-1]} {self.text[t][w]}'
+                else:
+                    textList[-1][-1] = f'{textList[-1][-1]}{self.text[t][w]}'  # no spaces on new lines!
         self.text = []
         for t in range(len(textList)):
             self.text.append('')
             for c in range(len(textList[t])):
                 self.text[-1] = f'{self.text[-1]}{listToStr(textList[t][c])}'
-        print(self.text)
         self.stage = 0
         self.textObj = viz.addText3D('', fontSize=textSize)
         self.boltText = boldTextList
