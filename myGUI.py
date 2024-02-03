@@ -828,21 +828,20 @@ class GUISelector:
 
 
 class Tutorial:
-    def __init__(self, cords, sizeXYZ, text, boldTextList, textSize, lController, rController):
+    def __init__(self, cords, sizeXZ, text, boldTextList, textSize, lController, rController):
         offset = 0.15
         self.drawn = True
         self.cords = cords
-        self.size = sizeXYZ
         self.text = text
-        maxLen = math.floor((sizeXYZ[0] - offset * 2) * jetBrainsFontSize / textSize)
+        maxLen = math.floor((sizeXZ[0] - offset * 2) * jetBrainsFontSize / textSize)
+        print(maxLen)
         textList = []
         for t in range(len(self.text)):
             textList.append(['\n'])
             self.text[t] = self.text[t].split()
             for w in range(len(self.text[t])):
-                if (w + 1) < len(self.text[t]):
-                    if (len(textList[-1][-1]) + len(self.text[t][w + 1])) > maxLen:
-                        textList[-1].append('\n')
+                if (len(textList[-1][-1]) + len(self.text[t][w])) > maxLen:
+                    textList[-1].append('\n')
                 if textList[-1][-1] != '\n':
                     textList[-1][-1] = f'{textList[-1][-1]} {self.text[t][w]}'
                 else:
@@ -852,12 +851,16 @@ class Tutorial:
             self.text.append('')
             for c in range(len(textList[t])):
                 self.text[-1] = f'{self.text[-1]}{listToStr(textList[t][c])}'
+        print(textList)
+        self.size = [sizeXZ[0], offset * 3 + getMaxLen(textList) * textSize, sizeXZ[1]]
         self.stage = 0
+        self.stageDisplay = viz.addText3D('', fontSize=textSize)
+        self.stageDisplay.setPosition(self.cords[0] - textSize / jetBrainsFontSize, self.cords[1] + self.size[1] / 1.9, self.cords[2])
         self.textObj = viz.addText3D('', fontSize=textSize)
         self.boltText = boldTextList
         self.closeButton = XSymbol(0.5, [self.cords[0] + self.size[0] / 1.9, self.cords[1] + self.size[1] / 1.9, self.cords[2]])
         self.closeButton.setAngle((0, 90, 0))
-        self.box = vizshape.addBox(sizeXYZ)
+        self.box = vizshape.addBox(self.size)
         self.box.setPosition(cords)
         self.box.alpha(0.1)
         self.arrows = [vizshape.addArrow(0.1), vizshape.addArrow(0.1)]  # left arrow, right arrow
@@ -914,10 +917,12 @@ class Tutorial:
 
     def draw(self, camCords):
         self.textObj.message(f'{self.text[self.stage]}')
+        self.stageDisplay.message(f'{self.stage + 1} / {len(self.text)}')
 
     def unDraw(self):
         self.textObj.remove()
         self.closeButton.unDraw()
         self.box.remove()
+        self.stageDisplay.remove()
         for a in self.arrows:
             a.remove()

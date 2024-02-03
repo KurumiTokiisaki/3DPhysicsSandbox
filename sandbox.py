@@ -43,7 +43,12 @@ def selectP(cIdx):
 # Main class for main.py
 class Main:
     def __init__(self):
-        vizshape.addGrid()  # used for testing
+        # commented code below used for testing
+        # vizshape.addGrid()
+        # vizshape.addGrid(axis=vizshape.AXIS_X)
+        # vizshape.addBox((1, 0.01, 1)).setPosition(0, 0, 0)
+        # vizshape.addBox((1, 0.01, 1)).setPosition(0, -1, 0)
+        # vizshape.addBox((1, 0.01, 1)).setPosition(0, -2, 0)
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
@@ -107,6 +112,7 @@ class Main:
         self.updateCloths()
         # below is the code I used to get the relative size of the JetBrains font to the game scene
         # myT = viz.addText3D('abcd', fontSize=1.69 / 4)  # OBSERVATION: font size of 1.69 has the width of 1 unit
+        # myT = viz.addText3D('a\nb\nc', fontSize=1)  # OBSERVATION: font size of 1 has the height of 1 unit
         # myT.font("JetBrainsMono-2.304\\fonts\\ttf\\JetBrainsMono-Medium.ttf")
 
     def updateLists(self):
@@ -462,7 +468,7 @@ class Main:
                 self.tpCloth(self.GUIType[1][0], controls.hand[0].cords, 0, 'cloth')
             elif self.GUIType[0] == 'Tutorials':
                 if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is None:
-                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [5, 5, 0.2], self.tutorialTexts[self.GUIType[1][0]], [], 0.2, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [10, 0.2], self.tutorialTexts[self.GUIType[1][0]], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             elif self.GUIType[1][0] == 'Slider':
                 if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] is not None:
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]].unDraw()

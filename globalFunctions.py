@@ -242,3 +242,12 @@ def listToStr(listIn):
     for l in listIn:
         tempStr = f'{tempStr}{l}'
     return tempStr
+
+
+# get the maximum length of a list in a multidimensional list
+def getMaxLen(listIn):
+    maxLen = 0
+    for l in listIn:
+        if len(l) > maxLen:
+            maxLen = len(l)
+    return maxLen
