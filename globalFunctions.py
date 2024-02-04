@@ -244,6 +244,14 @@ def listToStr(listIn):
     return tempStr
 
 
+# convert a string to a list
+def strToList(strIn):
+    tempList = []
+    for c in strIn:
+        tempList.append(c)
+    return tempList
+
+
 # get the maximum length of a list in a multidimensional list
 def getMaxLen(listIn):
     maxLen = 0

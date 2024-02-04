@@ -216,6 +216,8 @@ class Dial:
         if not self.tDim:
             if self.xyz == 1:
                 self.cAngle.append([0, 90, 0])
+            elif self.xyz == 2:
+                self.cAngle.append([90, 90, 0])
             else:
                 self.cAngle.append([0, 0, 0])
             self.circle.append(vizshape.addTorus(cRad, 0.04))
@@ -286,8 +288,8 @@ class Dial:
             self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
             if self.collision[cIdx]:
                 if not self.tDim:
-                    self.p.cords[self.axes[0]] = copy.deepcopy(self.cDat[cIdx].cords[0])
-                    self.p.cords[self.axes[1]] = copy.deepcopy(self.cDat[cIdx].cords[1])
+                    self.p.cords[self.axes[0]] = copy.deepcopy(self.cDat[cIdx].cords[self.axes[0]])
+                    self.p.cords[self.axes[1]] = copy.deepcopy(self.cDat[cIdx].cords[self.axes[1]])
                 else:
                     self.p.cords = copy.deepcopy(self.cDat[cIdx].cords)
 
@@ -363,7 +365,7 @@ class Dial:
         self.p.point.setPosition(self.p.cords)
 
         if not self.tDim:
-            self.textFront.message(f'{self.text[0]}: {round(self.var[0], 4)}\n{self.text[1]}: {round(self.var[1], 4)}')
+            self.textFront.message(f'{self.text[0]}: {round(self.var[self.axes[0]], 4)}\n{self.text[1]}: {round(self.var[self.axes[1]], 4)}')
             self.textFront.setPosition(self.p.cords[0] - 0.3, self.p.cords[1] - 0.2, self.p.cords[2] - 0.2)
         else:
             self.textFront.message(f'{self.text[0]}: {round(self.var[0], 4)}\n{self.text[1]}: {round(self.var[1], 4)}\n{self.text[2]}: {round(self.var[2], 4)}')
@@ -776,8 +778,10 @@ class GUISelector:
                             self.selectGUI(tutorialNames)
                         elif self.var == 'cloths':
                             self.selectGUI(clothNames)
-                        else:
+                        elif self.var == 'gField':
                             self.selectGUI(GUItypes)
+                        else:
+                            self.selectGUI(GUItypesScalar)
                     elif self.stage == 'GUISelection':
                         if (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
                             self.GUI.append(list(self.GUIs.keys())[p])
@@ -839,10 +843,10 @@ class Tutorial:
             self.text[t] = self.text[t].split()
             textList.append(['\n'])
             for w in range(len(self.text[t])):
-                if self.text[t][w].find('###') != -1:
+                if self.text[t][w].find('###') != -1:  # allows text following '###'s to be replaced with its respective control
                     for _ in range(3):
                         self.text[t][w] = removeFromStr(self.text[t][w], 0)
-                    self.text[t][w] = controls[self.text[t][w]]
+                    self.text[t][w] = controlsMap[self.text[t][w]]
                 if (len(textList[-1][-1]) + len(self.text[t][w])) > maxLen:
                     textList[-1].append('\n')
                 if textList[-1][-1] != '\n':
@@ -854,7 +858,6 @@ class Tutorial:
             self.text.append('')
             for c in range(len(textList[t])):
                 self.text[-1] = f'{self.text[-1]}{listToStr(textList[t][c])}'
-        # print(textList)
         self.size = [sizeXZ[0], offset * 3 + getMaxLen(textList) * textSize, sizeXZ[1]]
         self.stage = 0
         self.stageDisplay = viz.addText3D('', fontSize=textSize)

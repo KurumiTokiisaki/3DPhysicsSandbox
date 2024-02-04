@@ -21,6 +21,11 @@ GUItypes = {
     'Manual': {'X': None, 'Y': None, 'Z': None}
 }
 
+GUItypesScalar = {
+    'Slider': {'X': None, 'Y': None, 'Z': None},
+    'Manual': {'X': None, 'Y': None, 'Z': None}
+}
+
 tutorialNames = {}
 clothNames = {}
 
@@ -68,8 +73,13 @@ if mode == 'k':
         'recall': 'r',
         'reset': viz.KEY_DELETE,
         'pause': 'p',
-        'gFieldY': 'g',
-        'gField': 'h',
+        'GUISelector': 'l'
+    }
+    controlsMap = {
+        'select': 'left-click',
+        'recall': 'r',
+        'reset': 'delete',
+        'pause': 'p',
         'GUISelector': 'l'
     }
 elif mode == 'vr':
@@ -78,7 +88,12 @@ elif mode == 'vr':
         'recall': [6, 6],  # click the touchpad
         'reset': [1, None],  # left menu
         'pause': [10, 10],  # (find this out)
-        'gFieldY': [7, 7],
-        'gField': [2, 2],
-        'GUISelector': [None, 1]
+        'GUISelector': [None, 1]  # right menu
+    }
+    controlsMap = {
+        'select': 'left/right trigger',
+        'recall': 'left/right touchpad',  # click the touchpad
+        'reset': 'left menu',  # left menu
+        'pause': '???',  # (find this out)
+        'GUISelector': 'right menu'
     }

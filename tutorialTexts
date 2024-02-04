@@ -1,7 +1,17 @@
 ---Introduction
 Use the left/right arrow keys to navigate through these tutorials.
 Welcome to Faiz's Mod, a Physics Sandbox in which you are a God who controls all!
+Since you are a God, you control all. The point(s) you see in front of you resonate with the spirits of angels, allowing you to interact with objects regardless of their size and mass.
 ---ControlsnewLine(Keyboard/Mouse)
 Press ' W/A/S/D ' to move around and move the mouse to look around.
-Left-click to select points while God's Hand intersects with them. Keep left-click held to drag them around, and release to throw them!
-Press ' ###pause ' to pause the Physics simulation, ' ###recall ' to teleport the last selected point to God's Hand.
+Left-click to select points while God's Hand intersects with a point. Keep left-click held to drag them around, and release left-click to throw them!
+Press ' ###recall ' to teleport the last selected point to God's Hand, ' ###pause ' to pause the Physics simulation, and ' ###GUISelector ' to summon the GUI selector.
+All GUIs can have their values reset by pressing ' delete ' once. By pressing ' delete ' twice in quick succession, their values will be set to their global default. Manual input GUIs can be dismissed by selecting them and pressing ' enter '.
+---ControlsnewLine(VR)
+Tilt the ' left stick ' to move around, and tilt the ' right stick ' to move up/down.
+Press the ' ###select ' to select a point while either God's Hand intersects with one. Keep the trigger held to drag them around, and release the trigger to throw them!
+Press ' ###recall ' to teleport the last selected point to that God's Hand, ' ###pause ' to pause the Physics simulation, and ' ###GUISelector ' to summon the GUI selector.
+All GUIs can have their values reset by pressing the left controller's menu button once. By pressing the left controller's menu button twice in quick succession, their values will be set to their global default.
+---GUI Guide
+Press ' ###GUISelector ' to summon the GUI selector, where you'll be able to modify the physical quantities governing your world. Reversed gravity? Maybe sideways? Super-stiff joints? Super-slow time? It's all yours to control.
+Once in the GUI selector, select a GUI by pressing ' ###select ' while a God's Hand is inside one of the boxes. This may summon another set of boxes, depending on the value selected. For example, since Gravity is directional, selecting boxes containing X, Y, and/or Z will change both its direction and size based on what was selected.
