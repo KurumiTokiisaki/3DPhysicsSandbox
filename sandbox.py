@@ -170,8 +170,8 @@ class Main:
             self.tutorialTexts.update({tNames[t]: tTexts[t]})  # update local information about the tutorial
             tutorialNames.update({tNames[t]: None})  # update the global value of tutorialNames for use in myGUI.GUISelector
             self.GUI['Tutorials'][''].update({tNames[t]: None})  # update local value of tutorials in self.GUI
-        print(self.GUI['Tutorials'])
         f.close()
+        self.GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.tutorialTexts['Introduction'], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
 
     def tpCloth(self, cloth, cords, c, tpType):
         cordDiff = []
@@ -467,8 +467,10 @@ class Main:
             if self.GUIType[0] == 'cloths':
                 self.tpCloth(self.GUIType[1][0], controls.hand[0].cords, 0, 'cloth')
             elif self.GUIType[0] == 'Tutorials':
-                if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is None:
-                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [10, 0.2], self.tutorialTexts[self.GUIType[1][0]], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is not None:
+                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]].unDraw()
+                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = None
+                self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [10, 0.2], self.tutorialTexts[self.GUIType[1][0]], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             elif self.GUIType[1][0] == 'Slider':
                 if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] is not None:
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]].unDraw()
