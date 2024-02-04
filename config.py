@@ -1,6 +1,10 @@
 import viz
 import math
 
+# border properties
+borderSize = [500, 500, 250]  # XYZ
+borderHeight = -50
+
 fullscreen = True
 handRadius = 0.1  # radius of each hand
 gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
@@ -35,7 +39,7 @@ globalVars = {
     'gasDensity': 1.293,  # density of all gases
     'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
-    'friction': 0,  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'friction': 0.1,  # global frictional force coefficient. set to 'sticky' for infinite value.
     'strain': 2,  # global maximum strain before breaking point
     'Tutorials': None,  # only here for summoning tutorials
     'cloths': None  # only here for summoning cloths
@@ -47,7 +51,7 @@ defaultGlobalVars = {
     'gasDensity': 0,  # density of all gases
     'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
-    'friction': 0,  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'friction': 0.1,  # global frictional force coefficient. set to 'sticky' for infinite value.
     'strain': 10,  # global maximum strain before breaking point
 }
 

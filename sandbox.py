@@ -647,7 +647,7 @@ class Point:
                         resultF += abs(self.force[2])
                     self.normalForce[2] = resultF * self.multiplier[count] * 0.999999
                     for plane in range(2):
-                        self.friction[plane] = -resultF * self.sf * getSign(self.velocity[plane]) * sin(abs(self.movingAngle[0]))
+                        self.friction[plane] = -resultF * self.sf * b.sf * getSign(self.velocity[plane]) * sin(abs(self.movingAngle[0]))
 
                 # negative coefficients used for friction here since it always acts in the opposite direction to motion
                 if self.collisionState == 'y':
@@ -656,14 +656,14 @@ class Point:
                     self.normalForce[0] = -resultF * sin(self.collAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[1] = resultF * cos(self.collAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[2] = -resultF * sin(self.collAngle[0]) * self.multiplier[count] * 0.999999
-                    self.friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.collAngle[2]) * self.sf * sin(abs(self.movingAngle[1]))
-                    self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.collAngle[2]) * self.sf * cos(abs(self.movingAngle[1]))
+                    self.friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.collAngle[2]) * self.sf * b.sf * sin(abs(self.movingAngle[1]))
+                    self.friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.collAngle[2]) * self.sf * b.sf * cos(abs(self.movingAngle[1]))
                 elif self.collisionState == 'x':
                     self.normalForce[0] = -resultF * sin(self.collAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[1] = resultF * cos(self.collAngle[2]) * self.multiplier[count] * 0.999999
                     self.normalForce[2] = -resultF * sin(self.collAngle[0]) * self.multiplier[count] * 0.999999
-                    self.friction[1] = getSign(self.velocity[1]) * resultF * sin(self.collAngle[2]) * self.sf * cos(abs(self.movingAngle[2]))
-                    self.friction[2] = getSign(self.velocity[2]) * resultF * sin(self.collAngle[2]) * self.sf * sin(abs(self.movingAngle[2]))
+                    self.friction[1] = getSign(self.velocity[1]) * resultF * sin(self.collAngle[2]) * self.sf * b.sf * cos(abs(self.movingAngle[2]))
+                    self.friction[2] = getSign(self.velocity[2]) * resultF * sin(self.collAngle[2]) * self.sf * b.sf * sin(abs(self.movingAngle[2]))
             count += 1
 
         for axis in range(3):
@@ -1157,12 +1157,15 @@ class Joint:
 
 
 class CollisionRect:
-    def __init__(self, size, cords, angle, density, viscosity, dragConst, transparency, rectType):
+    def __init__(self, size, cords, angle, density, viscosity, dragConst, transparency, rectType, *hide):
         self.type = rectType  # solid or liquid
         self.angle = angle
         self.vertexAngle = [0, 0, 0]
         self.size = size
-        self.rect = vizshape.addBox(self.size)
+        self.show = False
+        if not hide:
+            self.show = True
+            self.rect = vizshape.addBox(self.size)
         self.cords = cords
         self.density = density
         self.dragConst = dragConst
@@ -1178,14 +1181,16 @@ class CollisionRect:
             'bottom': 0
         }
         self.grad = dict
+        self.sf = 1
         self.update()
 
     def update(self):
-        self.rect.remove()
-        self.rect = vizshape.addBox(self.size)
-        self.rect.setPosition(self.cords)
-        self.rect.setEuler(math.degrees(self.angle[0]), math.degrees(self.angle[1]), math.degrees(self.angle[2]))
-        self.rect.alpha(self.transparency)
+        if self.show:
+            self.rect.remove()
+            self.rect = vizshape.addBox(self.size)
+            self.rect.setPosition(self.cords)
+            self.rect.setEuler(math.degrees(self.angle[0]), math.degrees(self.angle[1]), math.degrees(self.angle[2]))
+            self.rect.alpha(self.transparency)
         sizeMultiplier = [0.5, 0.5, 0.5]
         multiplier = 1
         self.vertexAngle = math.atan(self.size[1] / self.size[0])
@@ -1397,9 +1402,17 @@ if slantedSurface:
 game.collisionRect.append(CollisionRect((100, 50, 50), [-50, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
 game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
 game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
-game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+# game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+# game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+# game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+
+# draw the borders (which are hidden collisionRects)
+game.collisionRect.append(CollisionRect((borderSize[0], 1, borderSize[2]), [0, borderHeight, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect[-1].sf = 5
+game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, borderSize[2] / 2], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, -borderSize[2] / 2], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [-borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
 
 game.initLists()  # WARNING: MUST ALWAYS RUN THIS RIGHT BEFORE vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second

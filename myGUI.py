@@ -845,8 +845,8 @@ class Tutorial:
     def __init__(self, cords, sizeXZ, text, boldTextList, textSize, lController, rController):
         offset = 0.15
         self.drawn = True
-        self.cords = cords
-        self.text = text
+        self.cords = copy.deepcopy(cords)
+        self.text = copy.deepcopy(text)
         maxLen = math.floor((sizeXZ[0] - offset * 2) * jetBrainsFontSize / textSize)
         textList = []
         for t in range(len(self.text)):
