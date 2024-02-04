@@ -185,6 +185,11 @@ class XSymbol:
         self.X[0].setEuler(angle[0] + 90, angle[1] + 45, angle[2])
         self.X[1].setEuler(angle[0] + 90, angle[1] + 135, angle[2])
 
+    def setPos(self, pos):
+        self.cords = copy.deepcopy(pos)
+        for c in range(len(self.X)):
+            self.X[c].setPosition(pos)
+
     def unDraw(self):
         self.X[0].remove()
         self.X[1].remove()
@@ -248,6 +253,11 @@ class Dial:
             self.anim = CircleAnim(self.p, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -3, 3, 5)
         self.resetVar()
         self.closeButton = XSymbol(0.5, [self.cords[0], self.cords[1] + self.cRad + 0.5, self.cords[2]])
+        if not self.tDim:
+            self.closeButton.setAngle(self.cAngle[0])
+            if self.xyz == 0:
+                self.closeButton.setPos([self.cords[0] + self.cRad + 0.5, self.cords[1], self.cords[2]])
+                self.closeButton.setAngle((0, 0, 0))
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
         self.timePressed = [0, 0]
