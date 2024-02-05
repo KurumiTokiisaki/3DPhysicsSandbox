@@ -453,9 +453,8 @@ class Main:
                             self.GUI[g][gt][gta] = None
 
         if self.GUIType is not None:
-            # print(self.GUIType)
             if self.GUIType[0] == 'cloths':
-                self.tpCloth(self.GUIType[1][0], controls.hand[self.GUIType[1][1]].cords, self.GUIType[1][1], 'cloth')
+                self.tpCloth(self.GUIType[1][0], controls.hand[self.GUIType[2]].cords, self.GUIType[2], 'cloth')
             elif self.GUIType[0] == 'Tutorials':
                 if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is not None:
                     self.GUI[self.GUIType[0]][''][self.GUIType[1][0]].unDraw()
@@ -625,7 +624,10 @@ class Point:
                         resultF += abs(self.force[1] * math.cos(self.bAngle[2]))
 
                 elif (self.lastCollision[count] == 'right') or (self.lastCollision[count] == 'left'):
-                    self.bAngle[2] -= math.pi / 2
+                    if self.lastCollision[count] == 'right':
+                        self.bAngle[2] -= math.pi / 2
+                    else:
+                        self.bAngle[2] += math.pi / 2
                     if (self.force[0] * self.multiplier[count]) < 0:
                         resultF += abs(self.force[0] * math.sin(self.bAngle[2]))
                     if (self.force[1] * self.multiplier[count]) < 0:
@@ -824,12 +826,10 @@ class Point:
                                 if self.collisionState == 'y':
                                     if not self.colliding[count]:
                                         self.colliding[count] = True
-                                        # self.cords[0] = copy.deepcopy(self.oldCords[0])
-                                        # yCollisionPlane = self.yCollisionPlane(b)
                                         self.cords[1] = yCollisionPlane[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))
                                         self.oldCords[0] = copy.deepcopy(self.cords[0])
                                         self.oldCords[1] = copy.deepcopy(self.cords[1])
-                                        resultP = ((self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2])))
+                                        resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
                                         self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
                                         self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
                                     else:
@@ -842,8 +842,16 @@ class Point:
                                         self.oldCords[0] = copy.deepcopy(self.cords[0])
                                         self.oldCords[1] = copy.deepcopy(self.cords[1])
                                         resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
-                                        self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
-                                        self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
+                                        if self.lastCollision[count] == 'left':
+                                            if self.velocity[1] < 0:
+                                                self.impulse[0] = resultP * physicsTime * sin(-self.bAngle[2]) * self.e
+                                                self.impulse[1] = -resultP * physicsTime * cos(-self.bAngle[2]) * self.e
+                                            else:
+                                                self.impulse[0] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
+                                                self.impulse[1] = -resultP * physicsTime * cos(self.bAngle[2]) * self.e
+                                        else:
+                                            self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
+                                            self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
                                     else:
                                         self.impulse = [0, 0, 0]
                                         self.cords[0] = xCollisionPlane[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)

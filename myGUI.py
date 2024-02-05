@@ -819,10 +819,9 @@ class GUISelector:
     def main(self):
         if self.stage == 'complete':
             self.drawn = False
-            self.GUI.append(self.cIdx)
         if not self.drawn:
             self.unDraw()
-            return self.var, self.GUI
+            return self.var, self.GUI, self.cIdx
 
     def draw(self, camCords):
         for t in range(len(self.textObj)):
