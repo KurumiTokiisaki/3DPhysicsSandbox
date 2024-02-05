@@ -70,7 +70,7 @@ class Main:
 
     # move camera depending on joystick position
     def moveCam(self):
-        # if right controller's rear finger trigger is pressed, increase the camera's max speed
+        # if right controller's middle-finger trigger is pressed, increase the camera's max speed
         if controllers[1].getButtonState() == 2:
             self.camSpeed = maxCamSpeed
         else:

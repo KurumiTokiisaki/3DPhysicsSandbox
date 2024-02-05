@@ -71,11 +71,10 @@ class Main:
         self.lastP = [None, None]  # last clicked point that always retains its value for "recalling" objects to the controller
         self.theForceJoint = False  # True if the force is being used
         self.pause = False  # pauses physics
-        self.pHeld = False  # stores if 'p' is held down
-        self.rHeld = False  # stores if 'r' is held down
-        self.lHeld = False  # stores if 'l' is held down
-        self.GUISelector = False  # stores if the button to summon the GUI selector is held
-        self.returnHeld = False  # stores if 'return' is held down
+        self.pHeld = [False, False]  # stores if 'p' is held down
+        self.rHeld = [False, False]  # stores if 'r' is held down
+        self.lHeld = [False, False]  # stores if 'l' is held down
+        self.GUISelector = [False, False]  # stores if the button to summon the GUI selector is held
         self.selectHeld = [False, False]  # stores if the select button is held on either controller
         self.collP = [None, None]  # stores the indexes of a point that is colliding with either controller
         self.anim = []  # stores all animations specific to the Main class
@@ -211,24 +210,24 @@ class Main:
         physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # update the value of physicsTime based on gameSpeed
         for c in range(controlsConf.controllerAmt):
             # pause if the 'pause' button is pressed
-            if (not self.pHeld) and buttonPressed('pause', controlsConf.controllers[c], c):
+            if (not self.pHeld[c]) and buttonPressed('pause', controlsConf.controllers[c], c):
                 self.pause = not self.pause  # reverse the boolean value of self.pause
                 if buttonPressed('pause', controlsConf.controllers[c], c):
-                    self.pHeld = True
+                    self.pHeld[c] = True
             elif not buttonPressed('pause', controlsConf.controllers[c], c):
-                self.pHeld = False
+                self.pHeld[c] = False
 
             # summon the GUI selector if the 'GUISelector' button is pressed
-            if (not self.lHeld) and buttonPressed('GUISelector', controlsConf.controllers[c], c):
+            if (not self.lHeld[c]) and buttonPressed('GUISelector', controlsConf.controllers[c], c):
                 if self.GUI['GUISelector'][''][''] is None:
                     self.GUI['GUISelector'][''][''] = myGUI.GUISelector(globalVars, controls.hand[c].cords, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                 else:
                     self.GUI['GUISelector'][''][''].drawn = False
                     self.GUI['GUISelector'][''][''].unDraw()
                 if buttonPressed('GUISelector', controlsConf.controllers[c], c):
-                    self.lHeld = True
+                    self.lHeld[c] = True
             elif not buttonPressed('GUISelector', controlsConf.controllers[c], c):
-                self.lHeld = False
+                self.lHeld[c] = False
 
         self.dragPoint()  # runs the function that detects if controller is selecting a point so that it can be "dragged" along with the controller
 
@@ -299,8 +298,8 @@ class Main:
 
     # used to drag points around using pointer/controller
     def dragPoint(self):
-        if mode == 'vr':
-            print(controlsConf.controllers[0].getButtonState() % touchpad, controlsConf.controllers[1].getButtonState() % touchpad)  # prints the current button being pressed for each controller
+        # if mode == 'vr':
+        #     print(controlsConf.controllers[0].getButtonState() % touchpad, controlsConf.controllers[1].getButtonState() % touchpad)  # prints the current button being pressed for each controller
 
         # loop through all drag code for each controller
         for c in range(controlsConf.controllerAmt):
@@ -394,15 +393,6 @@ class Main:
                 elif not theForce:
                     self.points[self.lastP[c]].cords = copy.deepcopy(controls.hand[c].cords)
                     if not self.rHeld:
-                        # cordDiff = []
-                        # for co in range(3):
-                        #     cordDiff.append(self.points[self.lastP[c]].cords[co] - self.points[self.lastP[c]].oldCords[co])
-                        # for po in range(len(self.points)):
-                        #     if (po != self.lastP[c]) and (self.points[po].cloth == self.points[self.lastP[c]].cloth) and (self.points[self.lastP[c]].cloth != ''):
-                        #         for cor in range(3):
-                        #             self.points[po].cords[cor] += cordDiff[cor]
-                        #             self.points[po].oldCords[cor] += cordDiff[cor]
-                        # self.points[self.lastP[c]].oldCords = copy.deepcopy(controls.hand[c].cords)
                         self.tpCloth(self.lastP[c], self.points[self.lastP[c]].cords, c, 'point')
                         self.rHeld = True
             # remove the force joint after recall is no longer active
@@ -465,7 +455,7 @@ class Main:
         if self.GUIType is not None:
             # print(self.GUIType)
             if self.GUIType[0] == 'cloths':
-                self.tpCloth(self.GUIType[1][0], controls.hand[0].cords, 0, 'cloth')
+                self.tpCloth(self.GUIType[1][0], controls.hand[self.GUIType[1][1]].cords, self.GUIType[1][1], 'cloth')
             elif self.GUIType[0] == 'Tutorials':
                 if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is not None:
                     self.GUI[self.GUIType[0]][''][self.GUIType[1][0]].unDraw()
@@ -512,7 +502,6 @@ class Main:
                     xyz = 1
                 else:
                     xyz = 2
-                # print(self.GUIType)
                 if type(globalVars[self.GUIType[0]]) is list:
                     self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = myGUI.Manual(xyz, globalVars[self.GUIType[0]][xyz], defaultGlobalVars[self.GUIType[0]][xyz], controls.hand[0].cords, self.GUIType[0], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                 else:

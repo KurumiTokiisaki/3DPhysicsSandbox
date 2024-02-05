@@ -740,6 +740,7 @@ class CircleAnim:
 
 class GUISelector:
     def __init__(self, varDict, cords, lController, rController):
+        self.cIdx = int
         self.cords = [cords[0] - (len(varDict) - 1) / 2, cords[1], cords[2]]
         self.drawn = True
         self.cObj = [lController[0], rController[0]]
@@ -777,6 +778,7 @@ class GUISelector:
     def drag(self, cIdx, selecting):
         self.selecting[cIdx] = selecting
         if selecting:
+            self.cIdx = cIdx
             for p in range(len(self.collP)):
                 self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.collP[p].radius, self.cDat[cIdx].cords, self.collP[p].cords)
                 if self.collision[cIdx] and (not self.sHeld[cIdx]):
@@ -817,6 +819,7 @@ class GUISelector:
     def main(self):
         if self.stage == 'complete':
             self.drawn = False
+            self.GUI.append(self.cIdx)
         if not self.drawn:
             self.unDraw()
             return self.var, self.GUI
