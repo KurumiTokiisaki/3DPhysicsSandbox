@@ -335,16 +335,15 @@ class Main:
                                 elif gta == 'angle':
                                     self.GUI[g][gt][gta].setVar(math.degrees(self.collisionRect[pcIdx].angle[2]))
                                     self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, self.collisionRect[pcIdx].size[0], 0, math.radians(self.GUI[g][gt][gta].main()), 2)
-                                else:
+                                elif (gta == 'XZ') or (gta == 'XY') or (gta == 'YZ') or (gta == '3D'):
+                                    self.GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size)
                                     size = self.GUI[g][gt][gta].main()
-                                    if type(size) is list:
-                                        for axis in self.GUI[g][gt][gta].axes:
-                                            self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size[axis], axis)
-                                        self.GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size)
-                                    else:
-                                        self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size, self.GUI[g][gt][gta].xyz)
-                                        self.GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size[self.GUI[g][gt][gta].xyz])
-
+                                    for axis in self.GUI[g][gt][gta].axes:
+                                        self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size[axis], axis)
+                                else:
+                                    self.GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size[self.GUI[g][gt][gta].xyz])
+                                    size = self.GUI[g][gt][gta].main()
+                                    self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size, self.GUI[g][gt][gta].xyz)
                         else:
                             self.GUI[g][gt][gta] = None
 
@@ -357,10 +356,9 @@ class Main:
                     self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['angle'].unDraw()
                     self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['angle'] = None
                 if self.GUIType[1][0] == 'Slider':
-                    if self.collisionRect[self.GUIType[3][0]].sizeOffset != [0, 0, 0]:
-                        for axis in range(3):
-                            self.collisionRect[self.GUIType[3][0]].size[axis] += self.collisionRect[self.GUIType[3][0]].sizeOffset[axis]
-                        self.collisionRect[self.GUIType[3][0]].sizeOffset = [0, 0, 0]
+                    for axis in range(3):
+                        self.collisionRect[self.GUIType[3][0]].size[axis] += self.collisionRect[self.GUIType[3][0]].sizeOffset[axis]
+                    self.collisionRect[self.GUIType[3][0]].sizeOffset = [0, 0, 0]
                     size = 10
                     for axis in range(3):
                         if self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()][axis] is not None:
@@ -372,10 +370,9 @@ class Main:
                     self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['density'] = myGUI.Slider(0, self.collisionRect[self.GUIType[3][0]].density, 1000, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 1, controls.hand[0].cords[2]], 5, 0.15, 50000, 10, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                     self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['angle'] = myGUI.Slider(0, self.collisionRect[self.GUIType[3][0]].angle[2], 0.00001, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 2, controls.hand[0].cords[2]], 5, 0.15, 89.99999, 0.00001, 'Angle', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                 elif self.GUIType[1][0] == 'Manual':
-                    if self.collisionRect[self.GUIType[3][0]].sizeOffset != [0, 0, 0]:
-                        for axis in range(3):
-                            self.collisionRect[self.GUIType[3][0]].size[axis] += self.collisionRect[self.GUIType[3][0]].sizeOffset[axis]
-                        self.collisionRect[self.GUIType[3][0]].sizeOffset = [0, 0, 0]
+                    for axis in range(3):
+                        self.collisionRect[self.GUIType[3][0]].size[axis] += self.collisionRect[self.GUIType[3][0]].sizeOffset[axis]
+                    self.collisionRect[self.GUIType[3][0]].sizeOffset = [0, 0, 0]
                     for axis in range(3):
                         if self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()][axis] is not None:
                             self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()][axis].unDraw()
