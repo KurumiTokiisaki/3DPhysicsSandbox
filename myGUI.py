@@ -13,6 +13,9 @@ if mode == 'vr':
 jetBrainsFontSize = 1.69  # font size of 1.69 equates to 1 unit of distance per character in Vizard
 
 
+# mode = 'vr'
+
+
 class Slider:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
         self.type = 'slider'
@@ -45,7 +48,7 @@ class Slider:
         elif self.xyz == 1:
             self.closeButton.cords = [self.cords[0] + 0.5, self.limits[1] + 0.2, self.cords[2]]
         elif self.xyz == 2:
-            self.closeButton.cords = [self.cords[0], self.cords[1] + 0.5, self.limits[0] - 0.2]
+            self.closeButton.cords = [self.cords[0], self.cords[1] + 0.5, self.limits[1] + 0.2]
         for s in self.closeButton.X:
             if (self.xyz == 0) or (self.xyz == 1):
                 s.setEuler(s.getEuler()[0] + 90, s.getEuler()[1], s.getEuler()[2])
@@ -173,7 +176,7 @@ class XSymbol:
     def __init__(self, size, cords):
         self.radius = size / 2
         self.cBox = Point(self.radius, False)  # True for testing
-        # self.cBox.point.setPosition(cords)
+        # self.cBox.point.setPosition(cords)  # uncomment for testing
         self.cords = cords
         self.X = [vizshape.addCylinder(size / math.sqrt(2), 0.03), vizshape.addCylinder(size / math.sqrt(2), 0.03)]
         self.X[0].setEuler(0, 45, 0)
@@ -185,10 +188,13 @@ class XSymbol:
         self.X[0].setEuler(angle[0] + 90, angle[1] + 45, angle[2])
         self.X[1].setEuler(angle[0] + 90, angle[1] + 135, angle[2])
 
-    def setPos(self, pos):
+    def setPos(self, pos, *unDraw):
         self.cords = copy.deepcopy(pos)
-        for c in range(len(self.X)):
-            self.X[c].setPosition(pos)
+        if unDraw:
+            self.unDraw()
+        else:
+            for c in range(len(self.X)):
+                self.X[c].setPosition(pos)
 
     def unDraw(self):
         self.X[0].remove()
@@ -198,17 +204,12 @@ class XSymbol:
 
 
 class Dial:
-    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, cRad, pointRadius, mini, maxi, text, lController, rController):
+    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, cRad, pointRadius, maxi, mini, text, lController, rController, *varOffset):
         self.type = 'dial'
         self.drawn = True
         self.xyz = xyz
         self.var = []
         self.globalOrigVar = []
-        for v in referenceVar:
-            self.var.append(float(v))
-        self.origVar = copy.deepcopy(self.var)
-        for v in globalDefaultVar:
-            self.globalOrigVar.append(float(v))
         self.cRad = cRad
         self.cords = copy.deepcopy(cords)
         self.min = []
@@ -231,10 +232,20 @@ class Dial:
         self.p = Point(pointRadius, True)
         self.p.cords = copy.deepcopy(cords)
         self.p.oldCords = copy.deepcopy(self.p.cords)
-        for axis in range(len(mini)):  # used to allow for inheritance in DialThreeD
-            self.min.append(mini[axis])
-            self.max.append(maxi[axis])
+        if varOffset:
+            self.varOffset = varOffset
+        else:
+            self.varOffset = [0, 0, 0]
+        for axis in range(len(mini)):
+            self.min.append(-(abs(mini[axis]) + abs(maxi[axis])) / 2)
+            self.max.append((abs(mini[axis]) + abs(maxi[axis])) / 2)
+            # self.varOffset.append((maxi[axis] + mini[axis]) / 2)
             self.range.append(maxi[axis] - mini[axis])
+        for v in range(len(referenceVar)):
+            self.var.append(float(referenceVar[v]))
+        self.origVar = copy.deepcopy(self.var)
+        for v in range(len(globalDefaultVar)):
+            self.globalOrigVar.append(float(globalDefaultVar[v]))
         if not self.tDim:
             if self.xyz == 0:  # lying down
                 self.axes = [0, 2]  # XZ
@@ -267,17 +278,17 @@ class Dial:
         if args:
             if self.tDim:
                 for axis in range(3):
-                    self.p.cords[axis] = self.cords[axis] - (self.globalOrigVar[axis] / self.range[axis]) * self.cRad * 2
+                    self.p.cords[axis] = self.cords[axis] + (self.globalOrigVar[axis] / self.range[axis]) * self.cRad * 2
             else:
-                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (self.globalOrigVar[self.axes[0]] / self.range[0]) * self.cRad * 2
-                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (self.globalOrigVar[self.axes[1]] / self.range[1]) * self.cRad * 2
+                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (self.globalOrigVar[self.axes[0]] / self.range[0]) * self.cRad * 2
+                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (self.globalOrigVar[self.axes[1]] / self.range[1]) * self.cRad * 2
         else:
             if self.tDim:
                 for axis in range(3):
-                    self.p.cords[axis] = self.cords[axis] - (self.origVar[axis] / self.range[axis]) * self.cRad * 2
+                    self.p.cords[axis] = self.cords[axis] + (self.origVar[axis] / self.range[axis]) * self.cRad * 2
             else:
-                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (self.origVar[self.axes[0]] / self.range[0]) * self.cRad * 2
-                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (self.origVar[self.axes[1]] / self.range[1]) * self.cRad * 2
+                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (self.origVar[self.axes[0]] / self.range[0]) * self.cRad * 2
+                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (self.origVar[self.axes[1]] / self.range[1]) * self.cRad * 2
         self.p.oldCords = copy.deepcopy(self.p.cords)
 
     def setVar(self, var):
@@ -287,10 +298,10 @@ class Dial:
             if (not self.dragging) or (not self.collision[c]):
                 if self.tDim:
                     for axis in range(3):
-                        self.p.cords[axis] = self.cords[axis] - (var[axis] / self.range[axis]) * self.cRad * 2
+                        self.p.cords[axis] = self.cords[axis] + (var[axis] / self.range[axis]) * self.cRad * 2
                 else:
-                    self.p.cords[self.axes[0]] = self.cords[self.axes[0]] - (var[self.axes[0]] / self.range[0]) * self.cRad * 2
-                    self.p.cords[self.axes[1]] = self.cords[self.axes[1]] - (var[self.axes[1]] / self.range[1]) * self.cRad * 2
+                    self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (var[self.axes[0]] / self.range[0]) * self.cRad * 2
+                    self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (var[self.axes[1]] / self.range[1]) * self.cRad * 2
 
     def drag(self, cIdx, dragging):
         self.dragging = dragging
@@ -306,10 +317,12 @@ class Dial:
     def interpolate(self):
         relDist = []
         ratio = []
+        # cords = [0, 0, 0]
         for dim in range(len(self.min)):
-            relDist.append(self.p.cords[self.axes[dim]] - (self.cords[self.axes[dim]] - self.cRad))
+            # cords[self.axes[dim]] = self.cords[self.axes[dim]] - (self.max[dim] + self.min[dim]) / 2
+            relDist.append(self.p.cords[self.axes[dim]] - self.cords[self.axes[dim]] + self.cRad)
             ratio.append(relDist[dim] / (self.cRad * 2))
-            self.var[self.axes[dim]] = -self.min[dim] - (self.range[dim] * ratio[dim])
+            self.var[self.axes[dim]] = self.min[dim] + (self.range[dim] * ratio[dim])
 
     def main(self):
         for c in range(controllerCount):
@@ -375,10 +388,10 @@ class Dial:
         self.p.point.setPosition(self.p.cords)
 
         if not self.tDim:
-            self.textFront.message(f'{self.text[0]}: {round(self.var[self.axes[0]], 4)}\n{self.text[1]}: {round(self.var[self.axes[1]], 4)}')
+            self.textFront.message(f'{self.text[0]}: {round(self.var[self.axes[0]] + self.varOffset[self.axes[0]], 4)}\n{self.text[1]}: {round(self.var[self.axes[1]] + self.varOffset[self.axes[1]], 4)}')
             self.textFront.setPosition(self.p.cords[0] - 0.3, self.p.cords[1] - 0.2, self.p.cords[2] - 0.2)
         else:
-            self.textFront.message(f'{self.text[0]}: {round(self.var[0], 4)}\n{self.text[1]}: {round(self.var[1], 4)}\n{self.text[2]}: {round(self.var[2], 4)}')
+            self.textFront.message(f'{self.text[0]}: {round(self.var[0] + self.varOffset[0], 4)}\n{self.text[1]}: {round(self.var[1] + self.varOffset[1], 4)}\n{self.text[2]}: {round(self.var[2] + self.varOffset[2], 4)}')
         angle, pos = camAnglePos(camCords, self.p.cords, self.p.radius ** (1 / 3))
         self.textFront.setEuler(angle)
         self.textFront.setPosition(pos)
@@ -397,8 +410,14 @@ class Dial:
 
 
 class Manual:
-    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, text, lController, rController):
+    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, text, lController, rController, *follow):
         self.xyz = xyz
+        if follow and (mode == 'vr'):
+            self.follow = False
+            self.fontSize = 0.3
+        else:
+            self.follow = True
+            self.fontSize = 0.1
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
         self.drawn = True
@@ -407,14 +426,14 @@ class Manual:
         self.globalOrigVar = float(globalDefaultVar)
         self.text = text
         self.cords = copy.deepcopy(cords)
-        self.textVar = viz.addText3D('', fontSize=0.1)
+        self.textVar = viz.addText3D('', fontSize=self.fontSize)
         self.boxes = []
         self.boxPos = []
         self.collP = []
         self.keypadTexts = []
         if mode == 'vr':
             # add & display variable information
-            self.textVarPos = [self.cords[0] + 1, self.cords[1] + 1, self.cords[2]]
+            self.textVarPos = [self.cords[0] + 1, self.cords[1] + 2, self.cords[2]]
 
             # add & display the '0' number key
             self.boxes.append(vizshape.addBox())
@@ -464,13 +483,13 @@ class Manual:
                 self.collP.append(Point(0.5 - self.cDat[1].radius, False))
                 self.collP[b].cords = self.boxPos[b]
 
-            self.closeButton = XSymbol(0.5, self.textVarPos)
+            self.closeButton = XSymbol(0.5, [self.textVarPos[0], self.textVarPos[1] - 1, self.textVarPos[2]])
         else:
             self.textVarPos = self.cords
-        self.indicator = viz.addText3D('', fontSize=0.1)
+        self.indicator = viz.addText3D('', fontSize=self.fontSize)
         self.spacing = '|'
         self.spaces = 0
-        self.indicator.setPosition(self.textVarPos[0], self.textVarPos[1] - 0.1, self.textVarPos[2])  # offset the indicator to be on the same line as self.var
+        self.indicator.setPosition(self.textVarPos[0], self.textVarPos[1] - self.fontSize, self.textVarPos[2])  # offset the indicator to be on the same line as self.var
         self.keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', viz.KEY_BACKSPACE, '-', viz.KEY_RETURN, viz.KEY_RIGHT, viz.KEY_LEFT]
         self.keyHeld = []
         self.textVar.setPosition(self.textVarPos)
@@ -642,9 +661,10 @@ class Manual:
         self.textVar.message(f'{self.text}\n{self.var}')
         self.indicator.message(f'{self.spacing}')
         if mode == 'vr':
-            self.textVarPos = [camCords[0], camCords[1], camCords[2] + 1]
-            self.textVar.setPosition(self.textVarPos)
-            self.indicator.setPosition(self.textVarPos[0], self.textVarPos[1] - 0.1, self.textVarPos[2])
+            if self.follow:
+                self.textVarPos = [camCords[0], camCords[1], camCords[2] + 1]
+                self.textVar.setPosition(self.textVarPos)
+                self.indicator.setPosition(self.textVarPos[0], self.textVarPos[1] - 0.1, self.textVarPos[2])
             angle, pos = camAnglePos(camCords, self.closeButton.cords, 0)
             self.closeButton.setAngle(angle)
         else:
@@ -739,8 +759,12 @@ class CircleAnim:
 
 
 class GUISelector:
-    def __init__(self, varDict, cords, lController, rController):
+    def __init__(self, varDict, cords, lController, rController, *pIdx):
         self.cIdx = int
+        if pIdx:
+            self.pIdx = pIdx
+        else:
+            self.pIdx = 0
         self.cords = [cords[0] - (len(varDict) - 1) / 2, cords[1], cords[2]]
         self.drawn = True
         self.cObj = [lController[0], rController[0]]
@@ -792,10 +816,12 @@ class GUISelector:
                             self.selectGUI(clothNames)
                         elif self.var == 'gField':
                             self.selectGUI(GUItypes)
+                        elif self.var == 'Size':
+                            self.selectGUI(GUItypesVector)
                         else:
                             self.selectGUI(GUItypesScalar)
                     elif self.stage == 'GUISelection':
-                        if (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
+                        if (self.var != 'Size') and (self.var != 'Angle') and (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
                             self.GUI.append(list(self.GUIs.keys())[p])
                             self.GUI.append('def')
                             self.stage = 'complete'
@@ -821,7 +847,7 @@ class GUISelector:
             self.drawn = False
         if not self.drawn:
             self.unDraw()
-            return self.var, self.GUI, self.cIdx
+            return self.var, self.GUI, self.cIdx, self.pIdx
 
     def draw(self, camCords):
         for t in range(len(self.textObj)):

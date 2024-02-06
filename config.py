@@ -30,6 +30,12 @@ GUItypesScalar = {
     'Manual': {'X': None, 'Y': None, 'Z': None}
 }
 
+GUItypesVector = {
+    'Slider': None,
+    'Dial': {'2D': None, '3D': None},
+    'Manual': None
+}
+
 tutorialNames = {}
 clothNames = {}
 

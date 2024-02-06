@@ -495,6 +495,9 @@ class Main:
                                                                                                            [globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1], globalRanges[self.GUIType[0]][1]], 'XYZ',
                                                                                                            [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
             elif self.GUIType[1][0] == 'Manual':
+                if self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] is not None:
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]].unDraw()
+                    self.GUI[self.GUIType[0]][self.GUIType[1][0].lower()][self.GUIType[1][1]] = None
                 if self.GUIType[1][1] == 'X':
                     xyz = 0
                 elif self.GUIType[1][1] == 'Y':
@@ -1162,7 +1165,8 @@ class CollisionRect:
         self.show = False
         if not hide:
             self.show = True
-            self.rect = vizshape.addBox(self.size)
+            self.rect = vizshape.addBox([1, 1, 1])
+            self.rect.setScale(self.size)
         self.cords = cords
         self.density = density
         self.dragConst = dragConst
@@ -1183,8 +1187,7 @@ class CollisionRect:
 
     def update(self):
         if self.show:
-            self.rect.remove()
-            self.rect = vizshape.addBox(self.size)
+            self.rect.setScale(self.size)
             self.rect.setPosition(self.cords)
             self.rect.setEuler(math.degrees(self.angle[0]), math.degrees(self.angle[1]), math.degrees(self.angle[2]))
             self.rect.alpha(self.transparency)

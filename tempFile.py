@@ -1,5 +1,1 @@
-﻿f = open('tutorialTexts')
-texts = f.read()
-texts = texts.splitlines()
-print(texts[7].replace('newLine', '\n'))
-f.close()
+﻿
