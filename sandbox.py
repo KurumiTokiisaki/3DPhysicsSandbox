@@ -1058,7 +1058,7 @@ class Joint:
         self.damping = [0, 0, 0]
         self.dampingCoef = 1
         if self.show:
-            self.cylinder = vizshape.addCylinder(1, self.radius, slices=jointResolution)  # make the joint visible if shown
+            self.cylinder = vizshape.addCylinder(1, 1, slices=jointResolution)  # make the joint visible if shown
         self.volume = math.pi * (self.radius ** 2) * self.height
         self.theForceJoint = False
         self.cIdx = -1
@@ -1087,7 +1087,7 @@ class Joint:
 
     def draw(self):
         if self.show:
-            self.cylinder.setScale([self.radius, self.height, 1])  # change visual of cylinder
+            self.cylinder.setScale([self.radius, self.height, self.radius])  # change visual of cylinder
             if self.theForceJoint:
                 self.cords = midpoint(controls.hand[self.cIdx], game.points[self.pTwo])  # set the midpoint of the joint to the middle of each connected cord
                 self.cylinder.setEuler(getEulerAngle(controls.hand[self.cIdx].cords, game.points[self.pTwo].cords))  # set the facing angle of the joint to "connect" to both points

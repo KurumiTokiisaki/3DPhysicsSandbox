@@ -77,6 +77,8 @@ class Main:
         self.pHeld = [False, False]  # stores if 'p' is held down
         self.rHeld = [False, False]  # stores if 'r' is held down
         self.lHeld = [False, False]  # stores if 'l' is held down
+        self.jHeld = [False, False]  # stores if 'j' is held down
+        self.uHeld = [False, False]  # stores if 'u' is held down
         self.GUISelector = [False, False]  # stores if the button to summon the GUI selector is held
         self.selectHeld = [False, False]  # stores if the select button is held on either controller
         self.collP = [None, None]  # stores the indexes of a point that is colliding with either controller
@@ -86,12 +88,15 @@ class Main:
         self.animeColor = [[0, 0, 0], [0, 0, 0]]  # color of each animation
         self.GUIType = None  # holds the return value of GUISelector to create relevant GUI(s)
         self.clickTime = [0, 0]  # stores time since 'select' was pressed for both controllers in order for double-click detection
+        self.jClickTime = [0, 0]  # stores time since 'j' was pressed for both controllers in order for double-click detection
         self.relPos = [[0, 0, 0], [0, 0, 0]]  # stores the relative position of selected points with either controller
         self.GUI = {
             'GUISelector': {'': {'': None}},
             'Tutorials': {'': {}}
         }
         self.addPoint([0, 0, 0], 0.1)
+        self.addPoint([1, 2, 3], 0.15)
+        self.newJoint = None
 
     def addPoint(self, cords, radius):
         self.points.append(Point(cords, radius))
@@ -113,6 +118,8 @@ class Main:
         for c in range(controlsConf.controllerAmt):
             if self.clickTime[c] <= 0.25:
                 self.clickTime[c] += 1 / calcRate
+            if self.jClickTime[c] <= 0.25:
+                self.jClickTime[c] += 1 / calcRate
             for g in self.GUI:
                 for gu in self.GUI[g]:
                     for gui in self.GUI[g][gu]:
@@ -152,6 +159,38 @@ class Main:
                                     self.lastP[c] = p
                     else:
                         self.selectHeld[c] = False
+
+                if buttonPressed('dragJoint', controlsConf.controllers[c], c):
+                    if not self.jHeld[c]:
+                        if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
+                            self.jHeld[c] = True
+                            if self.jClickTime[c] < 0.25:
+                                for j in self.joints:
+                                    if (j.pOne == p) or (j.pTwo == p):
+                                        j.unDraw()
+                            else:
+                                self.jClickTime[c] = 0
+                                if self.newJoint is None:
+                                    self.newJoint = Joint(p, c, 'controls')
+                                else:
+                                    self.newJoint.pTwo = p
+                                    self.newJoint.controller = False
+                                    self.joints.append(self.newJoint)
+                                    self.newJoint = None
+                        else:
+                            if self.newJoint is not None:
+                                self.newJoint.unDraw()
+                                self.newJoint = None
+                else:
+                    self.jHeld[c] = False
+
+                if buttonPressed('undoJoint', controlsConf.controllers[c], c):
+                    if not self.uHeld[c]:
+                        self.uHeld[c] = True
+                        self.joints[-1].unDraw()
+                        self.joints.pop(-1)  # popping allowed here since it's the end of the list
+                else:
+                    self.uHeld[c] = False
 
             for cr in range(len(self.collisionRect)):
                 yCollisionPlane = getYCollisionPlane(self.collisionRect[cr], controls.hand[c].cords)
@@ -376,6 +415,8 @@ class Main:
             p.draw()
         for j in self.joints:
             j.draw()
+        if self.newJoint is not None:
+            self.newJoint.draw()
         for g in self.GUI:
             for gu in self.GUI[g]:
                 for gui in self.GUI[g][gu]:
@@ -507,17 +548,37 @@ class CollisionRect:
 
 
 class Joint:
-    def __init__(self, pOne, pTwo):
-        self.pOne = pOne
-        self.pTwo = pTwo
-        self.cylinder = vizshape.addCylinder()
-        self.length = 0
+    def __init__(self, pOneIdx, pTwoIdx, *controller):
+        self.drawn = True
+        self.pOne = pOneIdx
+        self.pTwo = pTwoIdx
+        if controller:
+            self.controller = True
+        else:
+            self.controller = False
+        self.height = 1
+        self.radius = jointRadius
+        self.cords = [0, 0, 0]
+        self.cylinder = vizshape.addCylinder(1, 1, slices=jointResolution)
 
     def draw(self):
-        self.cylinder.setScale([1, self.length, 1])
+        if self.drawn:
+            if not self.controller:
+                self.height = distance(game.points[self.pOne].cords, game.points[self.pTwo].cords)
+                self.cylinder.setScale([self.radius, self.height, self.radius])  # change visual of cylinder
+                self.cords = midpoint(game.points[self.pOne], game.points[self.pTwo])
+                self.cylinder.setEuler(getEulerAngle(game.points[self.pOne].cords, game.points[self.pTwo].cords))
+            else:
+                self.height = distance(game.points[self.pOne].cords, controls.hand[self.pTwo].cords)
+                self.cylinder.setScale([self.radius, self.height, self.radius])  # change visual of cylinder
+                self.cords = midpoint(game.points[self.pOne], controls.hand[self.pTwo])
+                self.cylinder.setEuler(getEulerAngle(game.points[self.pOne].cords, controls.hand[self.pTwo].cords))
+
+            self.cylinder.setPosition(self.cords)
 
     def unDraw(self):
         self.cylinder.remove()
+        self.drawn = False
 
 
 game = Main()

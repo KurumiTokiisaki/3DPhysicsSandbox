@@ -83,7 +83,9 @@ if mode == 'k':
         'recall': 'r',
         'reset': viz.KEY_DELETE,
         'pause': 'p',
-        'GUISelector': 'l'
+        'GUISelector': 'l',
+        'dragJoint': 'j',
+        'undoJoint': 'u'
     }
     controlsMap = {
         'select': 'left-click',
@@ -98,7 +100,9 @@ elif mode == 'vr':
         'recall': [8, 8],
         'reset': [1, None],
         'pause': [2, None],
-        'GUISelector': [None, 1]
+        'GUISelector': [None, 1],
+        'dragJoint': [None, 2],
+        'undoJoint': [2, None]
     }
     controlsMap = {
         'select': 'left/right trigger',
