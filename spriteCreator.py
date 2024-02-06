@@ -337,12 +337,12 @@ class Main:
                                     self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, self.collisionRect[pcIdx].size[0], 0, math.radians(self.GUI[g][gt][gta].main()), 2)
                                 elif (gta == 'XZ') or (gta == 'XY') or (gta == 'YZ') or (gta == '3D'):
                                     self.GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size)
-                                    size = self.GUI[g][gt][gta].main()
+                                    size = self.GUI[g][gt][gta].main()  # must be done AFTER setVar (for complex reasons)
                                     for axis in self.GUI[g][gt][gta].axes:
                                         self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size[axis], axis)
                                 else:
                                     self.GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size[self.GUI[g][gt][gta].xyz])
-                                    size = self.GUI[g][gt][gta].main()
+                                    size = self.GUI[g][gt][gta].main()  # must be done AFTER setVar (for complex reasons)
                                     self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size, self.GUI[g][gt][gta].xyz)
                         else:
                             self.GUI[g][gt][gta] = None
@@ -588,6 +588,32 @@ class Joint:
     def unDraw(self):
         self.cylinder.remove()
         self.drawn = False
+
+
+class VoidBox:
+    def __init__(self, cords, type):
+        self.cords = cords
+        self.box = vizshape.addBox()
+        self.box.setPosition(self.cords)
+        self.box.alpha(0.5)
+        self.innerShape = None
+        if type == 'collisionRect':
+            self.innerShape = vizshape.addBox()
+            self.innerShape.setScale([0.5, 0.5, 0.5])
+        elif type == 'point':
+            self.innerShape = vizshape.addSphere()
+            self.innerShape.setScale([0.5, 0.5, 0.5])
+        self.pHeld = [False, False]
+
+    def drag(self):
+        for c in range(controlsConf.controllerAmt):
+            if selectP(c):
+                if not self.pHeld[c]:
+                    self.pHeld[c] = True
+                    if detectCollision(controls.hand[c].radius, 0.25, controls.hand[c].cords, self.cords):
+                        print('selecting!')
+            else:
+                self.pHeld[c] = False
 
 
 game = Main()
