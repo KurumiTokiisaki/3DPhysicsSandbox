@@ -71,6 +71,11 @@ globalRanges = {
     'friction': [2, 0]
 }
 
+spriteCreatorVars = {
+    'Tutorials': None,
+    'Save & Exit': None
+}
+
 mode = 'k'  # controller mode (keyboard/mouse or VR)
 calcRate = 165  # physics calculations/second (higher number means more accurate physics but lower performance)
 physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than frame-rate or smaller than 60)

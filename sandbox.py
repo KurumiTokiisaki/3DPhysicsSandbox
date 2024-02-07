@@ -67,7 +67,6 @@ class Main:
         self.diff = []  # cache variable to store the scalar distance between each point
         self.collisionRect = []  # list of collision rectangles
         self.dragP = [None, None]  # last clicked point index
-        self.dragC = [None, None]  # last clicked controller index for the last clicked point
         self.lastP = [None, None]  # last clicked point that always retains its value for "recalling" objects to the controller
         self.theForceJoint = False  # True if the force is being used
         self.pause = False  # pauses physics
@@ -89,6 +88,10 @@ class Main:
         self.tutorialTexts = {}
         # self.tutorialNames = {}
         self.importTutorials()
+
+    def importData(self):
+        f = open('exportData', 'r')
+        f.close()
 
     # initialize all the lists that depend on self.points and self.collisionRect
     def initLists(self):
@@ -403,12 +406,6 @@ class Main:
                 self.theForceJoint = False
             else:
                 self.rHeld = False
-
-    def sphereCollision(self, pOne, pTwo):
-        angle = getThreeDAngle(self.points[pOne].cords, self.points[pTwo].cords, 'y')
-        for v in range(3):
-            self.points[pOne].cords[v] = self.points[pOne].oldCords[v] - self.points[pOne].oldVelocity[v] * self.points[pOne].e
-            self.points[pTwo].cords[v] = self.points[pTwo].oldCords[v] - self.points[pTwo].oldVelocity[v] * self.points[pTwo].e
 
     # get the distance between each point
     def getDist(self):
@@ -1297,114 +1294,116 @@ class CollisionRect:
 
 game = Main()
 
+imports = False
 # makes a cube using points and joints
-cube = True
-if cube:
-    cubeSize = 8
-    cubeRes = 3
-    pointRadius = 0.1
-    for ve in range(cubeSize):
-        if ve > 7:
-            if ve == 8:
-                game.addPoint(Point(0.1, 1000, False))  # central point
-            else:
-                game.addPoint(Point(0.1, 1000, False))
-        else:
-            game.addPoint(Point(0.1, 1000, True))
-        game.points[ve].cloth = 'cube'
-    game.points[0].cords = [1, 2.5, 1]  # top-front-right
-    game.points[0].oldCords = [1, 2.5, 1]
-    game.points[1].cords = [1, 2.5, -1]  # top-back-right
-    game.points[1].oldCords = [1, 2.5, -1]
-    game.points[2].cords = [-1, 2.5, -1]  # top-back-left
-    game.points[2].oldCords = [-1, 2.5, -1]
-    game.points[3].cords = [-1, 2.5, 1]  # top-front-left
-    game.points[3].oldCords = [-1, 2.5, 1]
-    game.points[4].cords = [1, 0.5, 1]
-    game.points[4].oldCords = [1, 0.5, 1]
-    game.points[5].cords = [1, 0.5, -1]
-    game.points[5].oldCords = [1, 0.5, -1]
-    game.points[6].cords = [-1, 0.5, -1]
-    game.points[6].oldCords = [-1, 0.5, -1]
-    game.points[7].cords = [-1, 0.5, 1]
-    game.points[7].oldCords = [-1, 0.5, 1]
-    # if cubeSize > 8:
-    #     game.points[8].cords = [0, 1.5, 0]
-    #     game.points[8].oldCords = [0, 1.5, 0]
-    #     game.points[9].cords = [0, 2.5, 0]
-    #     game.points[9].oldCords = [0, 2.5, 0]
-    #     game.points[10].cords = [0, 0.5, 0]
-    #     game.points[10].oldCords = [0, 0.5, 0]
-    #     game.points[11].cords = [1, 1.5, 0]
-    #     game.points[11].oldCords = [1, 1.5, 0]
-    #     game.points[12].cords = [-1, 1.5, 0]
-    #     game.points[12].oldCords = [-1, 1.5, 0]
-    #     game.points[13].cords = [0, 1.5, 1]
-    #     game.points[13].oldCords = [0, 1.5, 1]
-    #     game.points[14].cords = [0, 1.5, -1]
-    #     game.points[14].oldCords = [0, 1.5, -1]
-
-    # for z in range(cubeRes):
-    #     for y in range(cubeRes):
-    #         for x in range(cubeRes):
-    #             if (x == 0) or (y == 0) or (z == 0) or (x == (cubeRes - 1)) or (y == (cubeRes - 1)) or (z == (cubeRes - 1)):
-    #                 game.addPoint(Point(pointRadius, 1000, True))
-    #                 game.points[-1].cords = [x * cubeSize / cubeRes, y * cubeSize / cubeRes, z * cubeSize / cubeRes]
-    #                 game.points[-1].oldCords = copy.deepcopy(game.points[-1].cords)
-    #                 game.points[-1].cloth = 'cube'
-
-    for j in range(len(game.points)):
-        for jo in range(len(game.points)):
-            if (j != jo) and (jo > j):  # performance optimisation: only go through unique combinations of j and jo (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
-                if jo <= 7:
-                    game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain']))
+if imports:
+    cube = True
+    if cube:
+        cubeSize = 8
+        cubeRes = 3
+        pointRadius = 0.1
+        for ve in range(cubeSize):
+            if ve > 7:
+                if ve == 8:
+                    game.addPoint(Point(0.1, 1000, False))  # central point
                 else:
-                    game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain']))
-    # game.addPoint(Point(0.1, 1000))
+                    game.addPoint(Point(0.1, 1000, False))
+            else:
+                game.addPoint(Point(0.1, 1000, True))
+            game.points[ve].cloth = 'cube'
+        game.points[0].cords = [1, 2.5, 1]  # top-front-right
+        game.points[0].oldCords = [1, 2.5, 1]
+        game.points[1].cords = [1, 2.5, -1]  # top-back-right
+        game.points[1].oldCords = [1, 2.5, -1]
+        game.points[2].cords = [-1, 2.5, -1]  # top-back-left
+        game.points[2].oldCords = [-1, 2.5, -1]
+        game.points[3].cords = [-1, 2.5, 1]  # top-front-left
+        game.points[3].oldCords = [-1, 2.5, 1]
+        game.points[4].cords = [1, 0.5, 1]
+        game.points[4].oldCords = [1, 0.5, 1]
+        game.points[5].cords = [1, 0.5, -1]
+        game.points[5].oldCords = [1, 0.5, -1]
+        game.points[6].cords = [-1, 0.5, -1]
+        game.points[6].oldCords = [-1, 0.5, -1]
+        game.points[7].cords = [-1, 0.5, 1]
+        game.points[7].oldCords = [-1, 0.5, 1]
+        # if cubeSize > 8:
+        #     game.points[8].cords = [0, 1.5, 0]
+        #     game.points[8].oldCords = [0, 1.5, 0]
+        #     game.points[9].cords = [0, 2.5, 0]
+        #     game.points[9].oldCords = [0, 2.5, 0]
+        #     game.points[10].cords = [0, 0.5, 0]
+        #     game.points[10].oldCords = [0, 0.5, 0]
+        #     game.points[11].cords = [1, 1.5, 0]
+        #     game.points[11].oldCords = [1, 1.5, 0]
+        #     game.points[12].cords = [-1, 1.5, 0]
+        #     game.points[12].oldCords = [-1, 1.5, 0]
+        #     game.points[13].cords = [0, 1.5, 1]
+        #     game.points[13].oldCords = [0, 1.5, 1]
+        #     game.points[14].cords = [0, 1.5, -1]
+        #     game.points[14].oldCords = [0, 1.5, -1]
 
-sphere = False
-if sphere:
-    game.addPoint(Point(0.01, 1000, True))
-elif not cube:
-    pass
-    # game.addPoint(Point(0.6, 1000, True))
-    # game.addPoint(Point(0.4, 1000, True))
-    # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cos(math.radians(30)), 0]
-    # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
-game.addPoint(Point(0.6, 1000, True))
-game.addPoint(Point(0.4, 1000, True))
+        # for z in range(cubeRes):
+        #     for y in range(cubeRes):
+        #         for x in range(cubeRes):
+        #             if (x == 0) or (y == 0) or (z == 0) or (x == (cubeRes - 1)) or (y == (cubeRes - 1)) or (z == (cubeRes - 1)):
+        #                 game.addPoint(Point(pointRadius, 1000, True))
+        #                 game.points[-1].cords = [x * cubeSize / cubeRes, y * cubeSize / cubeRes, z * cubeSize / cubeRes]
+        #                 game.points[-1].oldCords = copy.deepcopy(game.points[-1].cords)
+        #                 game.points[-1].cloth = 'cube'
 
-for p in range(len(game.points)):
-    game.points[p].cords[1] += 50
-    game.points[p].oldCords[1] += 50
-    game.points[p].cords[0] -= 20
-    game.points[p].oldCords[0] -= 20
-game.points[-1].cords[1] += 10
-game.points[-1].oldCords[1] += 10
-game.points[-2].cords[1] += 10
-game.points[-2].oldCords[1] += 10
-game.points[-1].cords[0] -= 10
-game.points[-1].oldCords[0] -= 10
-game.points[-2].cords[0] -= 20
-game.points[-2].oldCords[0] -= 20
+        for j in range(len(game.points)):
+            for jo in range(len(game.points)):
+                if (j != jo) and (jo > j):  # performance optimisation: only go through unique combinations of j and jo (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
+                    if jo <= 7:
+                        game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain']))
+                    else:
+                        game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain']))
+        # game.addPoint(Point(0.1, 1000))
 
-slantedSurface = False
-if slantedSurface:
-    surfaceRes = 400
-    radius = 5
-    for s in range(surfaceRes):
-        x = radius * s / surfaceRes
-        try:
-            y = math.sqrt(radius - (x ** 2))
-            game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 1, 's'))
-        except ValueError:
-            continue
-game.collisionRect.append(CollisionRect((100, 50, 50), [-50, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
-game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
-game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
-# game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-# game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-# game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+    sphere = False
+    if sphere:
+        game.addPoint(Point(0.01, 1000, True))
+    elif not cube:
+        pass
+        # game.addPoint(Point(0.6, 1000, True))
+        # game.addPoint(Point(0.4, 1000, True))
+        # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cos(math.radians(30)), 0]
+        # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
+    game.addPoint(Point(0.6, 1000, True))
+    game.addPoint(Point(0.4, 1000, True))
+
+    for p in range(len(game.points)):
+        game.points[p].cords[1] += 50
+        game.points[p].oldCords[1] += 50
+        game.points[p].cords[0] -= 20
+        game.points[p].oldCords[0] -= 20
+    game.points[-1].cords[1] += 10
+    game.points[-1].oldCords[1] += 10
+    game.points[-2].cords[1] += 10
+    game.points[-2].oldCords[1] += 10
+    game.points[-1].cords[0] -= 10
+    game.points[-1].oldCords[0] -= 10
+    game.points[-2].cords[0] -= 20
+    game.points[-2].oldCords[0] -= 20
+
+    slantedSurface = False
+    if slantedSurface:
+        surfaceRes = 400
+        radius = 5
+        for s in range(surfaceRes):
+            x = radius * s / surfaceRes
+            try:
+                y = math.sqrt(radius - (x ** 2))
+                game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 1, 's'))
+            except ValueError:
+                continue
+    game.collisionRect.append(CollisionRect((100, 50, 50), [-50, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
+    game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
+    # game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
+    # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
 
 # draw the borders (which are hidden collisionRects)
 game.collisionRect.append(CollisionRect((borderSize[0], 1, borderSize[2]), [0, borderHeight, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))

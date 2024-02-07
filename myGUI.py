@@ -13,7 +13,7 @@ if mode == 'vr':
 jetBrainsFontSize = 1.69  # font size of 1.69 equates to 1 unit of distance per character in Vizard
 
 
-# mode = 'vr'
+# mode = 'vr'  # uncomment for testing VR on keyboard/mouse
 
 
 class Slider:
@@ -812,6 +812,8 @@ class GUISelector:
                         self.unDraw()
                         if self.var == 'Tutorials':
                             self.selectGUI(tutorialNames)
+                        elif self.var == 'Save & Exit':
+                            self.stage = 'complete'
                         elif self.var == 'cloths':
                             self.selectGUI(clothNames)
                         elif self.var == 'gField':

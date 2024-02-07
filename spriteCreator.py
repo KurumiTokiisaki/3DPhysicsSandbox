@@ -69,8 +69,8 @@ class Main:
         self.joints = []
         self.collisionRect = []  # list of collision rectangles
         self.dragP = [None, None]  # last clicked point index
-        self.dragC = [None, None]  # last clicked controller index for the last clicked point
         self.lastP = [None, None]  # last clicked point that always retains its value for "recalling" objects to the controller
+        self.lastR = [None, None]
         self.dragR = [None, None]  # last clicked controller index for the last clicked collision rect
         self.theForceJoint = False  # True if the force is being used
         self.pause = False  # pauses physics
@@ -91,12 +91,42 @@ class Main:
         self.jClickTime = [0, 0]  # stores time since 'j' was pressed for both controllers in order for double-click detection
         self.relPos = [[0, 0, 0], [0, 0, 0]]  # stores the relative position of selected points with either controller
         self.GUI = {
-            'GUISelector': {'': {'': None}},
+            'GUISelector': {'': {'main': None, 'pointRect': None}},
             'Tutorials': {'': {}}
         }
+        self.newJoint = None
+        self.tutorialTexts = {}
+        self.importTutorials()
+        self.voidBox = [VoidBox([-1, 0, 0], 'point'), VoidBox([1, 0, 0], 'collisionRect'), VoidBox([0, -2, 0], 'trash')]
         self.addPoint([0, 0, 0], 0.1)
         self.addPoint([1, 2, 3], 0.15)
-        self.newJoint = None
+        self.addPoint([-1, 2, 0], 0.2)
+
+    def importTutorials(self):
+        # global tutorialNames
+        f = open('tutorialTexts', 'r')
+        tutors = f.read().splitlines()
+        tNames = []
+        tTexts = []
+        for l in tutors:
+            if l.find('---') != -1:
+                tTexts.append([])
+                tempList = list(l)
+                for _ in range(3):
+                    tempList.pop(0)
+                tempStr = ''
+                for c in tempList:
+                    tempStr = f'{tempStr}{c}'
+                tNames.append(tempStr)
+            else:
+                tTexts[-1].append(l)
+        for t in range(len(tNames)):
+            tNames[t] = tNames[t].replace('newLine', '\n')  # solution from Python Discord, credit goes to lordtyrionlannister "Saul Goodman"
+            self.tutorialTexts.update({tNames[t]: tTexts[t]})  # update local information about the tutorial
+            tutorialNames.update({tNames[t]: None})  # update the global value of tutorialNames for use in myGUI.GUISelector
+            self.GUI['Tutorials'][''].update({tNames[t]: None})  # update local value of tutorials in self.GUI
+        f.close()
+        self.GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.tutorialTexts['Introduction'], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
 
     def addPoint(self, cords, radius):
         self.points.append(Point(cords, radius))
@@ -108,13 +138,29 @@ class Main:
         self.GUI.update({len(self.collisionRect) - 1: {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None, 'density': None, 'angle': None}, 'slider': {0: None, 1: None, 2: None, 'density': None, 'angle': None}, 'manual': {0: None, 1: None, 2: None, 'density': None, 'angle': None}}})
 
     def main(self):
+        for c in range(controlsConf.controllerAmt):
+            # summon the GUI selector if the 'GUISelector' button is pressed
+            if (not self.lHeld[c]) and buttonPressed('GUISelector', controlsConf.controllers[c], c):
+                if self.GUI['GUISelector']['']['main'] is None:
+                    self.GUI['GUISelector']['']['main'] = myGUI.GUISelector(spriteCreatorVars, controls.hand[c].cords, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                else:
+                    self.GUI['GUISelector']['']['main'].drawn = False
+                    self.GUI['GUISelector']['']['main'].unDraw()
+                if buttonPressed('GUISelector', controlsConf.controllers[c], c):
+                    self.lHeld[c] = True
+            elif not buttonPressed('GUISelector', controlsConf.controllers[c], c):
+                self.lHeld[c] = False
+
+        for v in self.voidBox:
+            v.drag()
+
         self.dragPoint()
 
     def dragPoint(self):
         # if mode == 'vr':
         #     print(controlsConf.controllers[0].getButtonState() % touchpad, controlsConf.controllers[1].getButtonState() % touchpad)  # prints the current button being pressed for each controller
-
         # loop through all drag code for each controller
+        colliding = False
         for c in range(controlsConf.controllerAmt):
             if self.clickTime[c] <= 0.25:
                 self.clickTime[c] += 1 / calcRate
@@ -126,61 +172,64 @@ class Main:
                         if self.GUI[g][gu][gui] is not None:
                             self.GUI[g][gu][gui].drag(c, selectP(c))
             for p in range(len(self.points)):
-                if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords) and (self.dragR[c] is None):
-                    self.collP[c] = p  # set the collision point to the current point's index
-                    if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
-                        if not self.selectHeld[c]:
-                            self.selectHeld[c] = True
-                            for axis in range(3):
-                                self.relPos[c][axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
-                            cords = controls.hand[c].cords  # set cords to the current controller's cords to shorten the below for increased readability
-                            if self.clickTime[c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the density and radius of the double-clicked point
-                                if self.GUI[p + 1000]['slider']['radius'] is None:  # only summon if GUI is empty
-                                    if mode == 'vr':
-                                        self.GUI[p + 1000]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, maxRadius, minRadius, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                if self.points[p].drawn:
+                    if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords) and (self.dragR[c] is None):
+                        self.collP[c] = p  # set the collision point to the current point's index
+                        if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
+                            if not self.selectHeld[c]:
+                                self.selectHeld[c] = True
+                                for axis in range(3):
+                                    self.relPos[c][axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
+                                cords = controls.hand[c].cords  # set cords to the current controller's cords to shorten the below for increased readability
+                                if self.clickTime[c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the density and radius of the double-clicked point
+                                    if self.GUI[p + 1000]['slider']['radius'] is None:  # only summon if GUI is empty
+                                        if mode == 'vr':
+                                            self.GUI[p + 1000]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, maxRadius, minRadius, 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                        else:
+                                            self.GUI[p + 1000]['slider']['radius'] = myGUI.Manual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                                     else:
-                                        self.GUI[p + 1000]['slider']['radius'] = myGUI.Manual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                if self.GUI[p + 1000]['slider']['density'] is None:  # only summon if GUI is empty
-                                    if mode == 'vr':
-                                        self.GUI[p + 1000]['slider']['density'] = myGUI.Slider(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                        self.GUI[p + 1000]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
-                                        self.GUI[p + 1000]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                                        self.GUI[p + 1000]['slider']['radius'].unDraw()
+                                        self.GUI[p + 1000]['slider']['radius'] = None
+                                    if self.GUI[p + 1000]['slider']['density'] is None:  # only summon if GUI is empty
+                                        if mode == 'vr':
+                                            self.GUI[p + 1000]['slider']['density'] = myGUI.Slider(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                            self.GUI[p + 1000]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
+                                            self.GUI[p + 1000]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                                        else:
+                                            self.GUI[p + 1000]['slider']['density'] = myGUI.Manual(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                                     else:
-                                        self.GUI[p + 1000]['slider']['density'] = myGUI.Manual(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                            else:
-                                self.clickTime[c] = 0  # reset the time since last click, since this click IS the last click!
-                        if self.dragP[c] is None:  # used to set the drag variables if they are not already set
-                            self.dragP[c] = p
-                            if self.lastP[c] != p:  # no need to run the below if the value of lastP won't change
-                                if mode == 'vr':
-                                    if self.lastP[c - 1] != p:  # only allow unique points to be recalled by each controller
-                                        self.lastP[c] = p
+                                        self.GUI[p + 1000]['slider']['density'].unDraw()
+                                        self.GUI[p + 1000]['slider']['density'] = None
                                 else:
-                                    self.lastP[c] = p
-                    else:
-                        self.selectHeld[c] = False
+                                    self.clickTime[c] = 0  # reset the time since last click, since this click IS the last click!
+                            if self.dragP[c] is None:  # used to set the drag variables if they are not already set
+                                self.dragP[c] = p
+                                if self.lastP[c] != p:  # no need to run the below if the value of lastP won't change
+                                    if mode == 'vr':
+                                        if self.lastP[c - 1] != p:  # only allow unique points to be recalled by each controller
+                                            self.lastP[c] = p
+                                    else:
+                                        self.lastP[c] = p
+                        else:
+                            self.selectHeld[c] = False
 
                 if buttonPressed('dragJoint', controlsConf.controllers[c], c):
+                    collision = detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords)
+                    colliding = colliding or collision
                     if not self.jHeld[c]:
-                        if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):
+                        if collision:
                             self.jHeld[c] = True
                             if self.jClickTime[c] < 0.25:
-                                for j in self.joints:
-                                    if (j.pOne == p) or (j.pTwo == p):
-                                        j.unDraw()
+                                self.removeConnectedJoints(p)
                             else:
                                 self.jClickTime[c] = 0
                                 if self.newJoint is None:
                                     self.newJoint = Joint(p, c, 'controls')
-                                else:
+                                elif self.newJoint.pOne != p:  # if the point is not the current point, to prevent both points in a joint from being the exact same
                                     self.newJoint.pTwo = p
                                     self.newJoint.controller = False
                                     self.joints.append(self.newJoint)
                                     self.newJoint = None
-                        else:
-                            if self.newJoint is not None:
-                                self.newJoint.unDraw()
-                                self.newJoint = None
                 else:
                     self.jHeld[c] = False
 
@@ -193,41 +242,43 @@ class Main:
                     self.uHeld[c] = False
 
             for cr in range(len(self.collisionRect)):
-                yCollisionPlane = getYCollisionPlane(self.collisionRect[cr], controls.hand[c].cords)
-                if getCubeCollision(controls.hand[c].cords, controls.hand[c].radius, self.collisionRect[cr], yCollisionPlane) and (self.dragC[c] is None):
-                    if selectP(c):
-                        if not self.selectHeld[c]:
-                            self.selectHeld[c] = True
-                            for axis in range(3):
-                                self.relPos[c][axis] = self.collisionRect[cr].cords[axis] - controls.hand[c].cords[axis]
-                            cords = controls.hand[c].cords
-                            if self.clickTime[c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the size and density of the double-clicked collision rect
-                                if mode == 'k':
-                                    if self.GUI['GUISelector'][''][''] is None:
-                                        self.GUI['GUISelector'][''][''] = myGUI.GUISelector({'Size': None, 'Angle': None}, [controls.hand[c].cords[0], controls.hand[c].cords[1] - 1, controls.hand[c].cords[2]], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], cr)
-                                    else:
-                                        self.GUI['GUISelector'][''][''].drawn = False
-                                        self.GUI['GUISelector'][''][''].unDraw()
-                                else:
-                                    for axis in range(3):
-                                        if self.GUI[cr]['slider'][axis] is None:  # only summon if GUI is empty
-                                            if mode == 'vr':
-                                                self.GUI[cr]['slider'][axis] = myGUI.Slider(axis, self.collisionRect[cr].size[axis], self.collisionRect[cr].origSize[axis], [cords[0], cords[1] + (axis - 2) * 0.5, cords[2]], 10, 0.1, maxRadius, minRadius, f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                            else:
-                                                self.GUI[cr]['slider'][axis] = myGUI.Manual(axis, self.collisionRect[cr].size[axis], self.collisionRect[cr].origSize[axis], [cords[0], cords[1] + (axis - 2) * 0.5, cords[2]], f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                    if self.GUI[cr]['slider']['density'] is None:  # only summon if GUI is empty
-                                        if mode == 'vr':
-                                            self.GUI[cr]['slider']['density'] = myGUI.Slider(0, self.collisionRect[cr].density, self.collisionRect[cr].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                            self.GUI[cr]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
-                                            self.GUI[cr]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                if self.collisionRect[cr].drawn:
+                    yCollisionPlane = getYCollisionPlane(self.collisionRect[cr], controls.hand[c].cords)
+                    if getCubeCollision(controls.hand[c].cords, controls.hand[c].radius, self.collisionRect[cr], yCollisionPlane) and (self.dragP[c] is None):
+                        if selectP(c):
+                            if not self.selectHeld[c]:
+                                self.selectHeld[c] = True
+                                for axis in range(3):
+                                    self.relPos[c][axis] = self.collisionRect[cr].cords[axis] - controls.hand[c].cords[axis]
+                                cords = controls.hand[c].cords
+                                if self.clickTime[c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the size and density of the double-clicked collision rect
+                                    if mode == 'k':
+                                        if self.GUI['GUISelector']['']['pointRect'] is None:
+                                            self.GUI['GUISelector']['']['pointRect'] = myGUI.GUISelector({'Size': None, 'Angle': None}, [controls.hand[c].cords[0], controls.hand[c].cords[1] - 1, controls.hand[c].cords[2]], [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], cr)
                                         else:
-                                            self.GUI[cr]['slider']['density'] = myGUI.Manual(0, self.collisionRect[cr].density, self.collisionRect[cr].origDensity, [cords[0], cords[1] + 1, cords[2]], 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                            else:
-                                self.clickTime[c] = 0  # reset the time since last click, since this click IS the last click!
-                        if self.dragR[c] is None:  # used to set the drag variables if they are not already set
-                            self.dragR[c] = cr
-                    else:
-                        self.selectHeld[c] = False
+                                            self.GUI['GUISelector']['']['pointRect'].drawn = False
+                                            self.GUI['GUISelector']['']['pointRect'].unDraw()
+                                    else:
+                                        for axis in range(3):
+                                            if self.GUI[cr]['slider'][axis] is None:  # only summon if GUI is empty
+                                                if mode == 'vr':
+                                                    self.GUI[cr]['slider'][axis] = myGUI.Slider(axis, self.collisionRect[cr].size[axis], self.collisionRect[cr].origSize[axis], [cords[0], cords[1] + (axis - 2) * 0.5, cords[2]], 10, 0.1, maxRadius, minRadius, f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                                else:
+                                                    self.GUI[cr]['slider'][axis] = myGUI.Manual(axis, self.collisionRect[cr].size[axis], self.collisionRect[cr].origSize[axis], [cords[0], cords[1] + (axis - 2) * 0.5, cords[2]], f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                        if self.GUI[cr]['slider']['density'] is None:  # only summon if GUI is empty
+                                            if mode == 'vr':
+                                                self.GUI[cr]['slider']['density'] = myGUI.Slider(0, self.collisionRect[cr].density, self.collisionRect[cr].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                                self.GUI[cr]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
+                                                self.GUI[cr]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                                            else:
+                                                self.GUI[cr]['slider']['density'] = myGUI.Manual(0, self.collisionRect[cr].density, self.collisionRect[cr].origDensity, [cords[0], cords[1] + 1, cords[2]], 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                else:
+                                    self.clickTime[c] = 0  # reset the time since last click, since this click IS the last click!
+                            if self.dragR[c] is None:  # used to set the drag variables if they are not already set
+                                self.dragR[c] = cr
+                                self.lastR[c] = cr
+                        else:
+                            self.selectHeld[c] = False
 
             if self.dragP[c] is not None:
                 for axis in range(3):
@@ -290,6 +341,15 @@ class Main:
             else:
                 self.rHeld = False
 
+            if buttonPressed('dragJoint', controlsConf.controllers[c], c) and (self.newJoint is not None) and (not colliding):
+                self.newJoint.unDraw()
+                self.newJoint = None
+
+    def removeConnectedJoints(self, pIdx):
+        for j in self.joints:
+            if (j.pOne == pIdx) or (j.pTwo == pIdx):
+                j.unDraw()
+
     def tpCloth(self, cloth, cords, c, tpType):
         cordDiff = []
         if tpType == 'cloth':
@@ -340,6 +400,8 @@ class Main:
                                     size = self.GUI[g][gt][gta].main()  # must be done AFTER setVar (for complex reasons)
                                     for axis in self.GUI[g][gt][gta].axes:
                                         self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size[axis], axis)
+                                elif g == 'Tutorials':
+                                    self.GUI[g][gt][gta].main()
                                 else:
                                     self.GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size[self.GUI[g][gt][gta].xyz])
                                     size = self.GUI[g][gt][gta].main()  # must be done AFTER setVar (for complex reasons)
@@ -348,7 +410,15 @@ class Main:
                             self.GUI[g][gt][gta] = None
 
         if self.GUIType is not None:
-            if self.GUIType[0] == 'Size':
+            print(self.GUIType)
+            if self.GUIType[0] == 'Tutorials':
+                if self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] is not None:
+                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]].unDraw()
+                    self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = None
+                self.GUI[self.GUIType[0]][''][self.GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [10, 0.2], self.tutorialTexts[self.GUIType[1][0]], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+            elif self.GUIType[0] == 'Save & Exit':
+                self.export()
+            elif self.GUIType[0] == 'Size':
                 if self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['density'] is not None:
                     self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['density'].unDraw()
                     self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['density'] = None
@@ -434,9 +504,34 @@ class Main:
         for c in self.collisionRect:
             c.draw()
 
+    def export(self):
+        # format:
+        # POINTS
+        # cords, radius, density
+        # JOINTS
+        # pOneIdx, pTwoIdx
+        # COLLISIONRECTS
+        # size, cords, angle, density, viscosity, dragConst, transparency, rectType
+        f = open('exportData', 'w')
+        f.write('POINTS\n')
+        for p in self.points:
+            if p.drawn:
+                f.write(f'{p.cords} | {p.radius} | {p.density}\n')
+        f.write('JOINTS\n')
+        for j in self.joints:
+            if j.drawn:
+                f.write(f'{j.pOne} | {j.pTwo}\n')
+        f.write('COLLISIONRECTS\n')
+        for c in self.collisionRect:
+            if c.drawn:
+                f.write(f'{[c.size[0] + c.sizeOffset[0], c.size[1] + c.sizeOffset[1], c.size[2] + c.sizeOffset[2]]} | {c.cords} | {c.angle} | {c.density} | {c.viscosity} | {c.dragConst} | {c.transparency} | {c.rectType}\n')
+        f.close()
+        viz.quit()
+
 
 class Point:
     def __init__(self, cords, radius):
+        self.drawn = True
         self.cords = copy.deepcopy(cords)
         self.radius = radius
         self.origRadius = radius
@@ -456,12 +551,18 @@ class Point:
         pass
 
     def draw(self):
-        self.point.setPosition(self.cords)
+        if self.drawn:
+            self.point.setPosition(self.cords)
+
+    def unDraw(self):
+        self.point.remove()
+        self.drawn = False
 
 
 class CollisionRect:
-    def __init__(self, size, sizeOffset, cords, angle, density, viscosity, dragConst, transparency, rectType, *hide):
-        self.type = rectType  # solid or liquid
+    def __init__(self, size, cords, angle, density, viscosity, dragConst, transparency, rectType, *hide):
+        self.drawn = True
+        self.rectType = rectType  # solid or liquid
         self.angle = angle
         self.vertexAngle = [0, 0, 0]
         self.size = size
@@ -471,7 +572,7 @@ class CollisionRect:
             self.show = True
             self.rect = vizshape.addBox([1, 1, 1])
             self.rect.setScale(self.size)
-        self.cords = cords
+        self.cords = copy.deepcopy(cords)
         self.density = density
         self.origDensity = density
         self.dragConst = dragConst
@@ -488,59 +589,60 @@ class CollisionRect:
         }
         self.grad = dict
         self.sf = 1
-        self.sizeOffset = sizeOffset
+        self.sizeOffset = [0, 0, 0]
         self.update()
 
     def update(self):
-        tempSize = [self.size[0] + self.sizeOffset[0], self.size[1] + self.sizeOffset[1], self.size[2] + self.sizeOffset[2]]
-        sizeMultiplier = [0.5, 0.5, 0.5]
-        multiplier = 1
-        self.vertexAngle = math.atan(tempSize[1] / tempSize[0])
-        for v in range(8):
-            if (v == 1) or (v == 5):
-                sizeMultiplier[0] = -sizeMultiplier[0]
-            elif (v == 4) or (v == 6) or (v == 2):
-                sizeMultiplier[1] = -sizeMultiplier[1]
-            elif (v == 3) or (v == 7):
-                sizeMultiplier[2] = -sizeMultiplier[2]
-            if (v == 1) or (v == 4) or (v == 6) or (v == 7):
-                multiplier = -1
-            elif (v == 0) or (v == 5) or (v == 2) or (v == 3):
-                multiplier = 1
-            tempVertex = [0, 0, 0]
-            xySize = math.sqrt((tempSize[0]) ** 2 + (tempSize[1]) ** 2)
-            for i in range(3):
-                if i == 0:  # x
-                    tempVertex[i] = self.cords[i] + (xySize * sizeMultiplier[i] * cos(self.vertexAngle + (multiplier * self.angle[2])))
-                elif i == 1:  # y
-                    tempVertex[i] = self.cords[i] + (xySize * sizeMultiplier[i] * sin(self.vertexAngle + (multiplier * self.angle[2])))
-                elif i == 2:  # z
-                    tempVertex[i] = self.cords[i] + (tempSize[i] * sizeMultiplier[i])
+        if self.drawn:
+            tempSize = [self.size[0] + self.sizeOffset[0], self.size[1] + self.sizeOffset[1], self.size[2] + self.sizeOffset[2]]
+            sizeMultiplier = [0.5, 0.5, 0.5]
+            multiplier = 1
+            self.vertexAngle = math.atan(tempSize[1] / tempSize[0])
+            for v in range(8):
+                if (v == 1) or (v == 5):
+                    sizeMultiplier[0] = -sizeMultiplier[0]
+                elif (v == 4) or (v == 6) or (v == 2):
+                    sizeMultiplier[1] = -sizeMultiplier[1]
+                elif (v == 3) or (v == 7):
+                    sizeMultiplier[2] = -sizeMultiplier[2]
+                if (v == 1) or (v == 4) or (v == 6) or (v == 7):
+                    multiplier = -1
+                elif (v == 0) or (v == 5) or (v == 2) or (v == 3):
+                    multiplier = 1
+                tempVertex = [0, 0, 0]
+                xySize = math.sqrt((tempSize[0]) ** 2 + (tempSize[1]) ** 2)
+                for i in range(3):
+                    if i == 0:  # x
+                        tempVertex[i] = self.cords[i] + (xySize * sizeMultiplier[i] * cos(self.vertexAngle + (multiplier * self.angle[2])))
+                    elif i == 1:  # y
+                        tempVertex[i] = self.cords[i] + (xySize * sizeMultiplier[i] * sin(self.vertexAngle + (multiplier * self.angle[2])))
+                    elif i == 2:  # z
+                        tempVertex[i] = self.cords[i] + (tempSize[i] * sizeMultiplier[i])
 
-            self.vertex[v] = tempVertex
+                self.vertex[v] = tempVertex
 
-        self.plane['right'] = self.cords[0] + (tempSize[0] / 2)
-        self.plane['left'] = self.cords[0] - (tempSize[0] / 2)
-        self.plane['top'] = self.cords[1] + (tempSize[1] / 2)
-        self.plane['bottom'] = self.cords[1] - (tempSize[1] / 2)
-        self.plane['front'] = self.cords[2] + (tempSize[2] / 2)
-        self.plane['back'] = self.cords[2] - (tempSize[2] / 2)
+            self.plane['right'] = self.cords[0] + (tempSize[0] / 2)
+            self.plane['left'] = self.cords[0] - (tempSize[0] / 2)
+            self.plane['top'] = self.cords[1] + (tempSize[1] / 2)
+            self.plane['bottom'] = self.cords[1] - (tempSize[1] / 2)
+            self.plane['front'] = self.cords[2] + (tempSize[2] / 2)
+            self.plane['back'] = self.cords[2] - (tempSize[2] / 2)
 
-        if self.vertex[0][0] != self.vertex[1][0]:
-            mx = (self.vertex[0][1] - self.vertex[1][1]) / (self.vertex[0][0] - self.vertex[1][0])
-        else:
-            mx = float('inf')
-        if self.vertex[5][0] != self.vertex[6][0]:
-            my = (self.vertex[5][1] - self.vertex[6][1]) / (self.vertex[5][0] - self.vertex[6][0])
-        else:
-            my = float('inf')
-        self.grad = {
-            'x': mx,
-            'y': my
-        }
+            if self.vertex[0][0] != self.vertex[1][0]:
+                mx = (self.vertex[0][1] - self.vertex[1][1]) / (self.vertex[0][0] - self.vertex[1][0])
+            else:
+                mx = float('inf')
+            if self.vertex[5][0] != self.vertex[6][0]:
+                my = (self.vertex[5][1] - self.vertex[6][1]) / (self.vertex[5][0] - self.vertex[6][0])
+            else:
+                my = float('inf')
+            self.grad = {
+                'x': mx,
+                'y': my
+            }
 
     def draw(self):
-        if self.show:
+        if self.show and self.drawn:
             tempSize = [self.size[0] + self.sizeOffset[0], self.size[1] + self.sizeOffset[1], self.size[2] + self.sizeOffset[2]]
             self.rect.setScale(tempSize)
             self.rect.setPosition(self.cords)
@@ -554,6 +656,10 @@ class CollisionRect:
         if len(sizeAngle) >= 3:
             self.angle[sizeAngle[3]] = copy.deepcopy(sizeAngle[2])
         self.update()
+
+    def unDraw(self):
+        self.rect.remove()
+        self.drawn = False
 
 
 class Joint:
@@ -591,33 +697,50 @@ class Joint:
 
 
 class VoidBox:
-    def __init__(self, cords, type):
+    def __init__(self, cords, spriteType):
         self.cords = cords
         self.box = vizshape.addBox()
         self.box.setPosition(self.cords)
-        self.box.alpha(0.5)
+        self.box.alpha(0.25)
         self.innerShape = None
-        if type == 'collisionRect':
+        self.spriteType = spriteType
+        if self.spriteType == 'collisionRect':
             self.innerShape = vizshape.addBox()
             self.innerShape.setScale([0.5, 0.5, 0.5])
-        elif type == 'point':
+        elif self.spriteType == 'point':
             self.innerShape = vizshape.addSphere()
-            self.innerShape.setScale([0.5, 0.5, 0.5])
+            self.innerShape.setScale([0.25, 0.25, 0.25])
+        if self.spriteType != 'trash':
+            self.innerShape.setPosition(self.cords)
         self.pHeld = [False, False]
 
     def drag(self):
         for c in range(controlsConf.controllerAmt):
+            collision = detectCollision(controls.hand[c].radius, 0.25, controls.hand[c].cords, self.cords)
             if selectP(c):
                 if not self.pHeld[c]:
                     self.pHeld[c] = True
-                    if detectCollision(controls.hand[c].radius, 0.25, controls.hand[c].cords, self.cords):
-                        print('selecting!')
+                    if collision:
+                        # self.innerShape.alpha(0.75)
+                        if self.spriteType == 'point':
+                            game.addPoint(self.cords, 0.25)
+                        elif self.spriteType == 'collisionRect':
+                            game.addCollisionRect(CollisionRect([0.25, 0.25, 0.25], self.cords, [0, 0, math.radians(0.0001)], 1000, 10, 1, 1, 's'))
+            elif self.spriteType == 'trash':
+                if collision:
+                    if game.lastP[c] is not None:
+                        game.removeConnectedJoints(game.lastP[c])
+                        game.points[game.lastP[c]].unDraw()
+                    elif game.lastR[c] is not None:
+                        game.collisionRect[game.lastR[c]].unDraw()
             else:
                 self.pHeld[c] = False
+            # if not collision:
+            #     self.innerShape.alpha(1)
 
 
 game = Main()
-game.addCollisionRect(CollisionRect([1, 1, 1], [0, 0, 0], [2, 1, 0], [0, 0, math.radians(69)], 1000, 10, 1, 0.5, 's'))
+game.addCollisionRect(CollisionRect([1, 1, 1], [2, 1, 0], [0, 0, math.radians(69)], 1000, 10, 1, 0.5, 's'))
 
 vizact.ontimer(1 / physicsTime, game.main)
 vizact.ontimer(1 / renderRate, game.render)
