@@ -88,10 +88,37 @@ class Main:
         self.tutorialTexts = {}
         # self.tutorialNames = {}
         self.importTutorials()
+        self.importData()
 
     def importData(self):
         f = open('exportData', 'r')
+        data = f.read().splitlines()
+        formattedData = []
         f.close()
+        for pjc in data:
+            if (pjc == 'POINTS') or (pjc == 'JOINTS') or (pjc == 'COLLISIONRECTS'):
+                formattedData.append([])
+            else:
+                formattedData[-1].append(pjc)  # .replace(' |', ', ')
+                formattedData[-1][-1] = formattedData[-1][-1].split(' | ')
+        for i in range(len(formattedData)):
+            for j in range(len(formattedData[i])):
+                for k in range(len(formattedData[i][j])):
+                    if (formattedData[i][j][k] != 's') and (formattedData[i][j][k] != 'l'):
+                        try:
+                            if i == 1:
+                                formattedData[i][j][k] = int(formattedData[i][j][k])  # should be int for joints since list indexes cannot be floats
+                            else:
+                                formattedData[i][j][k] = float(formattedData[i][j][k])
+                        except ValueError:
+                            formattedData[i][j][k] = formattedData[i][j][k].replace('[', '')
+                            formattedData[i][j][k] = formattedData[i][j][k].replace(']', '')
+                            tempList = formattedData[i][j][k].split(', ')
+                            for t in range(len(tempList)):
+                                tempList[t] = float(tempList[t])
+                            formattedData[i][j][k] = tempList
+        print(data)
+        print(formattedData)  # formattedData = [points, joints, collisionRects]
 
     # initialize all the lists that depend on self.points and self.collisionRect
     def initLists(self):
@@ -236,10 +263,7 @@ class Main:
 
         for p in range(len(self.points)):
             self.points[p].sf = globalVars['friction']  # update each point's local value of friction based on globalVars['friction'], for the same reason physicsTime is updated
-            # if (self.points[p].cords[1] - self.points[p].radius) <= self.gridFloor:
-            #     self.points[p].cords[1] = self.gridFloor + self.points[p].radius
-            #     self.points[p].oldCords[1] = self.points[p].cords[1]
-            # detect collisions with other points
+            # detect & resolve collisions with all points
             for po in range(len(self.points)):
                 if (po > p) and (p != po) and (self.points[p].pointCollisions[0] != po) and (self.points[po].pointCollisions[0] != p):  # performance optimisation: only go through unique combinations of p and po (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
                     sumR = self.points[p].radius + self.points[po].radius

@@ -13,7 +13,7 @@ if mode == 'vr':
 jetBrainsFontSize = 1.69  # font size of 1.69 equates to 1 unit of distance per character in Vizard
 
 
-# mode = 'vr'  # uncomment for testing VR on keyboard/mouse
+# mode = 'vr'  # uncomment for testing VR settings on keyboard/mouse
 
 
 class Slider:
