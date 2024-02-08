@@ -18,6 +18,17 @@ import copy
 from globalFunctions import *
 import myGUI
 
+while True:
+    imports = input('Import from exportData? (y / n): ')
+    if imports == 'y':
+        imports = True
+    elif imports == 'n':
+        imports = False
+    if type(imports) is bool:
+        break
+    else:
+        print('Please enter y / n!')
+
 # Vizard window initialization
 viz.setMultiSample(4)  # FSAA (Full Screen Anti-Alaiasing)
 viz.fov(90)
@@ -88,12 +99,14 @@ class Main:
         self.tutorialTexts = {}
         # self.tutorialNames = {}
         self.importTutorials()
-        self.importData()
+        self.imported = False
+        if imports:
+            self.importData()
 
     def importData(self):
         f = open('exportData', 'r')
         data = f.read().splitlines()
-        formattedData = []
+        formattedData = []  # formattedData = [points, joints, collisionRects]
         f.close()
         for pjc in data:
             if (pjc == 'POINTS') or (pjc == 'JOINTS') or (pjc == 'COLLISIONRECTS'):
@@ -117,8 +130,23 @@ class Main:
                             for t in range(len(tempList)):
                                 tempList[t] = float(tempList[t])
                             formattedData[i][j][k] = tempList
-        print(data)
-        print(formattedData)  # formattedData = [points, joints, collisionRects]
+        points = formattedData[0]
+        joints = formattedData[1]
+        collisionRects = formattedData[2]
+        print(collisionRects)
+        for p in points:
+            self.addPoint(Point(p[1], p[2], True))
+            self.points[-1].teleport(p[0])
+        for j in joints:
+            self.joints.append(Joint(True, '', globalVars['springConst'], j[0], j[1], globalVars['damping'], 69, self))
+            for p in range(len(self.points)):
+                for po in range(len(self.points)):
+                    if (p != po) and (po > p) and (((j[0] == p) and (j[1] == po)) or ((j[1] == p) and (j[0] == po))):
+                        if self.points[p].cloth == '':
+                            self.points[p].cloth = f'{len(self.joints)}'
+                        self.points[po].cloth = self.points[p].cloth
+        for c in collisionRects:
+            self.collisionRect.append(CollisionRect(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]))
 
     # initialize all the lists that depend on self.points and self.collisionRect
     def initLists(self):
@@ -591,6 +619,10 @@ class Point:
         if len(pointCollisions) > 0:
             self.pointCollisions = pointCollisions
 
+    def teleport(self, cords):
+        self.cords = copy.deepcopy(cords)
+        self.oldCords = copy.deepcopy(cords)
+
     def setRadiusDensity(self, radius, density):
         self.radius = radius
         self.density = density
@@ -1053,12 +1085,12 @@ class Point:
 
 # class for cylinders (joints) connecting spheres
 class Joint:
-    def __init__(self, show, origLength, stiffness, pOne, pTwo, bounciness, maxStrain, *theForceJoint):
+    def __init__(self, show, origLength, stiffness, pOne, pTwo, bounciness, maxStrain, gameObj, *theForceJoint):
         self.pOne = pOne  # index of first connected point
         self.pTwo = pTwo  # index of second connected point
-        game.points[pOne].connectedJoint = True
-        game.points[pTwo].connectedJoint = True
-        self.height = distance(game.points[self.pOne].cords, game.points[self.pTwo].cords)  # current size of joint
+        gameObj.points[pOne].connectedJoint = True
+        gameObj.points[pTwo].connectedJoint = True
+        self.height = distance(gameObj.points[self.pOne].cords, gameObj.points[self.pTwo].cords)  # current size of joint
         self.oldHeight = copy.deepcopy(self.height)  # size of joint from previous frame
         self.radius = jointRadius
         self.stiffness = stiffness
@@ -1318,9 +1350,8 @@ class CollisionRect:
 
 game = Main()
 
-imports = False
 # makes a cube using points and joints
-if imports:
+if not imports:
     cube = True
     if cube:
         cubeSize = 8
@@ -1380,9 +1411,9 @@ if imports:
             for jo in range(len(game.points)):
                 if (j != jo) and (jo > j):  # performance optimisation: only go through unique combinations of j and jo (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not)
                     if jo <= 7:
-                        game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain']))
+                        game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain'], game))
                     else:
-                        game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain']))
+                        game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain'], game))
         # game.addPoint(Point(0.1, 1000))
 
     sphere = False

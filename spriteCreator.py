@@ -18,6 +18,17 @@ import copy
 from globalFunctions import *
 import myGUI
 
+while True:
+    imports = input('Edit exportData? (y / n): ')
+    if imports == 'y':
+        imports = True
+    elif imports == 'n':
+        imports = False
+    if type(imports) is bool:
+        break
+    else:
+        print('Please enter y / n!')
+
 # Vizard window initialization
 viz.setMultiSample(4)  # FSAA (Full Screen Anti-Alaiasing)
 viz.fov(90)
@@ -34,6 +45,8 @@ elif mode == 'k':
 controls = controlsConf.Main()
 
 viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
+
+
 # mode = 'vr'  # uncomment for testing VR settings on keyboard/mouse
 
 
@@ -99,9 +112,47 @@ class Main:
         self.tutorialTexts = {}
         self.importTutorials()
         self.voidBox = [VoidBox([-1, 0, 0], 'point'), VoidBox([1, 0, 0], 'collisionRect'), VoidBox([0, -2, 0], 'trash')]
-        self.addPoint([0, 0, 0], 0.1)
-        self.addPoint([1, 2, 3], 0.15)
-        self.addPoint([-1, 2, 0], 0.2)
+        if imports:
+            self.importData()
+
+    def importData(self):
+        f = open('exportData', 'r')
+        data = f.read().splitlines()
+        formattedData = []  # formattedData = [points, joints, collisionRects]
+        f.close()
+        for pjc in data:
+            if (pjc == 'POINTS') or (pjc == 'JOINTS') or (pjc == 'COLLISIONRECTS'):
+                formattedData.append([])
+            else:
+                formattedData[-1].append(pjc)  # .replace(' |', ', ')
+                formattedData[-1][-1] = formattedData[-1][-1].split(' | ')
+        for i in range(len(formattedData)):
+            for j in range(len(formattedData[i])):
+                for k in range(len(formattedData[i][j])):
+                    if (formattedData[i][j][k] != 's') and (formattedData[i][j][k] != 'l'):
+                        try:
+                            if i == 1:
+                                formattedData[i][j][k] = int(formattedData[i][j][k])  # should be int for joints since list indexes cannot be floats
+                            else:
+                                formattedData[i][j][k] = float(formattedData[i][j][k])
+                        except ValueError:
+                            formattedData[i][j][k] = formattedData[i][j][k].replace('[', '')
+                            formattedData[i][j][k] = formattedData[i][j][k].replace(']', '')
+                            tempList = formattedData[i][j][k].split(', ')
+                            for t in range(len(tempList)):
+                                tempList[t] = float(tempList[t])
+                            formattedData[i][j][k] = tempList
+        points = formattedData[0]
+        joints = formattedData[1]
+        collisionRects = formattedData[2]
+        print(collisionRects)
+        for p in points:
+            self.addPoint(p[0], p[1])
+            self.points[-1].density = p[2]
+        for j in joints:
+            self.joints.append(Joint(j[0], j[1]))
+        for c in collisionRects:
+            self.addCollisionRect(CollisionRect(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]))
 
     def importTutorials(self):
         # global tutorialNames
@@ -611,6 +662,9 @@ class CollisionRect:
     def update(self):
         if self.drawn:
             tempSize = [self.size[0] + self.sizeOffset[0], self.size[1] + self.sizeOffset[1], self.size[2] + self.sizeOffset[2]]
+            for t in range(3):
+                if tempSize[t] <= 0:
+                    tempSize[t] = 0.1
             sizeMultiplier = [0.5, 0.5, 0.5]
             multiplier = 1
             self.vertexAngle = math.atan(tempSize[1] / tempSize[0])
@@ -764,7 +818,6 @@ class VoidBox:
 
 
 game = Main()
-game.addCollisionRect(CollisionRect([1, 1, 1], [2, 1, 0], [0, 0, math.radians(69)], 1000, 10, 1, 0.5, 's'))
 
 vizact.ontimer(1 / physicsTime, game.main)
 vizact.ontimer(1 / renderRate, game.render)
