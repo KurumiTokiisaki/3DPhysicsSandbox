@@ -257,7 +257,7 @@ class Dial:
             self.axes = [0, 1, 2]
         self.text = text
         self.textFront = viz.addText3D('', fontSize=0.15)
-        self.collision = [False, False]
+        self.collision = False
         self.dragging = False
         self.anim = None
         if self.tDim:
@@ -295,7 +295,7 @@ class Dial:
         for v in range(len(var)):
             var[v] = float(var[v])
         for c in range(controllerCount):
-            if (not self.dragging) or (not self.collision[c]):
+            if (not self.dragging) or (not self.collision):
                 if self.tDim:
                     for axis in range(3):
                         self.p.cords[axis] = self.cords[axis] + (var[axis] / self.range[axis]) * self.cRad * 2
@@ -306,8 +306,8 @@ class Dial:
     def drag(self, cIdx, dragging):
         self.dragging = dragging
         if dragging:
-            self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
-            if self.collision[cIdx]:
+            self.collision = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
+            if self.collision:
                 if not self.tDim:
                     self.p.cords[self.axes[0]] = copy.deepcopy(self.cDat[cIdx].cords[self.axes[0]])
                     self.p.cords[self.axes[1]] = copy.deepcopy(self.cDat[cIdx].cords[self.axes[1]])
@@ -357,7 +357,7 @@ class Dial:
 
         for axis in range(len(self.var)):
             for c in range(controllerCount):
-                if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging or not self.collision[c]):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
+                if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging or not self.collision):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
                     self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
 
         # Verlet integration
@@ -501,7 +501,7 @@ class Manual:
         self.resetHeld = [False, False]
         self.selecting = [False, False]
         self.sHeld = [True, True]
-        self.collision = [False, False]
+        self.collision = False
         self.selectionIdx = [None, None]
         self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete', '-', 'reset', 'hardReset']
         self.activePoint = None

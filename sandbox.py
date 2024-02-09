@@ -54,12 +54,6 @@ def selectP(cIdx):
 # Main class for main.py
 class Main:
     def __init__(self):
-        # commented code below used for testinglsd
-        # vizshape.addGrid()
-        # vizshape.addGrid(axis=vizshape.AXIS_X)
-        # vizshape.addBox((1, 0.01, 1)).setPosition(0, 0, 0)
-        # vizshape.addBox((1, 0.01, 1)).setPosition(0, -1, 0)
-        # vizshape.addBox((1, 0.01, 1)).setPosition(0, -2, 0)
         self.gridFloor = 0  # y-coordinate of test collision
         self.points = []  # list of points for the whole program
         self.joints = []  # list of joints for the whole program
@@ -95,9 +89,7 @@ class Main:
         self.clickTime = [0, 0]  # stores time since 'select' was pressed for both controllers in order for double-click detection
         self.relPos = [[0, 0, 0], [0, 0, 0]]  # stores the relative position of selected points with either controller
         self.clothData = {}
-        # self.cloths = {}
         self.tutorialTexts = {}
-        # self.tutorialNames = {}
         self.importTutorials()
         self.imported = False
         if imports:
@@ -112,7 +104,7 @@ class Main:
             if (pjc == 'POINTS') or (pjc == 'JOINTS') or (pjc == 'COLLISIONRECTS'):
                 formattedData.append([])
             else:
-                formattedData[-1].append(pjc)  # .replace(' |', ', ')
+                formattedData[-1].append(pjc)
                 formattedData[-1][-1] = formattedData[-1][-1].split(' | ')
         for i in range(len(formattedData)):
             for j in range(len(formattedData[i])):
@@ -202,7 +194,6 @@ class Main:
                 self.clothData.update({self.points[p].cloth: []})
             if (self.points[p].cloth != '') and (not checkInList(self.clothData[self.points[p].cloth], p)):
                 self.clothData[self.points[p].cloth].append(p)
-        # cloths = self.cloths
 
     def importTutorials(self):
         # global tutorialNames
@@ -353,8 +344,8 @@ class Main:
 
     # used to drag points around using pointer/controller
     def dragPoint(self):
-        # if mode == 'vr':
-        #     print(controlsConf.controllers[0].getButtonState() % touchpad, controlsConf.controllers[1].getButtonState() % touchpad)  # prints the current button being pressed for each controller
+        if mode == 'vr':
+            print(controlsConf.controllers[0].getButtonState() % touchpad, controlsConf.controllers[1].getButtonState() % touchpad)  # prints the current button being pressed for each controller
 
         # loop through all drag code for each controller
         for c in range(controlsConf.controllerAmt):
@@ -951,38 +942,9 @@ class Point:
                         self.cords = copy.deepcopy(self.oldCords)
                     else:
                         self.cords = copy.deepcopy(self.oldCords)
-                        # if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
-                        #     i = [2, 1, 0]
-                        #
-                        # elif (self.lastCollision[count] == 'left') or (self.lastCollision[count] == 'right'):
-                        #     i = [2, 0, 1]
-                        #
-                        # elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
-                        #     i = [1, 0, 2]
-
-                        # if abs(math.degrees(self.bAngle[2])) < 45:
-                        #     self.collisionState = 'y'
-                        #     collisionPoint = self.cords[0] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
-                        # else:
-                        #     self.collisionState = 'x'
-                        #     collisionPoint = self.cords[1] + (self.radius / cos(self.bAngle[2])), yCollisionPlane[self.lastCollision[count]][self.collisionState], b.vertex[vertexIdx[0]][i[0]]
-
-                        # self.angle = getThreeDAngle(collisionPoint, self.cords, self.vertexState)
-                        # angle = getTwoDAngle([self.cords[i[1]], self.cords[i[0]]], [b.vertex[vertexIdx[0]][i[1]], b.vertex[vertexIdx[0]][i[0]]])
-                        # resultV = math.sqrt(self.oldVelocity[i[0]] ** 2 + self.oldVelocity[i[1]] ** 2)
-                        # self.reboundVelocity[i[0]], self.reboundVelocity[i[1]], self.reboundVelocity[i[2]] = edgeBounce(resultV, self.angle, self.e, -1)
-                        # self.cords[i[0]] += self.multiplier[count] * self.reboundVelocity[i[0]]
-                        # self.oldCords[i[1]] = yCollisionPlane[self.lastCollision[count]]['y'] + (self.radius * cos(self.angle[0]))
-                        # self.collAngle = getThreeDAngle(collisionPoint, self.cords, 'y')
-                        # self.cords[i[1]] = yCollisionPlane[self.lastCollision[count]][self.collisionState] + (self.radius * sin(self.collAngle[0]))
-                        # self.oldCords[i[1]] = copy.deepcopy(self.cords[i[1]])
-                        # self.cords[i[2]] += self.multiplier[count] * self.reboundVelocity[i[2]]
-                        # print(self.normalForce, self.collAngle)
 
                 elif b.type == 'l':
                     pass
-
-                # collidingB.append(b)
 
             # detect collisions between points and vertices (corners) on a collision rect (cuboid)
             elif (self.collision[count] == '') and (self.vertexState == '') and (distance(b.vertex[vertexIdx], self.cords) <= self.radius):
@@ -990,78 +952,6 @@ class Point:
                     self.cords = copy.deepcopy(self.oldCords)
                 else:
                     self.cords = copy.deepcopy(self.oldCords)
-                    # resultF = math.sqrt(self.force[0] ** 2 + self.force[1] ** 2 + self.force[2] ** 2)
-                    # resultV = math.sqrt(self.oldVelocity[0] ** 2 + self.oldVelocity[1] ** 2 + self.oldVelocity[2] ** 2)
-                    #
-                    # # nMultiplier was obtained through testing
-                    # if (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'bottom'):
-                    #     self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'y')
-                    #     if (vertexIdx == 0) or (vertexIdx == 1) or (vertexIdx == 6) or (vertexIdx == 3):
-                    #         pMultiplier = [-1, -1]
-                    #         nMultiplier = [1, 1]
-                    #     elif (vertexIdx == 4) or (vertexIdx == 5) or (vertexIdx == 2) or (vertexIdx == 7):
-                    #         pMultiplier = [1, 1]
-                    #         nMultiplier = [-1, -1]
-                    #     if self.lastCollision[count] == 'top':
-                    #         yMultiplier = -1
-                    #     elif self.lastCollision[count] == 'bottom':
-                    #         yMultiplier = 1
-                    #
-                    #     self.reboundVelocity[0], self.reboundVelocity[1], self.reboundVelocity[2] = vertexBounce(resultV, self.angle, self.e)
-                    #     self.cords[0] += pMultiplier[0] * self.reboundVelocity[0]
-                    #     self.cords[1] = self.oldCords[1] + self.reboundVelocity[1] * yMultiplier
-                    #     self.cords[2] += pMultiplier[1] * self.reboundVelocity[2]
-                    #     self.normalForce[0] = nMultiplier[0] * resultF * cos(self.angle[1]) * sin(self.angle[0]) * -yMultiplier
-                    #     self.normalForce[2] = nMultiplier[1] * resultF * cos(self.angle[1]) * cos(self.angle[0]) * -yMultiplier
-                    #
-                    # elif (self.lastCollision[count] == 'left') or (self.lastCollision[count] == 'right'):
-                    #     self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'x')
-                    #     if (vertexIdx == 1) or (vertexIdx == 4) or (vertexIdx == 6) or (vertexIdx == 7):
-                    #         pMultiplier = [1, 1]
-                    #         if (vertexIdx == 6) or (vertexIdx == 7):
-                    #             nMultiplier = [-1, -1]
-                    #         elif (vertexIdx == 1) or (vertexIdx == 4):
-                    #             nMultiplier = [1, 1]
-                    #     elif (vertexIdx == 2) or (vertexIdx == 3) or (vertexIdx == 0) or (vertexIdx == 5):
-                    #         pMultiplier = [-1, -1]
-                    #         if (vertexIdx == 0) or (vertexIdx == 5):
-                    #             nMultiplier = [1, 1]
-                    #         elif (vertexIdx == 2) or (vertexIdx == 3):
-                    #             nMultiplier = [-1, -1]
-                    #     if self.lastCollision[count] == 'left':
-                    #         yMultiplier = 1
-                    #     elif self.lastCollision[count] == 'right':
-                    #         yMultiplier = -1
-                    #
-                    #     self.reboundVelocity[2], self.reboundVelocity[0], self.reboundVelocity[1] = vertexBounce(resultV, self.angle, self.e)
-                    #     self.cords[1] += pMultiplier[0] * self.reboundVelocity[1]
-                    #     self.cords[0] = self.oldCords[0] + self.reboundVelocity[0] * yMultiplier
-                    #     self.cords[2] += pMultiplier[1] * self.reboundVelocity[2]
-                    #     self.normalForce[1] = nMultiplier[0] * resultF * cos(self.angle[1]) * cos(self.angle[0])
-                    #     self.normalForce[2] = nMultiplier[1] * resultF * cos(self.angle[1]) * sin(self.angle[0])
-                    #
-                    # elif (self.lastCollision[count] == 'front') or (self.lastCollision[count] == 'back'):
-                    #     self.angle = getThreeDAngle(b.vertex[vertexIdx], self.cords, 'z')
-                    #     if (vertexIdx == 0) or (vertexIdx == 1) or (vertexIdx == 3) or (vertexIdx == 6):
-                    #         pMultiplier = [-1, -1]
-                    #         nMultiplier = [-1, -1]
-                    #     elif (vertexIdx == 7) or (vertexIdx == 2) or (vertexIdx == 4) or (vertexIdx == 5):
-                    #         pMultiplier = [1, 1]
-                    #         nMultiplier = [1, 1]
-                    #     if self.lastCollision[count] == 'front':
-                    #         yMultiplier = -1
-                    #     elif self.lastCollision[count] == 'back':
-                    #         yMultiplier = 1
-                    #
-                    #     self.reboundVelocity[0], self.reboundVelocity[2], self.reboundVelocity[1] = vertexBounce(resultV, self.angle, self.e)
-                    #     self.cords[0] += pMultiplier[0] * self.reboundVelocity[0]
-                    #     self.cords[2] = self.oldCords[2] + self.reboundVelocity[2] * yMultiplier
-                    #     self.cords[1] += pMultiplier[1] * self.reboundVelocity[1]
-                    #     self.normalForce[0] = nMultiplier[0] * resultF * cos(self.angle[1]) * sin(self.angle[0]) * yMultiplier
-                    #     self.normalForce[1] = nMultiplier[1] * resultF * cos(self.angle[1]) * cos(self.angle[0]) * yMultiplier
-
-                    # print(self.lastCollision[count], math.degrees(angle[0]), math.degrees(angle[1]), vertexIdx[0])
-                # collidingB.append(b)
             else:
                 self.colliding[count] = False
 
@@ -1247,7 +1137,6 @@ class CollisionRect:
         sizeMultiplier = [0.5, 0.5, 0.5]
         multiplier = 1
         self.vertexAngle = math.atan(self.size[1] / self.size[0])
-        # print(math.degrees(self.vertexAngle))
         for v in range(8):
             if (v == 1) or (v == 5):
                 sizeMultiplier[0] = -sizeMultiplier[0]
@@ -1271,59 +1160,6 @@ class CollisionRect:
 
             self.vertex.append(tempVertex)
 
-        # multiplier = [1, 1]
-        # self.vertexAngle = getThreeDAngle([0, 0, 0], self.size, 'y')
-        # self.vertexAngle = [abs(self.vertexAngle[0]), abs(self.vertexAngle[1]), abs(self.vertexAngle[2])]
-        # size = math.sqrt((self.size[0]) ** 2 + (self.size[1]) ** 2 + (self.size[2]) ** 2)
-        # size = [0, 0, 0]
-        # size[0] = math.sqrt((self.size[0]) ** 2 + (self.size[1]) ** 2)  # front/back
-        # size[1] = math.sqrt((self.size[0]) ** 2 + (self.size[2]) ** 2)  # top/bottom
-        # size[2] = math.sqrt((self.size[1]) ** 2 + (self.size[2]) ** 2)  # left/right
-        # self.vertexAngle[0] = math.atan(self.size[1] / self.size[0])
-        # self.vertexAngle[1] = math.atan(self.size[2] / self.size[0])
-        # self.vertexAngle[2] = math.atan(self.size[2] / self.size[1])
-        # print(math.degrees(self.vertexAngle[0]), math.degrees(self.vertexAngle[1]), math.degrees(self.vertexAngle[2]))
-        # bAngle = copy.deepcopy(self.angle)
-        # bAngle[0] += self.vertexAngle[0]
-        # bAngle[1] += self.vertexAngle[1]
-        # bAngle[2] += self.vertexAngle[2]
-        # matrix = [0, 0, 0]
-        # matrix[0] = [cos(bAngle[0]) * cos(bAngle[1]), cos(bAngle[0]) * sin(bAngle[1]) * sin(bAngle[2]) - sin(bAngle[0]) * cos(bAngle[2]), cos(bAngle[0]) * sin(bAngle[1]) * cos(bAngle[2]) + sin(bAngle[0]) * sin(bAngle[2])]
-        # matrix[1] = [sin(bAngle[0]) * cos(bAngle[1]), sin(bAngle[0]) * sin(bAngle[1]) * sin(bAngle[2]) + cos(bAngle[0]) * cos(bAngle[2]), sin(bAngle[0]) * sin(bAngle[1]) * cos(bAngle[2]) - cos(bAngle[0]) * sin(bAngle[2])]
-        # matrix[2] = [-sin(bAngle[1]), cos(bAngle[1]) * sin(bAngle[2]), cos(bAngle[1]) * cos(bAngle[2])]
-        # for i in range(3):
-        #     for j in range(3):
-        #         matrix[i][j] *= size
-        # print(matrix)
-        # for v in range(8):
-        #     if (v == 1) or (v == 5):
-        #         sizeMultiplier[0] = -sizeMultiplier[0]
-        #     elif (v == 4) or (v == 6) or (v == 2):
-        #         sizeMultiplier[1] = -sizeMultiplier[1]
-        #     elif (v == 3) or (v == 7):
-        #         sizeMultiplier[2] = -sizeMultiplier[2]
-        #     if (v == 1) or (v == 4) or (v == 6) or (v == 7):
-        #         multiplier[0] = -1
-        #     elif (v == 0) or (v == 5) or (v == 2) or (v == 3):
-        #         multiplier[0] = 1
-        #     if (v == 0) or (v == 2) or (v == 3) or (v == 5):
-        #         multiplier[1] = -1
-        #     else:
-        #         multiplier[1] = 1
-        #     tempVertex = [0, 0, 0]
-        #     for i in range(3):
-        #         if i == 0:  # x
-        #             tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * cos(self.vertexAngle[1] + (multiplier[0] * self.angle[0])) * sin(self.vertexAngle[0] + (multiplier[1] * self.angle[2])))
-        #             # tempVertex[i] = self.cords[i] + (sizeMultiplier[i] * size[0] * cos(self.vertexAngle[0] + (multiplier[0] * (self.angle[2] - self.angle[0]))))
-        #         elif i == 1:  # y
-        #             # tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * sin(self.vertexAngle[1] + (multiplier[0] * self.angle[2])))
-        #             tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * cos(self.vertexAngle[1] + (multiplier[0] * self.angle[0])) * cos(self.vertexAngle[0] + (multiplier[1] * self.angle[2])))
-        #             # tempVertex[i] = self.cords[i] + (sizeMultiplier[i] * size[0] * sin(self.vertexAngle[0] + (multiplier[0] * self.angle[2])))
-        #         elif i == 2:  # z
-        #             tempVertex[i] = self.cords[i] + (size * sizeMultiplier[i] * cos(self.vertexAngle[1]) * cos(self.vertexAngle[0] + (multiplier[1] * self.angle[0])))
-        #             # tempVertex[i] = self.cords[i] + (sizeMultiplier[i] * self.size[2])
-        #     self.vertex.append(tempVertex)
-
         self.plane['right'] = self.cords[0] + (self.size[0] / 2)
         self.plane['left'] = self.cords[0] - (self.size[0] / 2)
         self.plane['top'] = self.cords[1] + (self.size[1] / 2)
@@ -1343,9 +1179,6 @@ class CollisionRect:
             'x': mx,
             'y': my
         }
-
-        # print(self.vertex)
-        # print(self.vertexAngle)
 
 
 game = Main()
@@ -1382,30 +1215,6 @@ if not imports:
         game.points[6].oldCords = [-1, 0.5, -1]
         game.points[7].cords = [-1, 0.5, 1]
         game.points[7].oldCords = [-1, 0.5, 1]
-        # if cubeSize > 8:
-        #     game.points[8].cords = [0, 1.5, 0]
-        #     game.points[8].oldCords = [0, 1.5, 0]
-        #     game.points[9].cords = [0, 2.5, 0]
-        #     game.points[9].oldCords = [0, 2.5, 0]
-        #     game.points[10].cords = [0, 0.5, 0]
-        #     game.points[10].oldCords = [0, 0.5, 0]
-        #     game.points[11].cords = [1, 1.5, 0]
-        #     game.points[11].oldCords = [1, 1.5, 0]
-        #     game.points[12].cords = [-1, 1.5, 0]
-        #     game.points[12].oldCords = [-1, 1.5, 0]
-        #     game.points[13].cords = [0, 1.5, 1]
-        #     game.points[13].oldCords = [0, 1.5, 1]
-        #     game.points[14].cords = [0, 1.5, -1]
-        #     game.points[14].oldCords = [0, 1.5, -1]
-
-        # for z in range(cubeRes):
-        #     for y in range(cubeRes):
-        #         for x in range(cubeRes):
-        #             if (x == 0) or (y == 0) or (z == 0) or (x == (cubeRes - 1)) or (y == (cubeRes - 1)) or (z == (cubeRes - 1)):
-        #                 game.addPoint(Point(pointRadius, 1000, True))
-        #                 game.points[-1].cords = [x * cubeSize / cubeRes, y * cubeSize / cubeRes, z * cubeSize / cubeRes]
-        #                 game.points[-1].oldCords = copy.deepcopy(game.points[-1].cords)
-        #                 game.points[-1].cloth = 'cube'
 
         for j in range(len(game.points)):
             for jo in range(len(game.points)):
@@ -1416,15 +1225,6 @@ if not imports:
                         game.joints.append(Joint(True, '', globalVars['springConst'], j, jo, globalVars['damping'], globalVars['strain'], game))
         # game.addPoint(Point(0.1, 1000))
 
-    sphere = False
-    if sphere:
-        game.addPoint(Point(0.01, 1000, True))
-    elif not cube:
-        pass
-        # game.addPoint(Point(0.6, 1000, True))
-        # game.addPoint(Point(0.4, 1000, True))
-        # game.points[0].cords = [-(25 + game.points[0].radius) * sin(math.radians(30)), 30 + (25 + game.points[0].radius) * cos(math.radians(30)), 0]
-        # game.points[0].oldCords = copy.deepcopy(game.points[0].cords)
     game.addPoint(Point(0.6, 1000, True))
     game.addPoint(Point(0.4, 1000, True))
 
@@ -1456,9 +1256,6 @@ if not imports:
     game.collisionRect.append(CollisionRect((100, 50, 50), [-50, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
     game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
     game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
-    # game.collisionRect.append(CollisionRect((5000, 5, 10), [0, 125, 0], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-    # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, 10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
-    # game.collisionRect.append(CollisionRect((5000, 20, 10), [0, 128, -10], [math.radians(0), 0, math.radians(44)], 1000, 10, 1, 0.9, 's'))
 
 # draw the borders (which are hidden collisionRects)
 game.collisionRect.append(CollisionRect((borderSize[0], 1, borderSize[2]), [0, borderHeight, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
@@ -1468,6 +1265,6 @@ game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, b
 game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
 game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [-borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
 
-game.initLists()  # WARNING: MUST ALWAYS RUN THIS RIGHT BEFORE vizact.ontimer
+game.initLists()  # WARNING: must ALWAYS run this ONCE before vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
 vizact.ontimer(1 / renderRate, game.render)  # render objects game.render times each second

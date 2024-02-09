@@ -79,6 +79,7 @@ def getCubeCollision(cords, radius, b, yCollisionPlane):
 
 class Main:
     def __init__(self):
+        self.timer = 0  # stores how long the program is being run for so that it can save & exit before the 5-minute limit from the free Vizard license
         self.points = []
         self.joints = []
         self.collisionRect = []  # list of collision rectangles
@@ -89,7 +90,6 @@ class Main:
         self.theForceJoint = False  # True if the force is being used
         self.pause = False  # pauses physics
         self.pHeld = [False, False]  # stores if 'p' is held down
-        self.rHeld = [False, False]  # stores if 'r' is held down
         self.lHeld = [False, False]  # stores if 'l' is held down
         self.jHeld = [False, False]  # stores if 'j' is held down
         self.uHeld = [False, False]  # stores if 'u' is held down
@@ -111,7 +111,7 @@ class Main:
         self.newJoint = None
         self.tutorialTexts = {}
         self.importTutorials()
-        self.voidBox = [VoidBox([-1, 0, 0], 'point'), VoidBox([1, 0, 0], 'collisionRect'), VoidBox([0, -2, 0], 'trash')]
+        self.voidBox = [VoidBox([-1, 0, 0], 'point'), VoidBox([-1, 0, 0], 'trash'), VoidBox([1, 0, 0], 'collisionRect'), VoidBox([1, 0, 0], 'trash'), VoidBox([0, -2, 0], 'trash', True)]  # make the summoner void boxes also trash cans
         if imports:
             self.importData()
 
@@ -180,16 +180,21 @@ class Main:
         f.close()
         self.GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.tutorialTexts['Introduction'], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
 
-    def addPoint(self, cords, radius):
+    def addPoint(self, cords, radius, *cIdx):
         self.points.append(Point(cords, radius))
         self.GUI.update({len(self.points) + 999: {'slider': {'radius': None, 'density': None}, 'manual': {'radius': None, 'density': None}}})
-        self.lastP = [len(self.points) - 1, len(self.points) - 2]
+        if cIdx:
+            self.lastP[cIdx[0]] = len(self.points) - 1
 
     def addCollisionRect(self, cRect):
         self.collisionRect.append(cRect)
         self.GUI.update({len(self.collisionRect) - 1: {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None, 'density': None, 'angle': None}, 'slider': {0: None, 1: None, 2: None, 'density': None, 'angle': None}, 'manual': {0: None, 1: None, 2: None, 'density': None, 'angle': None}}})
 
     def main(self):
+        self.timer += 1 / calcRate
+        if self.timer > 290:  # exit after ~4.83 minutes
+            print("Timer's up on the free license!")
+            self.export()
         for c in range(controlsConf.controllerAmt):
             # summon the GUI selector if the 'GUISelector' button is pressed
             if (not self.lHeld[c]) and buttonPressed('GUISelector', controlsConf.controllers[c], c):
@@ -209,6 +214,7 @@ class Main:
         self.dragPoint()
 
     def dragPoint(self):
+        # print(self.lastP)
         # if mode == 'vr':
         #     print(controlsConf.controllers[0].getButtonState() % touchpad, controlsConf.controllers[1].getButtonState() % touchpad)  # prints the current button being pressed for each controller
         # loop through all drag code for each controller
@@ -226,7 +232,7 @@ class Main:
             for p in range(len(self.points)):
                 if self.points[p].drawn:
                     if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords) and (self.dragR[c] is None):
-                        self.points[p].collidingController = True
+                        self.points[p].collidingController[c] = True
                         self.collP[c] = p  # set the collision point to the current point's index
                         if selectP(c):  # detect if the select button is being pressed, depending on the controller mode
                             if not self.selectHeld[c]:
@@ -266,7 +272,7 @@ class Main:
                         else:
                             self.selectHeld[c] = False
                     else:
-                        self.points[p].collidingController = False
+                        self.points[p].collidingController[c] = False
 
                 if buttonPressed('dragJoint', controlsConf.controllers[c], c):
                     collision = detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords)
@@ -300,7 +306,7 @@ class Main:
                 if self.collisionRect[cr].drawn:
                     yCollisionPlane = getYCollisionPlane(self.collisionRect[cr], controls.hand[c].cords)
                     if getCubeCollision(controls.hand[c].cords, controls.hand[c].radius, self.collisionRect[cr], yCollisionPlane) and (self.dragP[c] is None):
-                        self.collisionRect[cr].collidingController = True
+                        self.collisionRect[cr].collidingController[c] = True
                         if selectP(c):
                             self.lastR[c] = cr
                             if not self.selectHeld[c]:
@@ -314,20 +320,6 @@ class Main:
                                     else:
                                         self.GUI['GUISelector']['']['pointRect'].drawn = False
                                         self.GUI['GUISelector']['']['pointRect'].unDraw()
-                                    # else:
-                                    #     for axis in range(3):
-                                    #         if self.GUI[cr]['slider'][axis] is None:  # only summon if GUI is empty
-                                    #             if mode == 'vr':
-                                    #                 self.GUI[cr]['slider'][axis] = myGUI.Slider(axis, self.collisionRect[cr].size[axis], self.collisionRect[cr].origSize[axis], [cords[0], cords[1] + (axis - 2) * 0.5, cords[2]], 10, 0.1, maxRadius, minRadius, f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                    #             else:
-                                    #                 self.GUI[cr]['slider'][axis] = myGUI.Manual(axis, self.collisionRect[cr].size[axis], self.collisionRect[cr].origSize[axis], [cords[0], cords[1] + (axis - 2) * 0.5, cords[2]], f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                    #     if self.GUI[cr]['slider']['density'] is None:  # only summon if GUI is empty
-                                    #         if mode == 'vr':
-                                    #             self.GUI[cr]['slider']['density'] = myGUI.Slider(0, self.collisionRect[cr].density, self.collisionRect[cr].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                                    #             self.GUI[cr]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
-                                    #             self.GUI[cr]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
-                                    #         else:
-                                    #             self.GUI[cr]['slider']['density'] = myGUI.Manual(0, self.collisionRect[cr].density, self.collisionRect[cr].origDensity, [cords[0], cords[1] + 1, cords[2]], 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                                 else:
                                     self.clickTime[c] = 0  # reset the time since last click, since this click IS the last click!
                             if self.dragR[c] is None:  # used to set the drag variables if they are not already set
@@ -335,7 +327,7 @@ class Main:
                         else:
                             self.selectHeld[c] = False
                     else:
-                        self.collisionRect[cr].collidingController = False
+                        self.collisionRect[cr].collidingController[c] = False
             if self.dragP[c] is not None:
                 for axis in range(3):
                     self.points[self.dragP[c]].cords[axis] = controls.hand[c].cords[axis] + self.relPos[c][axis]  # set the point position to the controller that grabbed said point's position
@@ -385,17 +377,12 @@ class Main:
             # recalls the last clicked point to the controller's position
             if buttonPressed('recall', controlsConf.controllers[c], c):
                 self.points[self.lastP[c]].cords = copy.deepcopy(controls.hand[c].cords)
-                if not self.rHeld:
-                    self.tpCloth(self.lastP[c], self.points[self.lastP[c]].cords, c, 'point')
-                    self.rHeld = True
             # remove the force joint after recall is no longer active
             elif self.theForceJoint:
                 if self.joints[-1].show:
                     self.joints[-1].cylinder.remove()
                 self.joints.pop(-1)
                 self.theForceJoint = False
-            else:
-                self.rHeld = False
 
             if buttonPressed('dragJoint', controlsConf.controllers[c], c) and (self.newJoint is not None) and (not colliding):
                 self.newJoint.unDraw()
@@ -405,28 +392,6 @@ class Main:
         for j in self.joints:
             if (j.pOne == pIdx) or (j.pTwo == pIdx):
                 j.unDraw()
-
-    def tpCloth(self, cloth, cords, c, tpType):
-        cordDiff = []
-        if tpType == 'cloth':
-            pIdx = self.clothData[cloth][0]
-            for co in range(3):
-                cordDiff.append(controls.hand[co].cords - self.points[pIdx].cords[co])
-            if cloth != '':
-                for p in self.clothData[f'{cloth}']:
-                    if p != pIdx:
-                        for cor in range(3):
-                            self.points[p].cords[cor] += cordDiff[cor]
-            self.points[pIdx].cords = copy.deepcopy(cords)
-        elif tpType == 'point':
-            for co in range(3):
-                cordDiff.append(controls.hand[co].cords - self.points[cloth].cords[co])
-            if self.points[cloth].cloth != '':
-                for p in self.clothData[f'{self.points[cloth].cloth}']:
-                    if p != self.lastP[c]:
-                        for cor in range(3):
-                            self.points[p].cords[cor] += cordDiff[cor]
-            self.points[cloth].cords = copy.deepcopy(cords)
 
     def updateGUI(self):
         for g in self.GUI:
@@ -511,7 +476,7 @@ class Main:
                             cords[0] += axis * 3.5
                             yDisp = -6.5
                             xDisp = 3.5
-                        else:
+                        else:  # keyboard/mouse manual inputs are much tinier compared to VR manual inputs!
                             cords[0] += axis * 0.5
                             yDisp = -0.5
                             xDisp = 0.5
@@ -527,7 +492,7 @@ class Main:
                         self.GUI[self.GUIType[3][0]][self.GUIType[1][0].lower()]['density'].closeButton.setPos(closeButtonCords, True)
                 elif self.GUIType[1][0] == 'Dial':
                     if self.collisionRect[self.GUIType[3][0]].sizeOffset == [0, 0, 0]:
-                        self.collisionRect[self.GUIType[3][0]].sizeOffset = [12, 12, 12]
+                        self.collisionRect[self.GUIType[3][0]].sizeOffset = [11, 11, 11]
                         for axis in range(3):
                             self.collisionRect[self.GUIType[3][0]].size[axis] -= self.collisionRect[self.GUIType[3][0]].sizeOffset[axis]
                     varOffset = self.collisionRect[self.GUIType[3][0]].sizeOffset
@@ -593,6 +558,7 @@ class Main:
                 f.write(f'{[c.size[0] + c.sizeOffset[0], c.size[1] + c.sizeOffset[1], c.size[2] + c.sizeOffset[2]]} | {c.cords} | {c.angle} | {c.density} | {c.viscosity} | {c.dragConst} | {c.transparency} | {c.rectType}\n')
         f.close()
         viz.quit()
+        print('Your progress has been saved in exportData!')
 
 
 class Point:
@@ -606,7 +572,7 @@ class Point:
         self.point = vizshape.addSphere()
         self.setRadiusDensity(self.radius, self.density)
         self.cloth = ''
-        self.collidingController = False
+        self.collidingController = [False, False]
 
     def setRadiusDensity(self, radius, density):
         self.radius = radius
@@ -656,7 +622,7 @@ class CollisionRect:
         self.grad = dict
         self.sf = 1
         self.sizeOffset = [0, 0, 0]
-        self.collidingController = False
+        self.collidingController = [False, False]
         self.update()
 
     def update(self):
@@ -767,7 +733,7 @@ class Joint:
 
 
 class VoidBox:
-    def __init__(self, cords, spriteType):
+    def __init__(self, cords, spriteType, *display):
         self.cords = cords
         self.box = vizshape.addBox()
         self.box.setPosition(self.cords)
@@ -785,7 +751,7 @@ class VoidBox:
             self.innerShape = vizshape.addSphere()
             self.innerShape.setScale([0.25, 0.25, 0.25])
             self.text.message('Point')
-        elif self.spriteType == 'trash':
+        elif self.spriteType == 'trash' and display:
             self.text.message('Trash Can')
             self.collisionRad = 0.5
         if self.spriteType != 'trash':
@@ -801,15 +767,25 @@ class VoidBox:
                     if collision:
                         # self.innerShape.alpha(0.75)
                         if self.spriteType == 'point':
-                            game.addPoint(self.cords, 0.25)
+                            game.addPoint(self.cords, 0.1, c)
                         elif self.spriteType == 'collisionRect':
                             game.addCollisionRect(CollisionRect([0.25, 0.25, 0.25], self.cords, [0, 0, math.radians(0.0001)], 1000, 10, 1, 1, 's'))
             elif self.spriteType == 'trash':
                 if collision:
-                    if (game.lastP[c] is not None) and game.points[game.lastP[c]].collidingController:
-                        game.removeConnectedJoints(game.lastP[c])
-                        game.points[game.lastP[c]].unDraw()
-                    if (game.lastR[c] is not None) and game.collisionRect[game.lastR[c]].collidingController:
+                    if game.lastP[c] is not None:
+                        if game.points[game.lastP[c]].collidingController[c]:
+                            game.removeConnectedJoints(game.lastP[c])
+                            game.points[game.lastP[c]].unDraw()
+                            game.points.pop(game.lastP[c])
+                            game.lastP[c] = None
+                            game.dragP[c] = None
+                            game.collP[c] = None
+                            for j in range(len(game.joints)):
+                                if game.joints[j].pOne >= game.lastP[c]:
+                                    game.joints[j].pOne -= 1
+                                if game.joints[j].pTwo >= game.lastP[c]:
+                                    game.joints[j].pTwo -= 1
+                    if (game.lastR[c] is not None) and game.collisionRect[game.lastR[c]].collidingController[c]:
                         game.collisionRect[game.lastR[c]].unDraw()
             else:
                 self.pHeld[c] = False
@@ -819,5 +795,5 @@ class VoidBox:
 
 game = Main()
 
-vizact.ontimer(1 / physicsTime, game.main)
+vizact.ontimer(1 / calcRate, game.main)
 vizact.ontimer(1 / renderRate, game.render)

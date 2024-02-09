@@ -15,8 +15,8 @@ from globalFunctions import buttonPressed
 hmdConfig = steamvr.HMD()
 
 # camera speed
-minCamSpeed = 10 / renderRate
-maxCamSpeed = minCamSpeed * 2
+minCamSpeed = 5 / renderRate
+maxCamSpeed = minCamSpeed * 4
 
 # degrees of freedom to prevent joystick drift
 freedomDegrees = 0.5

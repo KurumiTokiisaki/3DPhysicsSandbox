@@ -9,7 +9,7 @@ fullscreen = True
 handRadius = 0.1  # radius of each hand
 gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
 gConst = -9.81  # gravitational field constant
-renderRate = 165  # render rate (lower for performance)
+renderRate = 90  # render rate (lower for performance)
 collisionTolerance = 0  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
 collisionCalcTolerance = 0.1  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
 jointResolution = 3  # lower to increase performance
@@ -76,8 +76,8 @@ spriteCreatorVars = {
     'Save & Exit': None
 }
 
-mode = 'k'  # controller mode (keyboard/mouse or VR)
-calcRate = 165  # physics calculations/second (higher number means more accurate physics but lower performance)
+mode = 'vr'  # controller mode (keyboard/mouse or VR)
+calcRate = 90  # physics calculations/second (higher number means more accurate physics but lower performance)
 physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than frame-rate or smaller than 60)
 touchpad = 16
 
