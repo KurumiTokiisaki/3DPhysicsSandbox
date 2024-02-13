@@ -501,7 +501,7 @@ class Manual:
         self.resetHeld = [False, False]
         self.selecting = [False, False]
         self.sHeld = [True, True]
-        self.collision = False
+        self.collision = [False, False]
         self.selectionIdx = [None, None]
         self.selections = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'left', 'right', 'delete', '-', 'reset', 'hardReset']
         self.activePoint = None
@@ -820,10 +820,12 @@ class GUISelector:
                             self.selectGUI(GUItypes)
                         elif self.var == 'Size':
                             self.selectGUI(GUItypesVector)
+                        elif self.var == 'Solid/\nLiquid':
+                            self.selectGUI(collisionRectTypes)
                         else:
                             self.selectGUI(GUItypesScalar)
                     elif self.stage == 'GUISelection':
-                        if (self.var != 'Size') and (self.var != 'Angle') and (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
+                        if (self.var != 'Size') and (self.var != 'Solid/\nLiquid') and (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
                             self.GUI.append(list(self.GUIs.keys())[p])
                             self.GUI.append('def')
                             self.stage = 'complete'
