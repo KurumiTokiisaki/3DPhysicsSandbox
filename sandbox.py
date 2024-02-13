@@ -905,8 +905,9 @@ class Point:
                                 self.oldCords[0] = copy.deepcopy(self.cords[0])
                                 self.oldCords[1] = copy.deepcopy(self.cords[1])
                                 resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
-                                self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
-                                self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
+                                if self.collision[count] != 'left':
+                                    self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
+                                    self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
                             else:
                                 self.impulse = [0, 0, 0]
                                 self.cords[0] = self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
@@ -1204,8 +1205,8 @@ if not imports:
                 game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 1, 's'))
             except ValueError:
                 continue
-    game.collisionRect.append(CollisionRect((100, 50, 50), [-60, 0, 0], [math.radians(0), math.radians(0), math.radians(10)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
-    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
+    game.collisionRect.append(CollisionRect((100, 50, 50), [-60, 0, 0], [math.radians(0), math.radians(0), math.radians(0.0001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(60)], 1000, 10, 1, 0.9, 's'))
     game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
 
 # draw the borders (which are hidden collisionRects)
