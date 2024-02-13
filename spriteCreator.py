@@ -331,40 +331,7 @@ class Main:
                 for axis in range(3):
                     tempCords[axis] = controls.hand[c].cords[axis] + self.relPos[c][axis]
                 self.collisionRect[self.dragR[c]].setVars(tempCords)  # set the collision rect position to the controller that grabbed said collision rect's position
-            # unique animation for selecting points
-            if self.collP[c] is not None:  # only run animations if a point is intersecting with a controller
-                if self.dragP[c] is not None:  # only run the below if a point is being dragged
-                    controls.anim[c].point = self.points[self.collP[c]]  # make the selection animation encapsulate the point
-                    if self.animeScale[c] > (self.points[self.collP[c]].radius / controls.anim[c].sphereRad):  # set the maximum size of the animation equal to the size of the selected point
-                        self.animeScaleSpeed -= 0.1 / physicsTime
-                        self.animeScale[c] += self.animeScaleSpeed
-                        # approximate function for changing color with time based on radius: f(x) = 6 / (time * sqrt(radius * 10))
-                        f = 6 / (renderRate * math.sqrt(self.points[self.collP[c]].radius * 10))
-                        # green-shift the animation
-                        self.animeColor[c][0] -= f
-                        self.animeColor[c][1] += f
-                    else:
-                        self.animeScale[c] = self.points[self.collP[c]].radius / controls.anim[c].sphereRad
-                        controls.anim[c].pause = True
-                    controls.anim[c].setScale(self.animeScale[c])
-                    controls.anim[c].setColor(self.animeColor[c])
-                elif not detectCollision(self.points[self.collP[c]].radius, controls.hand[c].radius, self.points[self.collP[c]].cords, controls.hand[c].cords):
-                    controls.anim[c].point = controls.hand[c]
-                    controls.anim[c].setScale(1)
-                    self.collP[c] = None
-                    controls.anim[c].pause = False
-                else:
-                    controls.anim[c].point = self.points[self.collP[c]]
-                    self.animeScale[c] = 1.2 * self.points[self.collP[c]].radius / controls.anim[c].sphereRad
-                    self.animeScaleSpeed = 0
-                    controls.anim[c].setScale(self.animeScale[c])
-                    self.animeColor[c] = [1, 0, 0]
-                    controls.anim[c].setColor([1, 0, 0])
-                    controls.anim[c].pause = False
-            else:  # return the animation to the controller
-                controls.anim[c].resetColor()
-                controls.anim[c].resetScale()
-                controls.anim[c].point = controls.hand[c]
+            self.selectPointAnime(c)
             # reset drag variables if select button is not pressed
             if not selectP(c):
                 self.dragP[c] = None
@@ -383,6 +350,42 @@ class Main:
             if buttonPressed('dragJoint', controlsConf.controllers[c], c) and (self.newJoint is not None) and (not colliding):
                 self.newJoint.unDraw()
                 self.newJoint = None
+
+    def selectPointAnime(self, c):
+        # unique animation for selecting points
+        if self.collP[c] is not None:  # only run animations if a point is intersecting with a controller
+            if self.dragP[c] is not None:  # only run the below if a point is being dragged
+                controls.anim[c].point = self.points[self.collP[c]]  # make the selection animation encapsulate the point
+                if self.animeScale[c] > (self.points[self.collP[c]].radius / controls.anim[c].sphereRad):  # set the maximum size of the animation equal to the size of the selected point
+                    self.animeScaleSpeed -= 0.1 / physicsTime
+                    self.animeScale[c] += self.animeScaleSpeed
+                    # approximate function for changing color with time based on radius: f(x) = 6 / (time * sqrt(radius * 10))
+                    f = 6 / (renderRate * math.sqrt(self.points[self.collP[c]].radius * 10))
+                    # green-shift the animation
+                    self.animeColor[c][0] -= f
+                    self.animeColor[c][1] += f
+                else:
+                    self.animeScale[c] = self.points[self.collP[c]].radius / controls.anim[c].sphereRad
+                    controls.anim[c].pause = True
+                controls.anim[c].setScale(self.animeScale[c])
+                controls.anim[c].setColor(self.animeColor[c])
+            elif not detectCollision(self.points[self.collP[c]].radius, controls.hand[c].radius, self.points[self.collP[c]].cords, controls.hand[c].cords):
+                controls.anim[c].point = controls.hand[c]
+                controls.anim[c].setScale(1)
+                self.collP[c] = None
+                controls.anim[c].pause = False
+            else:
+                controls.anim[c].point = self.points[self.collP[c]]
+                self.animeScale[c] = 1.2 * self.points[self.collP[c]].radius / controls.anim[c].sphereRad
+                self.animeScaleSpeed = 0
+                controls.anim[c].setScale(self.animeScale[c])
+                self.animeColor[c] = [1, 0, 0]
+                controls.anim[c].setColor([1, 0, 0])
+                controls.anim[c].pause = False
+        else:  # return the animation to the controller
+            controls.anim[c].resetColor()
+            controls.anim[c].resetScale()
+            controls.anim[c].point = controls.hand[c]
 
     def removeConnectedJoints(self, pIdx):
         for j in self.joints:

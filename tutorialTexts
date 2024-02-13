@@ -23,7 +23,6 @@ Tip: using your infinite strength, you can double-click ' ###select ' to change 
 gField: how quickly everything wants to move. gasDensity: The density of the air. friction: How much points hate moving on a surface.
 springConst: How much joints like to pull points. damping: How much joints hate moving faster. strain: Maximum relative size a joint can be before breaking. (UNDER DEVELOPMENT)
 ---Tips, Bugs, andnewLineCreator Notes
-Impulses from colliding with the left of boxes do not work for some unknown reason, when the box's angle is greater than 45 degrees!
 ONLY IN SANDBOX: Edge & Vertex collision resolutions are so messed up that I just made points freeze when touching them. No fancy stuff there!
 ONLY IN SPRITECREATOR: summoning both dials and slider/manual GUIs simultaneously when changing the values a box's size will cause some funni stuf to happen due to offsets being weird!
 ADD EASTER EGG HERE

@@ -263,6 +263,8 @@ class Main:
         self.dragPoint()  # runs the function that detects if controller is selecting a point so that it can be "dragged" along with the controller
 
         for p in range(len(self.points)):
+            # if p == (len(self.points) - 1):
+            #     print(self.points[p].velocity[1])
             self.points[p].sf = globalVars['friction']  # update each point's local value of friction based on globalVars['friction'], for the same reason physicsTime is updated
             self.pointCollision(p)
 
@@ -767,9 +769,8 @@ class Point:
                     self.lastCollision[count] = 'back'
 
             self.cubeCollisionCalc[count] = (self.cords[1] <= (collisionCalcTolerance + self.yCollisionLine['top']['y'] + self.radius / cos(self.bAngle[2]))) and (self.cords[1] >= (-collisionCalcTolerance + self.yCollisionLine['bottom']['y'] - self.radius / cos(self.bAngle[2]))) and (
-                        self.cords[1] <= (collisionCalcTolerance + self.yCollisionLine['right']['y'] + self.radius / sin(self.bAngle[2]))) and (
-                                                    self.cords[1] >= (-collisionCalcTolerance + self.yCollisionLine['left']['y'] - self.radius / sin(self.bAngle[2]))) and (self.cords[2] <= (collisionCalcTolerance + cr.plane['front'] + self.radius)) and (
-                                                        self.cords[2] >= (-collisionCalcTolerance + cr.plane['back'] - self.radius))  # True if any part of the point is in a collisionRect, given a collisionCalcTolerance
+                    self.cords[1] <= (collisionCalcTolerance + self.yCollisionLine['right']['y'] + self.radius / sin(self.bAngle[2]))) and (self.cords[1] >= (-collisionCalcTolerance + self.yCollisionLine['left']['y'] - self.radius / sin(self.bAngle[2]))) and (self.cords[2] <= (collisionCalcTolerance + cr.plane['front'] + self.radius)) and (
+                                                    self.cords[2] >= (-collisionCalcTolerance + cr.plane['back'] - self.radius))  # True if any part of the point is in a collisionRect, given a collisionCalcTolerance
             self.cubeCollision[count] = (self.cords[1] <= (collisionTolerance + self.yCollisionLine['top']['y'] + self.radius / cos(self.bAngle[2]))) and (self.cords[1] >= (-collisionTolerance + self.yCollisionLine['bottom']['y'] - self.radius / cos(self.bAngle[2]))) and (self.cords[1] <= (collisionTolerance + self.yCollisionLine['right']['y'] + self.radius / sin(self.bAngle[2]))) and (
                     self.cords[1] >= (-collisionTolerance + self.yCollisionLine['left']['y'] - self.radius / sin(self.bAngle[2]))) and (self.cords[2] <= (collisionTolerance + cr.plane['front'] + self.radius)) and (self.cords[2] >= (-collisionTolerance + cr.plane['back'] - self.radius))  # True if any part of the point is in a collisionRect, given a collisionTolerance
             self.cubeSubmersion[count] = (self.cords[1] <= (collisionTolerance + self.yCollisionLine['top']['y'] - self.radius / cos(self.bAngle[2]))) and (self.cords[1] >= (-collisionTolerance + self.yCollisionLine['bottom']['y'] + self.radius / cos(self.bAngle[2]))) and (self.cords[1] <= (collisionTolerance + self.yCollisionLine['right']['y'] - self.radius / sin(self.bAngle[2]))) and (
@@ -795,25 +796,24 @@ class Point:
 
             # get the distance until edge/vertex collision
             if (self.collision[count] == '') or (self.vertexState != ''):  # "why should we resolve vertex/edge collisions if the point is in front of a face on the collision rect?" hence, this if statement is used to optimize performance.
-                minDist, vertexIdx = self.getVertexDist(cr)
+                minDist, vertexIdx = self.getVertexDist(cr)  # get the distance to the closest vertices as well as their indexes
 
             # multiplier obtained through testing
             if (self.lastCollision[count] == 'right') or (self.lastCollision[count] == 'top') or (self.lastCollision[count] == 'front'):
                 self.multiplier[count] = 1
             else:
-                self.multiplier[count] = -1
+                self.multiplier[count] = -1  # EVERYTHING is reversed for left, bottom, and back
 
             # detect collisions between points and planes (flat surfaces) on a collision rect (cuboid)
             if (self.vertexState == '') and (self.collision[count] != '') and self.cubeCollisionCalc[count]:
                 self.planeCollision(count, cr)
 
-            # detect collisions between points and edges on a collision rect (cuboid)
-            elif (self.vertexState != '') and (minDist <= (distance(cr.vertex[vertexIdx[0]], cr.vertex[vertexIdx[1]]))):
-                if cr.type == 's':
-                    self.cords = copy.deepcopy(self.oldCords)
+            # detect collisions between points and edges on a SOLID collision rect (cuboid)
+            elif (self.vertexState != '') and (minDist <= (distance(cr.vertex[vertexIdx[0]], cr.vertex[vertexIdx[1]]))) and (cr.type == 's'):
+                self.cords = copy.deepcopy(self.oldCords)
 
-            # detect collisions between points and vertices (corners) on a collision rect (cuboid)
-            elif (self.collision[count] == '') and (self.vertexState == '') and (distance(cr.vertex[vertexIdx], self.cords) <= self.radius):
+            # detect collisions between points and vertices (corners) on a SOLID collision rect (cuboid)
+            elif (self.collision[count] == '') and (self.vertexState == '') and (distance(cr.vertex[vertexIdx], self.cords) <= self.radius) and (cr.type == 's'):
                 self.cords = copy.deepcopy(self.oldCords)
             else:
                 self.colliding[count] = False
@@ -848,13 +848,13 @@ class Point:
             vIdx = [[0, 5], [1, 4], [2, 3], [6, 7]]
         else:  # when undergoing a corner collision
             for inc in range(8):
-                vIdx.append(inc)
+                vIdx.append(inc)  # [0, 1, 2, 3, 4, 5, 6, 7]
         if self.vertexState != '':  # edge collision detection:
             dist = []  # distance to each vertex as indicated by vIdx
-            for d in range(len(vIdx)):
-                dist.append([])
+            for d in range(len(vIdx)):  # 4
+                dist.append([])  # [[0, 1], [2, 7], [3, 6], [4, 5]]
                 vertexDist.append(0)
-                for h in range(len(vIdx[d])):
+                for h in range(len(vIdx[d])):  # 2
                     tempDist = distance(cr.vertex[vIdx[d][h]], self.cords)
                     if tempDist >= self.radius:  # used to prevent sqrt(-number)
                         dist[d].append(math.sqrt(tempDist ** 2 - self.radius ** 2))  # gets the distance from each vertex to the current sphere's position
@@ -881,65 +881,66 @@ class Point:
             self.collisionState = 'x'
         if self.cubeCollision[count]:
             if cr.type == 's':
-                if str(self.sf) == 'sticky':
-                    self.cords = copy.deepcopy(self.oldCords)  # "stick" cords to oldCords
-                else:
-                    if (self.collision[count] == 'top') or (self.collision[count] == 'right') or (self.collision[count] == 'bottom') or (self.collision[count] == 'left'):  # colliding with top/right/bottom/left plane
-                        # check out this link to see why I need the logic below:
-                        if self.collisionState == 'y':
-                            if not self.colliding[count]:
-                                self.colliding[count] = True
-                                self.cords[1] = self.yCollisionLine[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))
-                                self.oldCords[0] = copy.deepcopy(self.cords[0])
-                                self.oldCords[1] = copy.deepcopy(self.cords[1])
-                                resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
-                                self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
-                                self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
-                            else:
-                                self.impulse = [0, 0, 0]
-                                self.cords[1] = self.yCollisionLine[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))
-                        else:
-                            if not self.colliding[count]:
-                                self.colliding[count] = True
-                                self.cords[0] = self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))
-                                self.oldCords[0] = copy.deepcopy(self.cords[0])
-                                self.oldCords[1] = copy.deepcopy(self.cords[1])
-                                resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
-                                if self.collision[count] != 'left':
-                                    self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
-                                    self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
-                            else:
-                                self.impulse = [0, 0, 0]
-                                self.cords[0] = self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
-                    elif (self.collision[count] == 'front') or (self.collision[count] == 'back'):
-                        if not self.colliding[count]:
-                            self.colliding[count] = True
-                            self.cords[2] = cr.plane[self.collision[count]] + (self.radius * self.multiplier[count])
-                            self.oldCords[2] = copy.deepcopy(self.cords[2])
-                        else:
-                            self.cords[2] = cr.plane[self.collision[count]] + (self.radius * self.multiplier[count])
-
+                self.planeCollisionSolid(count, cr)
             elif cr.type == 'l':
-                # get cap volume with submerged radius, etc.
-                # also disable gas upthrust for submerged parts
+                self.planeCollisionLiquid(count, cr)
+
+    def planeCollisionLiquid(self, count, cr):
+        # get cap volume with submerged radius, etc.
+        # also disable gas upthrust for submerged parts
+        if self.collisionState == 'y':
+            submergedAmt = abs((self.yCollisionLine[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2])) - self.cords[1]) * cos(self.bAngle[2]))  # check out the maths for this here:
+        elif self.collisionState == 'x':
+            submergedAmt = abs((self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2])) - self.cords[0]) * sin(self.bAngle[2]))
+        self.submergedVolume = capVolume(submergedAmt, self.radius)
+        self.submergedArea = capArea(submergedAmt, self.radius)
+        self.submergedRadius = submergedAmt
+        if self.cubeSubmersion[count]:  # if fully submerged
+            self.submergedVolume = copy.deepcopy(self.volume)
+        if self.submergedRadius > self.radius:  # if half of sphere is submerged
+            self.submergedArea = copy.deepcopy(self.halfArea)
+            self.submergedRadius = copy.deepcopy(self.radius)
+        for axis in range(3):
+            self.liquidUpthrust[axis] = cr.density * -globalVars['gField'][axis] * self.submergedVolume  # U = pgV
+            self.liquidDrag[axis] = (0.5 * cr.viscosity * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.submergedArea)  # Drag = 1/2 cpAv²
+
+    def planeCollisionSolid(self, count, cr):
+        if str(self.sf) == 'sticky':
+            self.cords = copy.deepcopy(self.oldCords)  # "stick" cords to oldCords
+        else:
+            if (self.collision[count] == 'top') or (self.collision[count] == 'right') or (self.collision[count] == 'bottom') or (self.collision[count] == 'left'):  # colliding with top/right/bottom/left plane
+                # todo: check out this link to see why I need the logic below:
                 if self.collisionState == 'y':
-                    submergedAmt = abs((self.yCollisionLine[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2])) - self.cords[1]) * cos(self.bAngle[2]))  # check out the maths for this here:
+                    if not self.colliding[count]:
+                        self.colliding[count] = True
+                        self.cords[1] = self.yCollisionLine[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))
+                        self.oldCords[0] = copy.deepcopy(self.cords[0])
+                        self.oldCords[1] = copy.deepcopy(self.cords[1])
+                        resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
+                        self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
+                        self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
+                    else:
+                        self.impulse = [0, 0, 0]
+                        self.cords[1] = self.yCollisionLine[self.collision[count]]['y'] + (self.multiplier[count] * self.radius / cos(self.bAngle[2]))
                 elif self.collisionState == 'x':
-                    submergedAmt = abs((self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2])) - self.cords[0]) * sin(self.bAngle[2]))
-                self.submergedVolume = capVolume(submergedAmt, self.radius)
-                self.submergedArea = capArea(submergedAmt, self.radius)
-                self.submergedRadius = submergedAmt
-
-                if self.cubeSubmersion[count]:  # if fully submerged
-                    self.submergedVolume = copy.deepcopy(self.volume)
-
-                if self.submergedRadius > self.radius:  # if half of sphere is submerged
-                    self.submergedArea = copy.deepcopy(self.halfArea)
-                    self.submergedRadius = copy.deepcopy(self.radius)
-
-                for axis in range(3):
-                    self.liquidUpthrust[axis] = cr.density * -globalVars['gField'][axis] * self.submergedVolume  # U = pgV
-                    self.liquidDrag[axis] = (0.5 * cr.viscosity * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.submergedArea)  # Drag = 1/2 cpAv²
+                    if not self.colliding[count]:
+                        self.colliding[count] = True
+                        self.cords[0] = self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))
+                        self.oldCords[0] = copy.deepcopy(self.cords[0])
+                        self.oldCords[1] = copy.deepcopy(self.cords[1])
+                        resultP = (self.mass * self.velocity[0] * cos(self.bAngle[2])) + (self.mass * self.velocity[1] * sin(self.bAngle[2]))
+                        self.impulse[0] = resultP * physicsTime * cos(self.bAngle[2]) * self.e
+                        self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
+                    else:
+                        self.impulse = [0, 0, 0]
+                        self.cords[0] = self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
+            elif (self.collision[count] == 'front') or (self.collision[count] == 'back'):
+                if not self.colliding[count]:
+                    self.colliding[count] = True
+                    self.cords[2] = cr.plane[self.collision[count]] + (self.radius * self.multiplier[count])
+                    self.oldCords[2] = copy.deepcopy(self.cords[2])
+                else:
+                    self.cords[2] = cr.plane[self.collision[count]] + (self.radius * self.multiplier[count])
 
 
 # class for cylinders (joints) connecting spheres
@@ -1206,7 +1207,7 @@ if not imports:
             except ValueError:
                 continue
     game.collisionRect.append(CollisionRect((100, 50, 50), [-60, 0, 0], [math.radians(0), math.radians(0), math.radians(0.0001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
-    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(60)], 1000, 10, 1, 0.9, 's'))
+    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
     game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
 
 # draw the borders (which are hidden collisionRects)
