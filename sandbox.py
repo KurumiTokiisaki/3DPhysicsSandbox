@@ -124,7 +124,6 @@ class Main:
         points = formattedData[0]
         joints = formattedData[1]
         collisionRects = formattedData[2]
-        print(collisionRects)
         for p in points:
             self.addPoint(Point(p[1], p[2], True))
             self.points[-1].teleport(p[0])
@@ -263,8 +262,6 @@ class Main:
         self.dragPoint()  # runs the function that detects if controller is selecting a point so that it can be "dragged" along with the controller
 
         for p in range(len(self.points)):
-            # if p == (len(self.points) - 1):
-            #     print(self.points[p].velocity[1])
             self.points[p].sf = globalVars['friction']  # update each point's local value of friction based on globalVars['friction'], for the same reason physicsTime is updated
             self.pointCollision(p)
 
@@ -585,7 +582,7 @@ class Point:
         self.collision = []  # self.collision[count] represents the surface of a collision cuboid that the point is CURRENTLY (hence making self.collision[count] = '' in else cases) in front of, using only its center point as reference
         self.lastCollision = []
         self.vertexState = ''  # closest vertex plane
-        self.e = 0.95  # elasticity (WARNING: must be less than 1 (can be closer to 1 as calcRate increases) due to floating point error)
+        self.e = 1  # elasticity (MUST BE 1 AT ALL TIMES BC FLOATING POINT ERROR SUCKS :sob:)
         self.sf = globalVars['friction']  # surface friction coefficient
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
@@ -932,7 +929,7 @@ class Point:
                         self.impulse[1] = resultP * physicsTime * sin(self.bAngle[2]) * self.e
                     else:
                         self.impulse = [0, 0, 0]
-                        self.cords[0] = self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))  # + (sin(self.bAngle[2]) * resultV * self.e)
+                        self.cords[0] = self.xCollisionLine[self.collision[count]]['x'] - (self.multiplier[count] * self.radius / sin(self.bAngle[2]))
             elif (self.collision[count] == 'front') or (self.collision[count] == 'back'):
                 if not self.colliding[count]:
                     self.colliding[count] = True
@@ -1200,20 +1197,21 @@ if not imports:
             x = radius * s / surfaceRes
             try:
                 y = math.sqrt(radius - (x ** 2))
-                game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.9, 1, 's'))
+                game.collisionRect.append(CollisionRect((10, 10, 10), [x, y + 10, 0], [0, 0, math.radians((80 * s / surfaceRes) + 5)], 1000, 1, 0.8, 1, 's'))
             except ValueError:
                 continue
-    game.collisionRect.append(CollisionRect((100, 50, 50), [-60, 0, 0], [math.radians(0), math.radians(0), math.radians(0.0001)], 1000, 10, 1, 0.9, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
-    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.9, 's'))
-    game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.0001)], 2000, 1, 1, 0.5, 'l'))
+    game.collisionRect.append(CollisionRect((100, 50, 50), [-60, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.8, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.8, 's'))
+    game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.001)], 2000, 1, 1, 0.5, 'l'))
 
 # draw the borders (which are hidden collisionRects)
 game.collisionRect.append(CollisionRect((borderSize[0], 1, borderSize[2]), [0, borderHeight, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect[-1].sf = 5
-game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, borderSize[2] / 2], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, -borderSize[2] / 2], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [-borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.00001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, borderSize[2] / 2], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, -borderSize[2] / 2], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [-borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+for cr in range(5):
+    game.collisionRect[-cr - 1].sf = 5
 
 game.initLists()  # WARNING: must ALWAYS run this ONCE before vizact.ontimer
 vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
