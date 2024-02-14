@@ -589,7 +589,6 @@ class Point:
         self.sf = globalVars['friction']  # surface friction coefficient
         self.multiplier = []  # variable for movement calcs
         self.constrainVelocity = [0, 0, 0]
-        self.connectedJoint = False
         self.cloth = ''
         self.movingAngle = [0, 0, 0]  # direction of movement
         self.collisionState = ''
@@ -948,8 +947,6 @@ class Joint:
     def __init__(self, show, origLength, stiffness, pOne, pTwo, bounciness, maxStrain, gameObj):
         self.pOne = pOne  # index of first connected point
         self.pTwo = pTwo  # index of second connected point
-        gameObj.points[pOne].connectedJoint = True
-        gameObj.points[pTwo].connectedJoint = True
         self.height = distance(gameObj.points[self.pOne].cords, gameObj.points[self.pTwo].cords)  # current size of joint
         self.oldHeight = copy.deepcopy(self.height)  # size of joint from previous frame
         self.radius = jointRadius
@@ -983,7 +980,7 @@ class Joint:
 
         self.diff = displacement(game.points[self.pOne].cords, game.points[self.pTwo].cords)
         self.oldHeight = copy.deepcopy(self.height)
-        if (self.pOne > self.pTwo) and (game.diff[self.pTwo][self.pOne] != 0):  # must be used to compensate for "also don't get distance between 2 points if you already have it!"
+        if (self.pOne > self.pTwo) and (game.diff[self.pTwo][self.pOne] != 0):  # must be used to compensate for "also don't get distance between 2 points if you already have it!" as seen in getDist() from the Main class
             self.height = game.diff[self.pTwo][self.pOne]
         elif game.diff[self.pOne][self.pTwo] != 0:
             self.height = game.diff[self.pOne][self.pTwo]

@@ -11,7 +11,7 @@ gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
 gConst = -9.81  # gravitational field constant
 renderRate = 144  # render rate (lower for performance)
 collisionTolerance = 0  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
-collisionCalcTolerance = 0.0001  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
+collisionCalcTolerance = 0.001  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
 jointResolution = 3  # lower to increase performance
 pointResolution = 10  # lower to increase performance
 theForce = False  # when True, "recalling" points causes them to float slowly to you
@@ -45,7 +45,7 @@ globalVars = {
     'gasDensity': 1.293,  # density of all gases
     'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
-    'friction': 0.1,  # global frictional force coefficient. set to 'sticky' for infinite value.
+    'friction': 1,  # global frictional force coefficient. set to 'sticky' for infinite value.
     'strain': 2,  # global maximum strain before breaking point
     'Tutorials': None,  # only here for summoning tutorials
     'cloths': None  # only here for summoning cloths
@@ -62,7 +62,7 @@ defaultGlobalVars = {
 }
 
 globalRanges = {
-    'gameSpeed': [5, 0.1],  # [max, min]
+    'gameSpeed': [3, 0.1],  # [max, min]
     'gField': [15, -15],
     'gasDensity': [10000, 0],
     'springConst': [10000, 0],
@@ -82,7 +82,7 @@ collisionRectTypes = {
 }
 
 mode = 'k'  # controller mode (keyboard/mouse or VR)
-calcRate = 200  # physics calculations/second (higher number means more accurate physics but lower performance). Sadly this value cannot exceed 90 for some VR headsets due to their un-overrideable vsync!
+calcRate = 300  # physics calculations/second (higher number means more accurate physics but lower performance). Sadly this value cannot exceed 90 for some VR headsets due to their un-overrideable vsync!
 physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than frame-rate or smaller than 60)
 touchpad = 16
 

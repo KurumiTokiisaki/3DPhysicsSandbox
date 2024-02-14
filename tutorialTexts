@@ -10,11 +10,11 @@ All GUIs can have their values reset by pressing ' ###reset ' once. By pressing 
 ---ControlsnewLine(VR)
 Tilt the ' left stick ' to move around, and tilt the ' right stick ' to move up/down. Press the right middle-finger trigger to gather the Olympian winds to move faster, and press the left middle-finger trigger to use ZE WORLD!!! (pause the Physics simulation)
 Press the ' ###select ' to select a point while either God's Hand intersects with one. Keep the trigger held to drag them around, and release the trigger to throw them!
-ONLY IN SANDBOX: Press ' ###recall ' to teleport the last selected point to that God's Hand, ' ###pause ' to pause the Physics simulation, and ' ###GUISelector ' to summon the GUI selector.
+Press ' ###recall ' to teleport the last selected point to that God's Hand, ' ###pause ' to pause the Physics simulation, and ' ###GUISelector ' to summon the GUI selector.
 All GUIs can have their values reset by pressing ' ###reset ' once. By pressing ' ###reset ' twice in quick succession, their values will be set to their global default.
 ---GUI Guide
-ONLY IN SANDBOX: Press ' ###GUISelector ' to summon the GUI selector, where you'll be able to modify the physical quantities governing your world. Reversed gravity? Maybe sideways? Super-stiff joints? Super-slow time? It's all yours to control.
-ONLY IN SANDBOX: nce in the GUI selector, select a GUI by pressing ' ###select ' while a God's Hand is inside one of the boxes. Selecting "Slider" will allow you to modify the selected value via an interactive slider.
+Press ' ###GUISelector ' to summon the GUI selector, where you'll be able to modify the physical quantities governing your world. ONLY IN SANDBOX: Reversed gravity? Maybe sideways? Super-stiff joints? Super-slow time? It's all yours to control.
+Once in the GUI selector, select a GUI by pressing ' ###select ' while a God's Hand is inside one of the boxes. Selecting "Slider" will allow you to modify the selected value via an interactive slider.
 This may summon another set of boxes, depending on the value selected. For example, since Gravity is directional, selecting boxes containing X, Y, and/or Z will change both its direction and size based on what was selected. If the quantity is not directional (like stiffness), then selecting these values will only affect the visual appearance of the GUI.
 All GUIs can have their values reset by pressing ' ###reset ' once. By pressing ' ###reset ' twice in quick succession, their values will be set to their global default.
 All GUIs have an "X" button to dismiss that GUI. Manual input GUIs on keyboard/mouse can be dismissed by selecting them and pressing ' enter '.
