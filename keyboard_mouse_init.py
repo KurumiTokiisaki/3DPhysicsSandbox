@@ -48,7 +48,7 @@ class Main:
         # camera speed (local)
         self.camSpeed = minCamSpeed
 
-        self.anim = [myGUI.CircleAnim(self.hand[0], 4, self.hand[0].radius, 0.01, [100, 10, 1], True, 10)]
+        self.anim = [myGUI.CircleAnim(self.hand[0], 5, self.hand[0].radius, 0.01, [100, 10, 1], True, 10)]
 
     def main(self):
         # call updateView when mouse is moved
@@ -141,13 +141,11 @@ class Main:
             if viz.key.isDown('s'):
                 self.camVelocity = self.getCamVelocity(l + r, f + b, 'cos')
         elif viz.key.isDown('s'):
-            self.camVelocity = self.getCamVelocity(f + b, l + r,
-                                                   'sin')
+            self.camVelocity = self.getCamVelocity(f + b, l + r, 'sin')
         elif viz.key.isDown('a') or viz.key.isDown('d'):
             self.camVelocity = self.getCamVelocity(l + r, l + r, 'cos')
         else:
-            self.camVelocity = [0, self.camVelocity[1], 0]
-        # x and z velocities must be 0 when there is no lateral camera movement or else verical movement will be affected
+            self.camVelocity = [0, self.camVelocity[1], 0]  # x and z velocities must be 0 when there is no lateral camera movement or else vertical movement will be affected
         self.camVelocity[1] = self.camSpeed * (u + d)
 
         # add camera speed to camera cords

@@ -510,24 +510,24 @@ class Manual:
         self.var = str(self.var)
         tempStr = ''
         for c in range(len(self.var) + 1):
-            if c == (int(self.spaces / 2) + self.offset[1]):
+            if c == (self.spaces + self.offset[1]):
                 tempStr = f'{tempStr}{number}'
             if c < len(self.var):
                 tempStr = f'{tempStr}{self.var[c]}'
         self.var = float(tempStr)
-        self.spaces += 2
+        self.spaces += 1
 
     def removeFromVar(self):
         self.var = str(self.var)
         tempStr = ''
-        if (self.var[int(self.spaces / 2) - 1] != '.') and (self.var[int(self.spaces / 2) - 1] != '-'):
+        if (self.var[self.spaces - 1] != '.') and (self.var[self.spaces - 1] != '-'):
             for c in range(len(self.var)):
-                if c != (int(self.spaces / 2) - 1):
+                if c != (self.spaces - 1):
                     tempStr = f'{tempStr}{self.var[c]}'
         else:
             tempStr = self.var
         if len(self.spacing) > 1:
-            self.spaces -= 2
+            self.spaces -= 1
         self.var = float(tempStr)
 
     def main(self):
@@ -571,10 +571,10 @@ class Manual:
                 if self.selectionIdx[c] is not None:
                     selection = self.selections[self.selectionIdx[c]]
                     if selection == 'right':
-                        self.spaces += 2
+                        self.spaces += 1
                     elif selection == 'left':
                         if self.spaces > 1:
-                            self.spaces -= 2
+                            self.spaces -= 1
                     elif selection == 'delete':
                         self.removeFromVar()
                     elif selection == '-':
@@ -612,17 +612,17 @@ class Manual:
                     if viz.key.isDown(self.keys[13]):
                         if not self.keyHeld[13]:
                             self.keyHeld[13] = True
-                            self.spaces += 2
+                            self.spaces += 1
                     if viz.key.isDown(self.keys[14]):
                         if not self.keyHeld[14]:
                             self.keyHeld[14] = True
                             if self.spaces > 1:
-                                self.spaces -= 2
+                                self.spaces -= 1
 
         for c in range(len(str(self.var))):
             if str(self.var)[c] == '.':
                 self.decIdx = c
-        if int(self.spaces / 2) >= self.decIdx:
+        if self.spaces >= self.decIdx:
             self.offset[0] = -1
         else:
             self.offset[0] = 0
@@ -632,7 +632,7 @@ class Manual:
             self.offset[1] = 0
 
         tempStr = ''
-        for s in range(self.spaces + self.offset[0] + self.offset[1]):
+        for s in range(self.spaces * 2 + self.offset[0] + self.offset[1]):  # multiply by 2 since 2 spaces = 1 character
             tempStr = f' {tempStr}'
         tempStr = f'{tempStr}|'
         self.spacing = tempStr
