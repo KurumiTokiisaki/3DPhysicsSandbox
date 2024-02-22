@@ -60,7 +60,7 @@ def getYCollisionPlane(b, cords):
         'left': {'y': (b.grad['y'] * cords[0]) + (b.vertex[1][1] - (b.grad['y'] * b.vertex[1][0])), 'm': b.grad['y'], 'c': b.vertex[1][1] - (b.grad['y'] * b.vertex[1][0])},
         'right': {'y': (b.grad['y'] * cords[0]) + (b.vertex[0][1] - (b.grad['y'] * b.vertex[0][0])), 'm': b.grad['y'], 'c': b.vertex[0][1] - (b.grad['y'] * b.vertex[0][0])},
         'top': {'y': (b.grad['x'] * cords[0]) + (b.vertex[1][1] - (b.grad['x'] * b.vertex[1][0])), 'm': b.grad['x'], 'c': b.vertex[1][1] - (b.grad['x'] * b.vertex[1][0])},
-        'bottom': {'y': (b.grad['x'] * cords[0]) + (b.vertex[2][1] - (b.grad['x'] * b.vertex[2][0])), 'm': b.grad['x'], 'c': b.vertex[2][1] - (b.grad['x'] * b.vertex[2][0])},
+        'bottom': {'y': (b.grad['x'] * cords[0]) + (b.vertex[7][1] - (b.grad['x'] * b.vertex[7][0])), 'm': b.grad['x'], 'c': b.vertex[7][1] - (b.grad['x'] * b.vertex[7][0])},
     }
 
 
@@ -69,7 +69,7 @@ def getXCollisionPlane(b, cords):
         'left': {'x': - (b.grad['x'] * cords[1]) + (b.vertex[1][0] + (b.grad['x'] * b.vertex[1][1])), 'm': -b.grad['x'], 'c': b.vertex[1][0] + (b.grad['x'] * b.vertex[1][1])},
         'right': {'x': - (b.grad['x'] * cords[1]) + (b.vertex[0][0] + (b.grad['x'] * b.vertex[0][1])), 'm': -b.grad['x'], 'c': b.vertex[0][0] + (b.grad['x'] * b.vertex[0][1])},
         'top': {'x': - (b.grad['y'] * cords[1]) + (b.vertex[1][0] + (b.grad['y'] * b.vertex[1][1])), 'm': -b.grad['y'], 'c': b.vertex[1][0] + (b.grad['y'] * b.vertex[1][1])},
-        'bottom': {'x': - (b.grad['y'] * cords[1]) + (b.vertex[2][0] + (b.grad['y'] * b.vertex[2][1])), 'm': -b.grad['y'], 'c': b.vertex[2][0] + (b.grad['y'] * b.vertex[2][1])}
+        'bottom': {'x': - (b.grad['y'] * cords[1]) + (b.vertex[7][0] + (b.grad['y'] * b.vertex[7][1])), 'm': -b.grad['y'], 'c': b.vertex[7][0] + (b.grad['y'] * b.vertex[7][1])}
     }
 
 
@@ -174,7 +174,8 @@ class Main:
             tutorialNames.update({tNames[t]: None})  # update the global value of tutorialNames for use in myGUI.GUISelector
             self.__GUI['Tutorials'][''].update({tNames[t]: None})  # update local value of tutorials in self.GUI
         f.close()
-        self.__GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.__tutorialTexts['Introduction'], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+        if not imports:
+            self.__GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.__tutorialTexts['Introduction'], [], 0.3, [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
 
     def __getButtonReleased(self, cIdx):
         for b in self.__buttonHeld:
@@ -278,6 +279,7 @@ class Main:
             for cr in range(len(self.collisionRect)):
                 if self.collisionRect[cr].drawn:
                     yCollisionPlane = getYCollisionPlane(self.collisionRect[cr], controls.hand[c].cords)
+                    print(getCubeCollision(controls.hand[c].cords, controls.hand[c].radius, self.collisionRect[cr], yCollisionPlane))
                     if getCubeCollision(controls.hand[c].cords, controls.hand[c].radius, self.collisionRect[cr], yCollisionPlane) and (self.dragP[c] is None):
                         self.collisionRect[cr].collidingController[c] = True
                         if selectP(c):
@@ -307,7 +309,7 @@ class Main:
                 tempCords = [0, 0, 0]
                 for axis in range(3):
                     tempCords[axis] = controls.hand[c].cords[axis] + self.__relPos[c][axis]
-                self.collisionRect[self.dragR[c]].setVars(tempCords)  # set the collision rect position to the controller that grabbed said collision rect's position
+                self.collisionRect[self.dragR[c]].cords = copy.deepcopy(tempCords)  # set the collision rect position to the controller that grabbed said collision rect's position
             self.__selectPointAnime(c)
             # reset drag variables if select button is not pressed
             if not selectP(c):
@@ -397,7 +399,7 @@ class Main:
                                     self.__GUI[g][gt][gta].setVar(self.points[pcIdx - 1000].radius)
                                     self.points[pcIdx - 1000].setRadiusDensity(self.__GUI[g][gt][gta].main(), self.points[pcIdx - 1000].density)
                                 elif gta == 'density':
-                                    if g >= 1000:
+                                    if pcIdx >= 1000:
                                         self.__GUI[g][gt][gta].setVar(self.points[pcIdx - 1000].density)
                                         self.points[pcIdx - 1000].setRadiusDensity(self.points[pcIdx - 1000].radius, self.__GUI[g][gt][gta].main())
                                     else:
@@ -405,21 +407,20 @@ class Main:
                                         self.collisionRect[pcIdx].density = self.__GUI[g][gt][gta].main()
                                 elif gta == 'angle':
                                     self.__GUI[g][gt][gta].setVar(math.degrees(self.collisionRect[pcIdx].angle[2]))
-                                    self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, self.collisionRect[pcIdx].size[0], 0, math.radians(self.__GUI[g][gt][gta].main()), 2)
+                                    self.collisionRect[pcIdx].angle[2] = math.radians(self.__GUI[g][gt][gta].main())
                                 elif gta == 'viscosity':
                                     self.__GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].viscosity)
                                     self.collisionRect[pcIdx].viscosity = self.__GUI[g][gt][gta].main()
                                 elif (gta == 'XZ') or (gta == 'XY') or (gta == 'YZ') or (gta == '3D'):
                                     self.__GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size)
-                                    size = self.__GUI[g][gt][gta].main()  # must be done AFTER setVar (for complex reasons)
+                                    size = self.__GUI[g][gt][gta].main()
                                     for axis in self.__GUI[g][gt][gta].axes:
-                                        self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size[axis], axis)
+                                        self.collisionRect[pcIdx].size[axis] = size[axis]
                                 elif g == 'Tutorials':
                                     self.__GUI[g][gt][gta].main()
                                 else:
-                                    self.__GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size[self.__GUI[g][gt][gta].xyz])
-                                    size = self.__GUI[g][gt][gta].main()  # must be done AFTER setVar (for complex reasons)
-                                    self.collisionRect[pcIdx].setVars(self.collisionRect[pcIdx].cords, size, self.__GUI[g][gt][gta].xyz)
+                                    self.__GUI[g][gt][gta].setVar(self.collisionRect[pcIdx].size)
+                                    self.collisionRect[pcIdx].size = self.__GUI[g][gt][gta].main()  # must be done AFTER setVar
                         else:
                             self.__GUI[g][gt][gta] = None
 
@@ -446,9 +447,9 @@ class Main:
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][r].unDraw()
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][r] = None
                 if self.__GUIType[1][0] == 'Slider':
-                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].density, 1000, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 1, controls.hand[0].cords[2]], 5, 0.15, 50000, 10, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].angle[2], 0.001, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 2, controls.hand[0].cords[2]], 5, 0.15, 89.99999, 0.001, 'Angle', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].viscosity, 1, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 3, controls.hand[0].cords[2]], 5, 0.15, 20, 0, 'Viscosity', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].density, 1000, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 1, controls.hand[0].cords[2]], 5, 50000, 10, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].angle[2], 0.001, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 2, controls.hand[0].cords[2]], 5, 89.99999, 0.001, 'Angle', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].viscosity, 1, [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 3, controls.hand[0].cords[2]], 5, 20, 0, 'Viscosity', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                     closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'].closeButton.cords
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'].closeButton.setPos(closeButtonCords, True)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'].closeButton.setPos(closeButtonCords, True)
@@ -462,7 +463,7 @@ class Main:
                             self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis] = None
                         cords = copy.deepcopy(controls.hand[0].cords)
                         cords[axis] += 0.5 + size / 2
-                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis] = myGUI.Slider(axis, self.collisionRect[self.__GUIType[3][0]].size[axis], 1, cords, size, 0.15, 100, 0.1, f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis] = myGUI.Slider(axis, self.collisionRect[self.__GUIType[3][0]].size, [1, 1, 1], cords, size, 100, 0.1, f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis].closeButton.setPos(closeButtonCords, True)
                 elif self.__GUIType[1][0] == 'Manual':
                     for axis in range(3):
@@ -481,7 +482,7 @@ class Main:
                             cords[0] += axis * 0.5
                             yDisp = -0.5
                             xDisp = 0.5
-                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis] = myGUI.Manual(axis, self.collisionRect[self.__GUIType[3][0]].size[axis], 1, cords, f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], False)
+                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis] = myGUI.Manual(axis, self.collisionRect[self.__GUIType[3][0]].size, [1, 1, 1], cords, f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], False)
                         if mode == 'vr':
                             closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][0].closeButton.cords
                             if axis != 0:  # don't prevent the only closeButton remaining from being removed!
@@ -502,16 +503,16 @@ class Main:
                     varOffset = self.collisionRect[self.__GUIType[3][0]].sizeOffset
                     cRad = 10
                     if self.__GUIType[1][1] == '3D':
-                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['3D'] = myGUI.Dial(0, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords, cRad, 0.15, [20, 20, 20], [-20, -20, -20], 'XYZ', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
+                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['3D'] = myGUI.Dial(0, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords, cRad, [20, 20, 20], [-20, -20, -20], 'XYZ', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
                         closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['3D'].closeButton.cords
                     else:
-                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XY'] = myGUI.Dial(1, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords, cRad, 0.15, [20, 20], [-20, -20], 'XY', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
+                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XY'] = myGUI.Dial(1, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords, cRad, [20, 20], [-20, -20], 'XY', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
                         closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XY'].closeButton.cords
-                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XZ'] = myGUI.Dial(0, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords, cRad, 0.15, [20, 20], [-20, -20], 'XZ', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
+                        self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XZ'] = myGUI.Dial(0, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords, cRad, [20, 20], [-20, -20], 'XZ', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XZ'].closeButton.setPos(closeButtonCords, True)
-                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].density, 1000, [controls.hand[0].cords[0], controls.hand[0].cords[1] + 1, controls.hand[0].cords[2] - cRad - 0.2], 5, 0.15, 50000, 10, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].angle[2], 0.001, [controls.hand[0].cords[0], controls.hand[0].cords[1], controls.hand[0].cords[2] - cRad - 0.2], 5, 0.15, 89.99999, 0.001, 'Angle', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].viscosity, 1, [controls.hand[0].cords[0], controls.hand[0].cords[1] - 1, controls.hand[0].cords[2] - cRad - 0.2], 5, 0.15, 20, 0, 'Viscosity', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].density, 1000, [controls.hand[0].cords[0], controls.hand[0].cords[1] + 1, controls.hand[0].cords[2] - cRad - 0.2], 5, 50000, 10, 'Density', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].angle[2], 0.001, [controls.hand[0].cords[0], controls.hand[0].cords[1], controls.hand[0].cords[2] - cRad - 0.2], 5, 89.99999, 0.001, 'Angle', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                    self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].viscosity, 1, [controls.hand[0].cords[0], controls.hand[0].cords[1] - 1, controls.hand[0].cords[2] - cRad - 0.2], 5, 20, 0, 'Viscosity', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                     for g in resetDicts:
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][g].closeButton.setPos(closeButtonCords, True)
 
@@ -664,8 +665,8 @@ class CollisionRect:
                 mx = (self.vertex[0][1] - self.vertex[1][1]) / (self.vertex[0][0] - self.vertex[1][0])
             else:
                 mx = float('inf')
-            if self.vertex[5][0] != self.vertex[6][0]:
-                my = (self.vertex[5][1] - self.vertex[6][1]) / (self.vertex[5][0] - self.vertex[6][0])
+            if self.vertex[0][0] != self.vertex[7][0]:
+                my = (self.vertex[0][1] - self.vertex[7][1]) / (self.vertex[0][0] - self.vertex[7][0])
             else:
                 my = float('inf')
             self.grad = {
@@ -675,6 +676,7 @@ class CollisionRect:
 
     def draw(self):
         if self.show and self.drawn:
+            self.update()
             if self.rectType == 's':
                 self.transparency = 0.8
             elif self.rectType == 'l':
@@ -684,14 +686,6 @@ class CollisionRect:
             self.rect.setPosition(self.cords)
             self.rect.setEuler(math.degrees(self.angle[0]), math.degrees(self.angle[1]), math.degrees(self.angle[2]))
             self.rect.alpha(self.transparency)
-
-    def setVars(self, cords, *sizeAngle):
-        self.cords = copy.deepcopy(cords)
-        if len(sizeAngle) >= 1:
-            self.size[sizeAngle[1]] = copy.deepcopy(sizeAngle[0])
-        if len(sizeAngle) >= 3:
-            self.angle[sizeAngle[3]] = copy.deepcopy(sizeAngle[2])
-        self.update()
 
     def unDraw(self):
         self.rect.remove()

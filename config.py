@@ -2,8 +2,8 @@ import viz
 import math
 
 # border properties
-borderSize = [500, 500, 250]  # XYZ
-borderHeight = -50
+borderSize = [500, 500, 500]  # XYZ
+borderHeight = -250  # center point of the border about the Y-axis
 
 fullscreen = True
 handRadius = 0.1  # radius of each hand
@@ -11,7 +11,7 @@ gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}
 gConst = -9.81  # gravitational field constant
 renderRate = 144  # render rate (lower for performance, should be equal to the display's refresh rate)
 collisionCalcTolerance = 0.01  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
-collisionTolerance = collisionCalcTolerance * 0.1  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
+collisionTolerance = collisionCalcTolerance * 0.001  # global collision tolerance (since computer programs aren't perfect unlike in real life 😭) (must lower when increasing calcRate or decreasing physicsTime; refer to collisionToleranceTables for values obtained through testing)
 jointResolution = 3  # lower to increase performance
 pointResolution = 10  # lower to increase performance
 theForce = False  # when True, "recalling" points causes them to float slowly to you
@@ -83,7 +83,7 @@ collisionRectTypes = {
 
 mode = 'k'  # controller mode (keyboard/mouse or VR)
 calcRate = 144  # physics calculations/second (higher number means more accurate physics but lower performance). Sadly this value cannot exceed 90 for some VR headsets due to their un-overrideable vsync!
-physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # inverse of physics speed (cannot be larger than frame-rate or smaller than 60)
+physicsTime = calcRate / globalVars['gameSpeed']  # inverse of physics speed (cannot be larger than frame-rate or smaller than 60)
 touchpad = 16
 
 # controls for keyboard/VR

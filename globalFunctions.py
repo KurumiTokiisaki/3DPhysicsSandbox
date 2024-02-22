@@ -271,3 +271,9 @@ def removeFromStr(string, popIdx):
     for i in strArray:
         modifiedStr = f'{modifiedStr}{i}'
     return modifiedStr
+
+
+# runs the code, given a GUI object, to remove it from the Vizard game scene. this will ALWAYS run when a new copy of a GUI is created, so that it can be "re-summoned" at a new position.
+def removeGUI(GUIObj):
+    GUIObj.drawn = False
+    GUIObj.unDraw()

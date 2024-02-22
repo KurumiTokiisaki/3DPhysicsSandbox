@@ -1,14 +1,10 @@
 ﻿# base Vizard libraries
 import viz
-import vizfx
-import vizconnect
 import vizshape
 import vizact
 # used for trig functions
-import math
 import myGUI
 from config import *
-from globalFunctions import buttonPressed
 
 # disable built-in mouse commands
 viz.mouse.setOverride()
@@ -21,37 +17,34 @@ minCamSpeed = 10 / renderRate
 maxCamSpeed = minCamSpeed * 2
 
 # scroll speed (for hand)
-scrollSpeed = 0.015 / renderRate
+scrollSpeed = 0.01 / renderRate
 # hide the cursor
 viz.mouse.setCursor(0)
-controllers = [None, None]
-controllerAmt = 1
+controllers = [None, None]  # 2nd value here will always be None
+controllerAmt = 1  # set this to 1 since there's only 1 mouse!
 
 
 # main class for keyboard & mouse
 class Main:
     def __init__(self):
-        # add test object for reference
-        # self.testAvatar = viz.addAvatar('vcc_male2.cfg').setPosition([0, 0, 5])
         self.camCords = viz.MainView.getPosition()
-        self.camAngle = viz.MainView.getEuler()
+        self.camAngle = viz.MainView.getEuler()  # [pitch, yaw, tilt]
         self.camVelocity = [0, 0, 0]
 
         # add the hand object
         self.radius = handRadius
-        self.hand = [Point()]
-        self.hand.append(self.hand[0])
+        self.hand = [Point()]  # draw the hand object
+        self.hand.append(self.hand[0])  # make an identical copy of the first hand to compensate for the fact that VR has 2 controllers. see point 4 in "For all files" for more info.
         # how far hand is from camera initially
         self.handDepth = 1
         self.handAngle = [[0, 0, 0]]
 
-        # camera speed (local)
-        self.camSpeed = minCamSpeed
+        self.camSpeed = minCamSpeed  # current camera speed; can change to speed up or slow down
 
-        self.anim = [myGUI.CircleAnim(self.hand[0], 5, self.hand[0].radius, 0.01, [100, 10, 1], True, 10)]
+        self.anim = [myGUI.CircleAnim(self.hand[0], 5, self.hand[0].radius, 0.01, [100, 10, 1], True, 10)]  # add an animation around the hand
 
     def main(self):
-        # call updateView when mouse is moved
+        # call updateView when mouse is moved, so that the facing camera angle can be updated
         viz.callback(viz.MOUSE_MOVE_EVENT, self.updateView)
 
         # update hand position with new facing angle
@@ -70,16 +63,18 @@ class Main:
         self.anim[0].draw()
 
     def updateView(self, cords):
-        # camAngle = [pitch, yaw, tilt]
+        """
+        dx and dy are passed into updateView's own reference (self) when running viz.MOUSE_MOVE_EVENT
+        a handy feature in Vizard is that dx and dy represent the change in the mouse's position regardless of if it's on the border of the screen
+        tilt is always set to 0 to prevent camera from going upside down
+        """
         self.camAngle = viz.MainView.getEuler()
-        # update facing angle based on CHANGE in mouse position
-        self.camAngle = [self.camAngle[0] + (cords.dx * sensitivity), self.camAngle[1] - (cords.dy * sensitivity), 0]  # self.camAngle[2]]
-
-    # tilt is always 0 to prevent camera from going upside down
+        self.camAngle = [self.camAngle[0] + (cords.dx * sensitivity), self.camAngle[1] - (cords.dy * sensitivity), 0]  # update the facing angle based on CHANGE in mouse position
 
     def updateHandPos(self):
-        vizact.onwheelup(self.addHand)
-        vizact.onwheeldown(self.subHand)
+        vizact.onwheelup(self.addHand)  # make the hand go further away if scrolling up
+        vizact.onwheeldown(self.subHand)  # make the hand come closer if scrolling down
+        # TODO: check out the link here to see the spherical coordinate geometry maths for updating the hand's position in the code below:
         self.hand[0].cords[0] = self.camCords[0] + self.handDepth * math.sin(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
         self.hand[0].cords[1] = self.camCords[1] - self.handDepth * math.sin(math.radians(self.camAngle[1]))
         self.hand[0].cords[2] = self.camCords[2] + self.handDepth * math.cos(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
@@ -91,14 +86,26 @@ class Main:
         self.handDepth += scrollSpeed
 
     def getCamVelocity(self, forwardBackward, leftRight, sinCos):
-        # y velocity is independent of x and z velocity
+        """
+        :param forwardBackward/leftRight: forwardBackward and leftRight can be positive/negative. when positive, move forwards and right, respectively. when negative, move backwards and left, respectively.
+        :param sinCos: used to handle exceptions in which there is left/right movement AND forward/back movement (sin), or left/right movement and NO forward/back movement (cos).
+
+        left/right movement is taken into account by reversing the trig functions and making their angle coefficients negative, since left/right is perpendicular to forward/back.
+        velocity about the X/Z-axis is halved when moving diagonally to maintain a constant speed about the X and Z axes.
+        45 is used in 'sin' since 45 degrees is diagonal to 0 degrees, allowing for accurate diagonal movements while maintaining a constant speed about X and Z.
+            diagonal movement happens when W/S AND A/D are pressed.
+        Y-velocity is independent of x and z velocity, so Y-velocity should always return itself.
+        check out this link for the mathematical proof:
+        """
         if sinCos == 'sin':
-            return [self.camSpeed * forwardBackward * math.sin(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward), self.camVelocity[1],
-                    self.camSpeed * forwardBackward * math.cos(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward)]
+            return [self.camSpeed * forwardBackward * math.sin(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward), self.camVelocity[1], self.camSpeed * forwardBackward * math.cos(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward)]
         elif sinCos == 'cos':
             return [self.camSpeed * forwardBackward * math.cos(-math.radians(self.camAngle[0])), self.camVelocity[1], self.camSpeed * leftRight * math.sin(-math.radians(self.camAngle[0]))]
 
     def moveCam(self):
+        """
+        forward & backward/left & right/up & down movements are summed, cancelling each other out when both are pressed at the same time to result in no movement.
+        """
         # forward & backward
         if viz.key.isDown('w'):
             f = 1
@@ -144,8 +151,8 @@ class Main:
             self.camVelocity = self.getCamVelocity(f + b, l + r, 'sin')
         elif viz.key.isDown('a') or viz.key.isDown('d'):
             self.camVelocity = self.getCamVelocity(l + r, l + r, 'cos')
-        else:
-            self.camVelocity = [0, self.camVelocity[1], 0]  # x and z velocities must be 0 when there is no lateral camera movement or else vertical movement will be affected
+        else:  # if the space bar or left-shift is being pressed
+            self.camVelocity = [0, self.camVelocity[1], 0]  # x and z velocities must be 0 when there is no lateral camera speed or else vertical camera velocity will be affected
         self.camVelocity[1] = self.camSpeed * (u + d)
 
         # add camera speed to camera cords

@@ -17,22 +17,29 @@ jetBrainsFontSize = 1.69  # font size of 1.69 equates to 1 unit of distance per 
 
 
 class Slider:
-    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, pointRadius, maxi, mini, text, lController, rController):
+    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text, lController, rController):
         self.type = 'slider'
         self.drawn = True
         self.xyz = xyz
-        self.var = float(referenceVar)
-        self.origVar = copy.deepcopy(float(referenceVar))
-        self.globalOrigVar = float(globalDefaultVar)
+        self.listVar = type(referenceVar) is list
+        if self.listVar:
+            self.var = float(referenceVar[self.xyz])
+            self.origVar = copy.deepcopy(float(referenceVar[self.xyz]))
+            self.globalOrigVar = float(globalDefaultVar[self.xyz])
+        else:
+            self.var = float(referenceVar)
+            self.origVar = copy.deepcopy(float(referenceVar))
+            self.globalOrigVar = float(globalDefaultVar)
+        self.globalVar = [0, 0, 0]
         self.cords = copy.deepcopy(cords)
         self.length = length
         self.limits = [self.cords[self.xyz] - (self.length / 2), cords[self.xyz] + (self.length / 2)]  # x/y/z (depending on the value of self.xyz) cords of both ends of the slider
-        self.pRad = pointRadius
+        self.pRad = 0.15
         self.max = maxi  # maximum variable value
         self.min = mini  # minimum variable value
         self.range = maxi - mini
-        self.pointer = vizshape.addSphere(pointRadius, slices=pointResolution)
-        self.sliders = [vizshape.addCylinder(length, 0.05), vizshape.addCylinder(pointRadius * 2, 0.02), vizshape.addCylinder(pointRadius * 2, 0.02)]
+        self.pointer = vizshape.addSphere(self.pRad, slices=pointResolution)
+        self.sliders = [vizshape.addCylinder(length, 0.05), vizshape.addCylinder(self.pRad * 2, 0.02), vizshape.addCylinder(self.pRad * 2, 0.02)]
         self.pCords = copy.deepcopy(self.cords)
         self.oldPCords = copy.deepcopy(self.pCords)
         self.pVelocity = [0, 0, 0]
@@ -87,6 +94,9 @@ class Slider:
         self.oldPCords = copy.deepcopy(self.pCords)
 
     def setVar(self, var):  # set the reference variable to a specific value
+        if self.listVar:
+            self.globalVar = var
+            var = var[self.xyz]
         var = float(var)
         if (not self.dragging) or (not self.collision):
             self.pCords[self.xyz] = self.limits[0] + ((var + abs(self.min) * -getSign(self.min)) / self.range) * self.length
@@ -104,6 +114,15 @@ class Slider:
                 self.pCords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
 
     def main(self):
+        """
+                1) check to see if the selected variable is a vector or scalar quantity (indicated by 'listVar').
+                        this is done to get whether the selected axis of the GUI will be used to change the value at the position index of the vector quantity (list) variable, or just the way it looks if the variable is a scalar (float).
+                    2) if it's a vector, pass in the selected variable's value at the selected index position 'xyz' to the Slider class.
+                        this maps the axis selected to an index.
+                    3) if it's a scalar, simply pass in the selected variable to the Slider class.
+
+        :return:
+        """
         for c in range(controllerCount):
             if self.timePressed[c] <= 0.25:
                 self.timePressed[c] += 1 / calcRate
@@ -140,7 +159,16 @@ class Slider:
 
         self.interpolate()
 
-        return self.var
+        if not self.listVar:
+            return self.var
+        else:
+            tempList = []
+            for axis in range(3):
+                if axis == self.xyz:
+                    tempList.append(self.var)
+                else:
+                    tempList.append(self.globalVar[axis])
+            return tempList
 
     def draw(self, camCords):
         self.pointer.setPosition(self.pCords)
@@ -204,7 +232,7 @@ class XSymbol:
 
 
 class Dial:
-    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, cRad, pointRadius, maxi, mini, text, lController, rController, *varOffset):
+    def __init__(self, xyz, referenceVar, globalDefaultVar, cords, cRad, maxi, mini, text, lController, rController, *varOffset):
         self.type = 'dial'
         self.drawn = True
         self.xyz = xyz
@@ -229,7 +257,7 @@ class Dial:
             self.circle.append(vizshape.addTorus(cRad, 0.04))
             self.circle[0].setPosition(self.cords)
             self.circle[0].setEuler(self.cAngle[0])
-        self.p = Point(pointRadius, True)
+        self.p = Point(0.15, True)
         self.p.cords = copy.deepcopy(cords)
         self.p.oldCords = copy.deepcopy(self.p.cords)
         if varOffset:
@@ -273,6 +301,7 @@ class Dial:
         self.cDat = [lController[1], rController[1]]
         self.timePressed = [0, 0]
         self.resetHeld = [False, False]
+        self.globalVar = [0, 0, 0]
 
     def resetVar(self, *args):
         if args:
@@ -292,7 +321,8 @@ class Dial:
         self.p.oldCords = copy.deepcopy(self.p.cords)
 
     def setVar(self, var):
-        for v in range(len(var)):
+        self.globalVar = var
+        for v in self.axes:
             var[v] = float(var[v])
         for c in range(controllerCount):
             if (not self.dragging) or (not self.collision):
@@ -317,9 +347,7 @@ class Dial:
     def interpolate(self):
         relDist = []
         ratio = []
-        # cords = [0, 0, 0]
         for dim in range(len(self.min)):
-            # cords[self.axes[dim]] = self.cords[self.axes[dim]] - (self.max[dim] + self.min[dim]) / 2
             relDist.append(self.p.cords[self.axes[dim]] - self.cords[self.axes[dim]] + self.cRad)
             ratio.append(relDist[dim] / (self.cRad * 2))
             self.var[self.axes[dim]] = self.min[dim] + (self.range[dim] * ratio[dim])
@@ -369,7 +397,10 @@ class Dial:
 
         self.interpolate()
 
-        return self.var
+        tempList = self.globalVar
+        for GUIAxis in self.axes:
+            tempList[GUIAxis] = self.var[GUIAxis]
+        return tempList
 
     def circularMotion(self):
         resultAcc = (distance([0, 0, 0], self.p.velocity) ** 2) / self.cRad
@@ -379,7 +410,7 @@ class Dial:
         self.p.oldCords[0] -= acc[0]  # / calcRate ** 2
         self.p.oldCords[1] -= acc[1]  # / calcRate ** 2
 
-    # prevent "dialer" (point) from exiting the dial
+    # prevent 'p' (the dialer point) from exiting the dial
     def boundDial(self):
         if distance(self.cords, self.p.cords) > self.cRad:
             self.p.cords = copy.deepcopy(self.p.oldCords)
@@ -421,9 +452,16 @@ class Manual:
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]
         self.drawn = True
-        self.var = float(referenceVar)
-        self.origVar = copy.deepcopy(float(referenceVar))
-        self.globalOrigVar = float(globalDefaultVar)
+        self.listVar = type(referenceVar) is list
+        if self.listVar:
+            self.var = float(referenceVar[self.xyz])
+            self.origVar = copy.deepcopy(float(referenceVar[self.xyz]))
+            self.globalOrigVar = float(globalDefaultVar[self.xyz])
+        else:
+            self.var = float(referenceVar)
+            self.origVar = copy.deepcopy(float(referenceVar))
+            self.globalOrigVar = float(globalDefaultVar)
+        self.globalVar = [0, 0, 0]
         self.text = text
         self.cords = copy.deepcopy(cords)
         self.textVar = viz.addText3D('', fontSize=self.fontSize)
@@ -597,6 +635,7 @@ class Manual:
                                 self.keyHeld[n] = True
                                 self.addToVar(n)
                                 break
+
                     if viz.key.isDown(self.keys[10]):
                         if not self.keyHeld[10]:
                             self.keyHeld[10] = True
@@ -640,7 +679,16 @@ class Manual:
         if not self.drawn:
             self.unDraw()
 
-        return self.var
+        if not self.listVar:
+            return self.var
+        else:
+            tempList = []
+            for axis in range(3):
+                if axis == self.xyz:
+                    tempList.append(self.var)
+                else:
+                    tempList.append(self.globalVar[axis])
+            return tempList
 
     def drag(self, cIdx, selecting):
         self.selecting[cIdx] = selecting
@@ -676,6 +724,9 @@ class Manual:
             self.keypadTexts[b].setEuler(angle)
 
     def setVar(self, var):
+        if self.listVar:
+            self.globalVar = var
+            var = var[self.xyz]
         var = float(var)
         self.var = var
 

@@ -81,7 +81,7 @@ class Main(ShowBase):
 
     # create a point and add it to the points list
     def createPoint(self, radius, cords, oldCords):
-        self.points.append(Point(radius, cords, oldCords, 1000))
+        self.points.append(Point(radius, cords, oldCords, 1))
 
     # load the points into the game window
     def loadActors(self):
@@ -109,15 +109,16 @@ class Point(Actor):
         self.collisionRadius = radius
         self.cords = cords  # (x, z, y)
         self.density = density
-        self.mass = (4 / 3) * math.pi * (self.radius ** 3) * self.density
+        self.mass = 1
         self.oldCords = oldCords
         self.velocity = Vec3(0, 0, 0)
         self.acceleration = Vec3(0, 0, 0)
         self.force = Vec3(0, 0, 0)
-        self.circularForce = Vec3(0, 0, 0)
+        self.circularForce = Vec3(1, 0, 0)
         self.magneticForce = Vec3(0, 0, 0)
 
     def physics(self):
+        print(self.velocity[0])
         self.circularMotion(hadronCollider)
         self.force = copy.deepcopy(self.circularForce)
 
@@ -135,14 +136,10 @@ class Point(Actor):
         self.cords += self.velocity * game.dt
         self.setPos(self.cords)
 
-    def circularMotion(self, c):
-        radius = distance(c.cords, self.cords)
-        resultV = math.sqrt(self.velocity[0] ** 2 + self.velocity[1] ** 2 + self.velocity[2] ** 2)
-        resultF = self.mass * (resultV ** 2) / radius
-        # angle = getThreeDAngle(c.cords, self.cords, 'y')
-        angle = getAbsTwoDAngle(c.cords, self.cords)
-        self.circularForce[0] = resultF * math.sin(angle)  # * math.cos(angle[1])
-        self.circularForce[1] = resultF * math.cos(angle)
+    def circularMotion(self, collider):
+        angle = getAbsTwoDAngle(collider.cords, self.cords)
+        orbitRad = distance(collider.cords, self.cords)
+        # f = mv² / r
 
     def updateSize(self):
         self.set_scale(self.radius)
@@ -150,7 +147,7 @@ class Point(Actor):
 
 class Collider:
     def __init__(self, outerRadius, innerRadius, thickness):
-        self.cords = Vec3(0, 0, 0)
+        self.cords = Vec3(0, 100, 0)
         self.outerRad = outerRadius
         self.innerRad = innerRadius
         self.thickness = thickness
@@ -158,8 +155,8 @@ class Collider:
 
 game = Main()
 
-game.createPoint(1, Vec3(0, 10, 0), Vec3(-0.01, 10, 0))
-hadronCollider = Collider(69, 10, 1)
+game.createPoint(1, Vec3(0, 100, 9), Vec3(0, 100, 9))
+hadronCollider = Collider(9, 1, 1)
 # game.createPoint(2, Vec3(-33, 100, 0), Vec3(-33, 100, 0))
 
 game.loadActors()

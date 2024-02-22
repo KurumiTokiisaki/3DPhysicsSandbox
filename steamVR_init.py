@@ -1,15 +1,9 @@
 ﻿# base Vizard libraries
 import viz
-import vizfx
-import vizshape
-import vizconnect
 import steamvr
-import vizact
-from config import calcRate
 # for trig functions
 import myGUI
 from config import *
-from globalFunctions import buttonPressed
 
 # link HMD to program
 hmdConfig = steamvr.HMD()
@@ -18,9 +12,9 @@ hmdConfig = steamvr.HMD()
 minCamSpeed = 5 / renderRate
 maxCamSpeed = minCamSpeed * 4
 
-# degrees of freedom to prevent joystick drift
-freedomDegrees = 0.5
-yFreedomDegrees = 0.5
+# degrees of freedom to prevent joystick drift. this value can lower the higher-quality a controller is.
+freedomDegrees = 0.3
+yFreedomDegrees = 0.3
 # gets the HMD's controllers
 controllers = [steamvr.getControllerList()[0], steamvr.getControllerList()[1]]
 hmd = hmdConfig.getSensor()
@@ -30,31 +24,30 @@ controllerAmt = 2
 # main class for HMD
 class Main:
     def __init__(self):
-        # test object for reference
-        # self.testAvatar = viz.addAvatar('vcc_male2.cfg').setPosition([0, 0, 5])
         # max speed of camera
         self.camSpeed = minCamSpeed
         # camera variables
-        self.apparentCamCords = [0, 0, 0]
-        self.camCords = [0, 0, 0]
-        self.camAngle = [0, 0, 0]
+        self.apparentCamCords = [0, 0, 0]  # camera cords when the HMD's relative position isn't taken into account
+        self.camCords = [0, 0, 0]  # actual camera cords after adding the HMD's relative position to apparentCamCords
+        self.camAngle = [0, 0, 0]  # HMD's facing angle
         self.camVelocity = [0, 0, 0]
         self.handAngle = [[0, 0, 0], [0, 0, 0]]
 
-        self.hmdPos = hmd.getPosition()
+        self.hmdPos = hmd.getPosition()  # position of the HMD relative to the computer IRL
         # controller sprites to render
         self.hand = [Point('l'), Point('r')]
 
         self.anim = [myGUI.CircleAnim(self.hand[0], 4, 0.1, 0.01, [100, 5, 1], True), myGUI.CircleAnim(self.hand[1], 4, 0.1, 0.01, [100, 5, 1], True)]
 
     def main(self):
-        # gets position of HMD IRL
-        self.hmdPos = hmd.getPosition()
+        self.hmdPos = hmd.getPosition()  # update the position of the camera by querying the HMD's new position every frame
         self.moveCam()
         self.updateHMD()
 
+        # update the facing angle and position of the camera in the Vizard game scene
         viz.MainView.setEuler(self.camAngle)
         viz.MainView.setPosition(self.camCords)
+        # update visuals about both hands and their animations
         for c in range(2):
             self.hand[c].sphere.setPosition(self.hand[c].cords)
             self.hand[c].sphere.setEuler(self.handAngle[c])
@@ -62,15 +55,22 @@ class Main:
 
     # set controller position relative to camera position
     def updateHMD(self):
-        self.camAngle = hmd.getEuler()
+        self.camAngle = hmd.getEuler()  # update the angle of the camera by querying teh HMD's new orientation every frame
 
+        # update info about both hands (position & orientation)
         for c in range(2):
             self.hand[c].cords = [controllers[c].getPosition()[0] + self.apparentCamCords[0], controllers[c].getPosition()[1] + self.apparentCamCords[1], controllers[c].getPosition()[2] + self.apparentCamCords[2]]
             self.handAngle[c] = controllers[c].getEuler()
 
     # move camera depending on joystick position
     def moveCam(self):
-        # if right controller's middle-finger trigger is pressed, increase the camera's max speed
+        """
+        the left joystick is used to control lateral position (X & Z axes), and the right joystick is used to control vertical position only (Y axis).
+        when setting camVelocity[0] and camVelocity[2], the tilt of the left joystick about both its axes (since it can be tilted up/down AND left/right) are taken into account to allow full 360 degree motion.
+        left/right movement is taken into account by reversing the trig functions and making their angle coefficients negative, since left/right is perpendicular to forward/back.
+        camAngle is used here to allow the camera to move relative to the current facing position rather than the world axes.
+        check out this link for the mathematical proof:
+        """
         if controllers[1].getButtonState() == 2:
             self.camSpeed = maxCamSpeed
         else:
@@ -80,14 +80,14 @@ class Main:
         if (abs(controllers[0].getThumbstick()[0]) > freedomDegrees) or (abs(controllers[0].getThumbstick()[1]) > freedomDegrees):
             self.camVelocity[0] = (controllers[0].getThumbstick()[1] * math.sin(math.radians(self.camAngle[0])) * self.camSpeed) + (controllers[0].getThumbstick()[0] * math.cos(-math.radians(self.camAngle[0])) * self.camSpeed)
             self.camVelocity[2] = (controllers[0].getThumbstick()[1] * math.cos(math.radians(self.camAngle[0])) * self.camSpeed) + (controllers[0].getThumbstick()[0] * math.sin(-math.radians(self.camAngle[0])) * self.camSpeed)
-        else:
+        else:  # if the left joystick isn't being tilted (within the degrees if freedom), don't move!
             self.camVelocity[0] = 0
             self.camVelocity[2] = 0
 
         # right controller's degrees of freedom are different to the left controller's, hence yFreedomDegrees
         if abs(controllers[1].getThumbstick()[1]) > yFreedomDegrees:
             self.camVelocity[1] = controllers[1].getThumbstick()[1] * self.camSpeed
-        else:
+        else:  # if the right joystick isn't being tilted (within the degrees if freedom), don't move!
             self.camVelocity[1] = 0
 
         # change camera coordinates depending on velocity and current position
@@ -102,7 +102,7 @@ class Point:
     def __init__(self, lr):
         self.radius = handRadius
         if lr == 'l':
-            self.sphere = controllers[0].addModel()
+            self.sphere = controllers[0].addModel()  # add left controller model to the Vizard game scene
         elif lr == 'r':
-            self.sphere = controllers[1].addModel()
+            self.sphere = controllers[1].addModel()  # add right controller model to the Vizard game scene
         self.cords = [0, 0, 0]
