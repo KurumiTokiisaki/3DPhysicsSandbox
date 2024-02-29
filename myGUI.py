@@ -30,37 +30,37 @@ class Slider:
             self.var = float(referenceVar)
             self.origVar = copy.deepcopy(float(referenceVar))
             self.globalOrigVar = float(globalDefaultVar)
-        self.globalVar = [0, 0, 0]
+        self.globalVar = [0, 0, 0]  # holds the current value of the variable if it's a vector quantity (list)
         self.cords = copy.deepcopy(cords)
-        self.length = length
+        self.length = length  # visual length of the slider in the Vizard game scene
         self.limits = [self.cords[self.xyz] - (self.length / 2), cords[self.xyz] + (self.length / 2)]  # x/y/z (depending on the value of self.xyz) cords of both ends of the slider
-        self.pRad = 0.15
         self.max = maxi  # maximum variable value
         self.min = mini  # minimum variable value
-        self.range = maxi - mini
-        self.pointer = vizshape.addSphere(self.pRad, slices=pointResolution)
-        self.sliders = [vizshape.addCylinder(length, 0.05), vizshape.addCylinder(self.pRad * 2, 0.02), vizshape.addCylinder(self.pRad * 2, 0.02)]
-        self.pCords = copy.deepcopy(self.cords)
-        self.oldPCords = copy.deepcopy(self.pCords)
-        self.pVelocity = [0, 0, 0]
-        self.textFront = viz.addText3D('', fontSize=0.1)
-        self.textOffset = 0.1
-        self.collision = False
-        self.dragging = False
-        self.text = viz.addText3D(f'{text}', fontSize=0.2)
+        self.range = maxi - mini  # difference between the maximum & minimum values
+        self.pVelocity = [0, 0, 0]  # velocity of the slider point
+        self.pointer = Point(0.15, True)
+        self.pointer.cords = copy.deepcopy(self.cords)
+        self.pointer.oldCords = copy.deepcopy(self.cords)
+        self.sliders = [vizshape.addCylinder(length + self.pointer.radius * 2, 0.05), vizshape.addCylinder(self.pointer.radius * 2, 0.02),
+                        vizshape.addCylinder(self.pointer.radius * 2, 0.02)]  # add the main slider, and then two tiny cylinders on both ends of the slider
+        self.varText = viz.addText3D('', fontSize=0.1)
+        self.collision = False  # stores if there's a collision between the slider's pointer and a hand
+        self.dragging = False  # stores if the slider's pointer is being dragged by a hand
+        self.descText = viz.addText3D(f'{text}', fontSize=0.2)
         self.textPos = [0, 0, 0]
         self.closeButton = XSymbol(0.5, self.cords)
-        if self.xyz == 0:
-            self.closeButton.cords = [self.limits[1] + 0.2, self.cords[1] + 0.5, self.cords[2]]
-        elif self.xyz == 1:
-            self.closeButton.cords = [self.cords[0] + 0.5, self.limits[1] + 0.2, self.cords[2]]
-        elif self.xyz == 2:
-            self.closeButton.cords = [self.cords[0], self.cords[1] + 0.5, self.limits[1] + 0.2]
-        for s in self.closeButton.X:
-            if (self.xyz == 0) or (self.xyz == 1):
-                s.setEuler(s.getEuler()[0] + 90, s.getEuler()[1], s.getEuler()[2])
-            s.setPosition(self.closeButton.cords)
 
+        # position the 'X' button and set its facing angle depending on the slider's axis
+        if self.xyz == 0:
+            self.closeButton.setPos([self.limits[1] + 0.2, self.cords[1] + 0.5, self.cords[2]])
+        elif self.xyz == 1:
+            self.closeButton.setPos([self.cords[0] + 0.5, self.limits[1] + 0.2, self.cords[2]])
+        elif self.xyz == 2:
+            self.closeButton.setPos([self.cords[0], self.cords[1] + 0.5, self.limits[1] + 0.2])
+        if (self.xyz == 0) or (self.xyz == 1):
+            self.closeButton.setAngle([0, 90, 0])
+
+        # position the text and the angle of the slider based on its axis. also displace the text backwards depending on its length.
         if xyz == 0:
             self.textPos = [self.cords[0] - (len(text) / 20), self.cords[1] + 0.3, self.cords[2]]
             self.sliders[0].setEuler(90, 90, 0)
@@ -70,62 +70,111 @@ class Slider:
             self.sliders[2].setEuler(90, 90, 0)
         elif xyz == 2:
             self.textPos = [self.cords[0], self.cords[1] + 0.3, self.cords[2] + (len(text) / 20)]
-            self.text.setEuler(90, 0, 0)
+            self.descText.setEuler(90, 0, 0)
             self.sliders[0].setEuler(0, 90, 0)
-        self.text.setPosition(self.textPos)
+
+        self.descText.setPosition(self.textPos)
         self.sliders[0].setPosition(self.cords)
         setPos = copy.deepcopy(self.cords)
-        setPos[self.xyz] = self.limits[0]
+        setPos[self.xyz] = self.limits[0] - self.pointer.radius
         self.sliders[1].setPosition(setPos)
         setPos = copy.deepcopy(self.cords)
-        setPos[self.xyz] = self.limits[1]
+        setPos[self.xyz] = self.limits[1] + self.pointer.radius
         self.sliders[2].setPosition(setPos)
         self.resetVar()
         self.cObj = [lController[0], rController[0]]  # controller objects
-        self.cDat = [lController[1], rController[1]]  # controller point data
+        self.cDat = [lController[1], rController[1]]  # hand data
         self.timePressed = [0, 0]
         self.resetHeld = [0, 0]
 
-    def resetVar(self, *args):  # reset the value of the reference variable to its initial value from when this class was initialized
+    def interpolate(self):
+        """
+        this method is used to update the value of the reference variable when the slider's pointer is moved.
+
+        process:
+            1. get the displacement of the point along the slider.
+            2. get a value from 0-1 for how far the point is along the slider.
+            3. multiply the ratio with the range of the reference variable, and displace it by the minimum value of the reference variable.
+        """
+        relDist = self.pointer.cords[self.xyz] - self.limits[0]
+        ratio = relDist / self.length
+        self.var = self.min + (self.range * ratio)
+
+    def resetVar(self, *args):
+        """
+        :param args: if this has any value, a hard reset of the variable will occur. otherwise, a soft reset of the variable will occur.
+
+        this method is used to reset the value of the reference variable by teleporting the slider's pointer and letting the 'interpolate()' method calculate the new value.
+        the way this works is 'interpolate()' but in reverse.
+        """
         if args:
-            self.pCords[self.xyz] = self.limits[0] + ((self.globalOrigVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
+            self.pointer.cords[self.xyz] = self.limits[0] + ((self.globalOrigVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
         else:
-            self.pCords[self.xyz] = self.limits[0] + ((self.origVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
-        self.oldPCords = copy.deepcopy(self.pCords)
+            self.pointer.cords[self.xyz] = self.limits[0] + ((self.origVar + abs(self.min) * -getSign(self.min)) / self.range) * self.length
+        self.pointer.oldCords = copy.deepcopy(self.pointer.cords)  # set the pointer's velocity to 0 after resetting it, so it doesn't shoot off with insane velocity
 
     def setVar(self, var):  # set the reference variable to a specific value
+        """
+        :param var: new value to set the reference variable to.
+
+        this method is used to set the value of the reference variable by teleporting the slider's pointer and letting the 'interpolate()' method calculate the new value.
+        the way this works is 'interpolate()' but in reverse.
+        if the reference variable is a vector quantity (list), update the value of 'globalVar'.
+        also get the new value of the reference variable at the position index indicated by the slider's axis by overwriting the old value.
+        """
         if self.listVar:
             self.globalVar = var
             var = var[self.xyz]
         var = float(var)
         if (not self.dragging) or (not self.collision):
-            self.pCords[self.xyz] = self.limits[0] + ((var + abs(self.min) * -getSign(self.min)) / self.range) * self.length
-
-    def interpolate(self):
-        relDist = self.pCords[self.xyz] - self.limits[0]
-        ratio = relDist / self.length
-        self.var = self.min + (self.range * ratio)
+            self.pointer.cords[self.xyz] = self.limits[0] + ((var + abs(self.min) * -getSign(self.min)) / self.range) * self.length
 
     def drag(self, cIdx, dragging):
+        """
+        :param cIdx: index of the current hand.
+        :param dragging: stores if the current controller is pressing the select button.
+
+        this method is used to update the position of the slider's pointer if it's being dragged by a hand.
+
+        process:
+            1. if the select button is being held, detect for a collision between the current hand and the slider's pointer.
+                set the result of this operation to the 'collision' variable.
+            2. if there's a collision, set the position of the point to the current hand's position.
+                since sliders are 1D, only do this about the axis on which it is summoned.
+        """
         self.dragging = dragging
         if dragging:
-            self.collision = detectCollision(self.cDat[cIdx].radius, self.pRad, self.cDat[cIdx].cords, self.pCords)
+            self.collision = detectCollision(self.cDat[cIdx].radius, self.pointer.radius, self.cDat[cIdx].cords, self.pointer.cords)
             if self.collision:
-                self.pCords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
+                self.pointer.cords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
 
     def main(self):
         """
-                1) check to see if the selected variable is a vector or scalar quantity (indicated by 'listVar').
-                        this is done to get whether the selected axis of the GUI will be used to change the value at the position index of the vector quantity (list) variable, or just the way it looks if the variable is a scalar (float).
-                    2) if it's a vector, pass in the selected variable's value at the selected index position 'xyz' to the Slider class.
-                        this maps the axis selected to an index.
-                    3) if it's a scalar, simply pass in the selected variable to the Slider class.
+        :return: resultant value of the reference variable.
 
-        :return:
+        this method is used to manage everything for the slider each frame.
+
+        process:
+            1. loop through each hand. update the time since the last double-click of the current hand.
+                to save computational power, don't keep updating this value past its limit of 0.25s!
+            2. if the reset button is pressed by either hand:
+                a) if the time since the last reset button press is less than 0.25s, hard reset the reference variable.
+                b) otherwise, soft reset the reference variable and reset the time since the last reset button press to 0.
+            3. if the select button is pressed on the 'X', dismiss the GUI.
+            4. if the slider's pointer goes outside the slider, teleporting the slider's pointer to its upper/lower limit to prevent this.
+            5. apply drag onto the slider to oppose its pointer's direction of motion.
+                if the point is moving super slowly as a result of drag, make its velocity 0 to keep it from constantly oscillating.
+            6. get the velocity of the point through Verlet integration, and update the position of the point based on its velocity.
+            7. run the 'interpolate()' method to get the new value of the reference variable based on the pointer's new position along the slider.
+            8. check to see if the selected variable is a vector or scalar quantity (indicated by 'listVar').
+                this is done to get whether the selected axis of the GUI will be used to change the value at the position index of the vector quantity (list) variable, or just the way it looks if the reference variable is a scalar (float).
+                a) if it's a vector, overwrite the global variable at the index position indicated by the slider's axis.
+                    this is done to allow updating the value of a vector quantity from a 1D GUI much easier.
+                b) if it's a scalar, simply pass in the reference variable.
         """
         for c in range(controllerCount):
             if self.timePressed[c] <= 0.25:
-                self.timePressed[c] += 1 / calcRate
+                self.timePressed[c] += 1 / renderRate
             if buttonPressed('reset', self.cObj[c], c):
                 if not self.resetHeld[c]:
                     self.resetHeld[c] = True
@@ -140,22 +189,18 @@ class Slider:
                 self.unDraw()
                 self.drawn = False
 
-        if self.pCords[self.xyz] < self.limits[0]:
-            self.pCords[self.xyz] = copy.deepcopy(self.limits[0])
-            self.oldPCords[self.xyz] = copy.deepcopy(self.pCords[self.xyz])
-        elif self.pCords[self.xyz] > self.limits[1]:
-            self.pCords[self.xyz] = copy.deepcopy(self.limits[1])
-            self.oldPCords[self.xyz] = copy.deepcopy(self.pCords[self.xyz])
+        self.boundSlider()
 
-        self.oldPCords[self.xyz] += 0.015 * getSign(self.pVelocity[self.xyz]) / calcRate  # adds some drag on the slider
+        self.pointer.oldCords[self.xyz] += 0.015 * getSign(self.pVelocity[self.xyz]) / renderRate  # adds some drag on the slider
 
-        if (abs(self.pVelocity[self.xyz]) < (10 ** -4)) and (not self.collision or not self.dragging):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
-            self.oldPCords[self.xyz] = copy.deepcopy(self.pCords[self.xyz])
+        if (abs(self.pVelocity[self.xyz]) < (10 ** -4)) and (
+                not self.collision or not self.dragging):  # if there is to be frictional force on the slider's pointer and velocity is very small, make velocity 0 to prevent vibration
+            self.pointer.oldCords[self.xyz] = copy.deepcopy(self.pointer.cords[self.xyz])
 
         # Verlet integration
-        self.pVelocity[self.xyz] = self.pCords[self.xyz] - self.oldPCords[self.xyz]
-        self.oldPCords = copy.deepcopy(self.pCords)
-        self.pCords[self.xyz] += self.pVelocity[self.xyz]
+        self.pVelocity[self.xyz] = self.pointer.cords[self.xyz] - self.pointer.oldCords[self.xyz]
+        self.pointer.oldCords = copy.deepcopy(self.pointer.cords)
+        self.pointer.cords[self.xyz] += self.pVelocity[self.xyz]
 
         self.interpolate()
 
@@ -170,22 +215,55 @@ class Slider:
                     tempList.append(self.globalVar[axis])
             return tempList
 
+    # prevent the point from leaving the slider
+    def boundSlider(self):
+        if self.pointer.cords[self.xyz] < self.limits[0]:
+            self.pointer.cords[self.xyz] = copy.deepcopy(self.limits[0])
+            self.pointer.oldCords[self.xyz] = copy.deepcopy(self.pointer.cords[self.xyz])
+        elif self.pointer.cords[self.xyz] > self.limits[1]:
+            self.pointer.cords[self.xyz] = copy.deepcopy(self.limits[1])
+            self.pointer.oldCords[self.xyz] = copy.deepcopy(self.pointer.cords[self.xyz])
+
     def draw(self, camCords):
-        self.pointer.setPosition(self.pCords)
-        angle, pos = camAnglePos(camCords, self.pCords, self.pRad)
-        self.textFront.setEuler(angle)
-        self.textFront.setPosition(pos)
-        self.textFront.message(f'{round(self.var, 4)}')
+        """
+        :param camCords: camera position in the Vizard game scene.
+
+        this method is used to update everything in the slider in the Vizard game scene.
+
+        process:
+        in the Vizard game scene:
+            1. update the position of the slider's pointer to its new position.
+            2. get the relative angle and new position from the camera to the slider's pointer.
+                use this to make the text on the slider's pointer always face the camera, so it can be read easier.
+            3. update the contents of the variable display text, rounding its value for increased readability.
+            4. get the relative angle from the camera to the slider's description text.
+                use this to make the text above the slider face the camera, so it can be read easier.
+        """
+        self.pointer.point.setPosition(self.pointer.cords)
+        angle, pos = camAnglePos(camCords, self.pointer.cords, self.pointer.radius)
+        self.varText.setEuler(angle)
+        self.varText.setPosition(pos)
+        self.varText.message(f'{round(self.var, 4)}')
 
         angle, pos = camAnglePos(camCords, self.textPos, 0)
-        self.text.setEuler(angle)
+        self.descText.setEuler(angle)
 
     def unDraw(self):
-        self.pointer.remove()
+        """
+        this method is used to dismiss the GUI.
+        
+        process:
+        in the Vizard game scene:
+            1. remove the slider's pointer.
+            2. remove the slider.
+            3. remove all text.
+            4. remove the 'X' button.
+        """
+        self.pointer.point.remove()
         for s in range(len(self.sliders)):
             self.sliders[s].remove()
-        self.textFront.remove()
-        self.text.remove()
+        self.varText.remove()
+        self.descText.remove()
         self.closeButton.unDraw()
 
 
@@ -203,8 +281,7 @@ class Point:
 class XSymbol:
     def __init__(self, size, cords):
         self.radius = size / 2
-        self.cBox = Point(self.radius, False)  # True for testing
-        # self.cBox.point.setPosition(cords)  # uncomment for testing
+        self.cBox = Point(self.radius, False)
         self.cords = cords
         self.X = [vizshape.addCylinder(size / math.sqrt(2), 0.03), vizshape.addCylinder(size / math.sqrt(2), 0.03)]
         self.X[0].setEuler(0, 45, 0)
@@ -284,7 +361,7 @@ class Dial:
         else:
             self.axes = [0, 1, 2]
         self.text = text
-        self.textFront = viz.addText3D('', fontSize=0.15)
+        self.varText = viz.addText3D('', fontSize=0.15)
         self.collision = False
         self.dragging = False
         self.anim = None
@@ -304,6 +381,14 @@ class Dial:
         self.globalVar = [0, 0, 0]
 
     def resetVar(self, *args):
+        """
+        :param args: if this has any value, a hard reset of the variable will occur. otherwise, a soft reset of the variable will occur.
+
+        this method is used to reset the value of the reference variable by teleporting the slider's pointer and letting the 'interpolate()' method calculate the new value.
+            if the dial is 3D, change the reference variable with respect to the dial's pointer about all axes.
+            otherwise, if the dial is 2D, change the reference variable with respect to the dial's pointer about 2 specific axes.
+        the way this works is 'interpolate()' but in reverse.
+        """
         if args:
             if self.tDim:
                 for axis in range(3):
@@ -321,6 +406,12 @@ class Dial:
         self.p.oldCords = copy.deepcopy(self.p.cords)
 
     def setVar(self, var):
+        """
+        :param var: new value to set the reference variable to.
+
+        this method is used to set the value of the reference variable by teleporting the slider's pointer and letting the 'interpolate()' method calculate the new value.
+        the way this works is 'interpolate()' but in reverse.
+        """
         self.globalVar = var
         for v in self.axes:
             var[v] = float(var[v])
@@ -334,6 +425,18 @@ class Dial:
                     self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (var[self.axes[1]] / self.range[1]) * self.cRad * 2
 
     def drag(self, cIdx, dragging):
+        """
+        :param cIdx: index of the current hand.
+        :param dragging: stores if the current controller is pressing the select button.
+
+        this method is used to update the position of the slider's pointer if it's being dragged by a hand.
+
+        process:
+            1. if the select button is being held, detect for a collision between the current hand and the slider's pointer.
+                set the result of this operation to the 'collision' variable.
+            2. if there's a collision, set the position of the point to the current hand's position.
+                if the dial is 2D, only do this about the axes on which it is summoned.
+        """
         self.dragging = dragging
         if dragging:
             self.collision = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
@@ -353,9 +456,32 @@ class Dial:
             self.var[self.axes[dim]] = self.min[dim] + (self.range[dim] * ratio[dim])
 
     def main(self):
+        """
+        :return: resultant value of the reference variable.
+
+        this method is used to manage everything for the dial each frame.
+
+        process:
+            1. loop through each hand. update the time since the last double-click of the current hand.
+                to save computational power, don't keep updating this value past its limit of 0.25s!
+            2. if the reset button is pressed by either hand:
+                a) if the time since the last reset button press is less than 0.25s, hard reset the reference variable.
+                b) otherwise, soft reset the reference variable and reset the time since the last reset button press to 0.
+            3. if the select button is pressed on the 'X', dismiss the GUI.
+            4. if the dial's pointer goes outside the circle/sphere, teleport the dial's pointer to its last position from the previous frame.
+            5. apply drag onto the dial to oppose its pointer's direction of motion.
+                if the point is moving super slowly as a result of drag, make its velocity 0 to keep it from constantly oscillating.
+            6. get the velocity of the point through Verlet integration, and update the position of the point based on its velocity.
+            7. run the 'interpolate()' method to get the new value of the reference variable based on the pointer's new position in the dial.
+            8. check if the dial is 2D or 3D.
+                this is done to get the selected axis of the GUI will be to change the value at the position indexes of the vector quantity (list) variable.
+                a) if the GUI is 2D, overwrite 'globalVar' at the index position indicated by the dial's axes.
+                    this is done to allow updating the value of a vector quantity from a 2D GUI much easier.
+                b) if the GUI is 3D, overwrite all values in 'globalVar'.
+        """
         for c in range(controllerCount):
             if self.timePressed[c] <= 0.25:
-                self.timePressed[c] += 1 / calcRate
+                self.timePressed[c] += 1 / renderRate
             if buttonPressed('reset', self.cObj[c], c):
                 if not self.resetHeld[c]:
                     self.resetHeld[c] = True
@@ -373,19 +499,21 @@ class Dial:
         # self.circularMotion()  # MASSIVE WIP
         self.boundDial()
 
+        # add some drag on the dial's pointer
         if not self.tDim:
             movingAngle = getAbsTwoDAngle([0, 0], [self.p.velocity[self.axes[0]], self.p.velocity[self.axes[1]]])
-            self.p.oldCords[self.axes[0]] += 0.015 * getSign(self.p.velocity[self.axes[0]]) * sin(movingAngle) / calcRate  # adds some drag on the dial
-            self.p.oldCords[self.axes[1]] += 0.015 * getSign(self.p.velocity[self.axes[1]]) * cos(movingAngle) / calcRate
+            self.p.oldCords[self.axes[0]] += 0.015 * getSign(self.p.velocity[self.axes[0]]) * sin(movingAngle) / renderRate
+            self.p.oldCords[self.axes[1]] += 0.015 * getSign(self.p.velocity[self.axes[1]]) * cos(movingAngle) / renderRate
         else:
             movingAngle = getAbsThreeDAngle([0, 0, 0], self.p.velocity, 'y')
-            self.p.oldCords[0] += 0.015 * getSign(self.p.velocity[0]) * cos(movingAngle[1]) * sin(movingAngle[0]) / calcRate  # adds some drag on the dial
-            self.p.oldCords[1] += 0.015 * getSign(self.p.velocity[1]) * sin(movingAngle[1]) / calcRate
-            self.p.oldCords[2] += 0.015 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / calcRate
+            self.p.oldCords[0] += 0.015 * getSign(self.p.velocity[0]) * cos(movingAngle[1]) * sin(movingAngle[0]) / renderRate
+            self.p.oldCords[1] += 0.015 * getSign(self.p.velocity[1]) * sin(movingAngle[1]) / renderRate
+            self.p.oldCords[2] += 0.015 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / renderRate
 
         for axis in range(len(self.var)):
             for c in range(controllerCount):
-                if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not self.dragging or not self.collision):  # if there is to be frictional force on the slider's point and velocity is very small, make velocity 0 to prevent vibration
+                if (abs(self.p.velocity[axis]) < (10 ** -4)) and (
+                        not self.dragging or not self.collision):  # if there is to be frictional force on the dial's pointer and velocity is very small, make velocity 0 to prevent vibrations
                     self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
 
         # Verlet integration
@@ -402,13 +530,14 @@ class Dial:
             tempList[GUIAxis] = self.var[GUIAxis]
         return tempList
 
+    # MASSIVE WIP METHOD
     def circularMotion(self):
         resultAcc = (distance([0, 0, 0], self.p.velocity) ** 2) / self.cRad
         angle = getAbsTwoDAngle([self.cords[0], self.cords[1]], [self.p.cords[0], self.p.cords[1]])
         quartiles = [self.p.cords[0] <= self.cords[0], self.p.cords[1] <= self.cords[1]]
         acc = [resultAcc * sin(angle) * TFNum(quartiles[0]), resultAcc * cos(angle) * TFNum(quartiles[1])]
-        self.p.oldCords[0] -= acc[0]  # / calcRate ** 2
-        self.p.oldCords[1] -= acc[1]  # / calcRate ** 2
+        self.p.oldCords[0] -= acc[0]  # / renderRate ** 2
+        self.p.oldCords[1] -= acc[1]  # / renderRate ** 2
 
     # prevent 'p' (the dialer point) from exiting the dial
     def boundDial(self):
@@ -417,26 +546,36 @@ class Dial:
 
     def draw(self, camCords):
         self.p.point.setPosition(self.p.cords)
-
-        if not self.tDim:
-            self.textFront.message(f'{self.text[0]}: {round(self.var[self.axes[0]] + self.varOffset[self.axes[0]], 4)}\n{self.text[1]}: {round(self.var[self.axes[1]] + self.varOffset[self.axes[1]], 4)}')
-            self.textFront.setPosition(self.p.cords[0] - 0.3, self.p.cords[1] - 0.2, self.p.cords[2] - 0.2)
-        else:
-            self.textFront.message(f'{self.text[0]}: {round(self.var[0] + self.varOffset[0], 4)}\n{self.text[1]}: {round(self.var[1] + self.varOffset[1], 4)}\n{self.text[2]}: {round(self.var[2] + self.varOffset[2], 4)}')
-        angle, pos = camAnglePos(camCords, self.p.cords, self.p.radius ** (1 / 3))
-        self.textFront.setEuler(angle)
-        self.textFront.setPosition(pos)
+        msg = ''
+        for ac in range(len(self.axes)):  # 'ac' stands for axis count
+            if ac > 0:  # only add new line after the first iteration, since there shouldn't be a new line after a blank line
+                msg += '\n'
+            msg += f'{self.text[ac]}: {round(self.var[self.axes[ac]] + self.varOffset[self.axes[ac]], 4)}'
+        self.varText.message(msg)
+        angle, pos = camAnglePos(camCords, self.p.cords, self.p.radius ** (1 / 3))  # displace the text from by the dial's pointer's center to its radius ^ 1/3
+        self.varText.setEuler(angle)
+        self.varText.setPosition(pos)
 
         if self.tDim:
             self.anim.draw(distance([0, 0, 0], self.p.velocity) * 0.2 + 1)
 
     def unDraw(self):
+        """
+        this method is used to dismiss the GUI.
+
+        process:
+        in the Vizard game scene:
+            1. remove the dial's pointer.
+            2. if the dial is 3D, remove its purple sphere animation. otherwise, remove the dial circle.
+            3. remove all text.
+            4. remove the 'X' button.
+        """
         self.p.point.remove()
         if self.anim is not None:
             self.anim.unDraw()
         else:
             self.circle[0].remove()
-        self.textFront.remove()
+        self.varText.remove()
         self.closeButton.unDraw()
 
 
@@ -592,7 +731,7 @@ class Manual:
 
         for c in range(controllerCount):
             if self.timePressed[c] <= 0.25:
-                self.timePressed[c] += 1 / calcRate
+                self.timePressed[c] += 1 / renderRate
             if buttonPressed('reset', self.cObj[c], c):
                 if not self.resetHeld[c]:
                     self.resetHeld[c] = True
@@ -731,6 +870,9 @@ class Manual:
         self.var = var
 
     def resetVar(self, *args):
+        """
+        :param args: if this has any value, a hard reset of the variable will occur. otherwise, a soft reset of the variable will occur.
+        """
         if args:
             self.var = self.globalOrigVar
         else:
@@ -762,7 +904,8 @@ class CircleAnim:
             self.circles.append(vizshape.addTorus(self.sphereRad, internalRadius))
             self.rotations.append([0, (180 / circleAmount) * c, 0])
             if len(args) == 3:
-                self.rotationSpeeds.append([random.triangular(args[0], args[1], random.choice([-args[2], args[2]])), random.triangular(args[0], args[1], random.choice([-args[2], args[2]])), random.triangular(args[0], args[1], random.choice([-args[2], args[2]]))])  # make weighing random as well
+                self.rotationSpeeds.append([random.triangular(args[0], args[1], random.choice([-args[2], args[2]])), random.triangular(args[0], args[1], random.choice([-args[2], args[2]])),
+                                            random.triangular(args[0], args[1], random.choice([-args[2], args[2]]))])  # make weighing random as well
             elif len(args) == 1:
                 if (c % 2) == 0:
                     self.rotationSpeeds.append([args[0], args[0], args[0]])
@@ -876,9 +1019,9 @@ class GUISelector:
                         else:
                             self.selectGUI(GUItypesScalar)
                     elif self.stage == 'GUISelection':
-                        if (self.var != 'Size') and (self.var != 'Solid/\nLiquid') and (type(globalVars[self.var]) is not list) and (list(self.GUIs.keys())[p] == 'Manual'):
+                        if (self.var != 'Size') and (self.var != 'Solid/\nLiquid') and (type(globalVars[self.var]) is not list):
                             self.GUI.append(list(self.GUIs.keys())[p])
-                            self.GUI.append('def')
+                            self.GUI.append('X')
                             self.stage = 'complete'
                             break
                         else:

@@ -41,7 +41,8 @@ clothNames = {}
 
 globalVars = {
     'gameSpeed': 1,  # game speed factor
-    'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
+    'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']),
+               gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
     'gasDensity': 1.293,  # density of all gases
     'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
@@ -53,7 +54,8 @@ globalVars = {
 
 defaultGlobalVars = {
     'gameSpeed': 1,  # game speed factor
-    'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
+    'gField': [gConst * math.cos(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']), gConst * math.sin(gFieldDirection['pitch']) * math.cos(gFieldDirection['yaw']),
+               gConst * math.sin(gFieldDirection['yaw'])],  # gravitational field constant about x, y, and z
     'gasDensity': 0,  # density of all gases
     'springConst': 1000,  # global spring constant (make negative to break the sandbox)
     'damping': 3,  # global damping constant (reduce as more points are connected to the same object)
@@ -98,6 +100,7 @@ if mode == 'k':
         'undoJoint': 'u'
     }
     controlsMap = {
+        'movement': 'W/A/S/D',
         'select': 'left-click',
         'recall': 'r',
         'reset': 'delete',
@@ -115,6 +118,7 @@ elif mode == 'vr':
         'undoJoint': [2, None]
     }
     controlsMap = {
+        'movement': 'joysticks',
         'select': 'left/right trigger',
         'recall': 'left/right touchpad',
         'reset': 'left menu',

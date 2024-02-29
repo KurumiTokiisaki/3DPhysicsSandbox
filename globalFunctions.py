@@ -48,7 +48,7 @@ def midpoint(pOne, pTwo):
     return [mid[0], mid[1], mid[2]]
 
 
-# returns the angle [pitch, yaw, roll] between 2 points. this is a special case for the Vizard setEuler function some reason unbeknownst to me!
+# returns the angle [pitch, yaw, roll] between 2 points. this is a special case for the Vizard setEuler function some reason unbeknownst to me! (trust)
 def getEulerAngle(cordOne, cordTwo):
     diff = [0, 0, 0]
     for d in range(3):
@@ -64,7 +64,7 @@ def getEulerAngle(cordOne, cordTwo):
         pitch = 90
         yaw = 0
     if diff[2] <= 0:
-        yaw = -yaw  # angle from y to z (reversed since this negates after negative difference along z for some reason)
+        yaw = -yaw  # angle from y to z (reversed since this negates after negative difference along z since trig is funny)
     roll = jointMadness
 
     return [pitch, yaw, roll]
@@ -173,11 +173,11 @@ def vertexBounce(resultV, angle, e):
 
 
 def capVolume(h, r):  # submerged height and sphere radius as parameters
-    return (math.pi * (h ** 2) / 3) * ((3 * r) - h)
+    return (math.pi * (h ** 2) / 3) * ((3 * r) - h)  # https://drive.google.com/file/d/1mfi4ajJRJr676QW_TxjNS7zyM0jippvX/view?usp=drive_link
 
 
 def capArea(h, r):  # submerged height and sphere radius as parameters
-    return 2 * math.pi * r * h
+    return 2 * math.pi * r * h  # differential of cap volume
 
 
 # returns the dot product between 2 cords (operator can vary)

@@ -5,7 +5,7 @@ import steamvr
 import myGUI
 from config import *
 
-# link HMD to program
+# link HMD (Head-Mounted Display) to program
 hmdConfig = steamvr.HMD()
 
 # camera speed
@@ -17,8 +17,8 @@ freedomDegrees = 0.3
 yFreedomDegrees = 0.3
 # gets the HMD's controllers
 controllers = [steamvr.getControllerList()[0], steamvr.getControllerList()[1]]
-hmd = hmdConfig.getSensor()
-controllerAmt = 2
+hmd = hmdConfig.getSensor()  # get the gyroscope and position details of the HMD
+controllerAmt = 2  # set this to 2 since there's 2 controllers
 
 
 # main class for HMD
@@ -44,9 +44,9 @@ class Main:
         self.moveCam()
         self.updateHMD()
 
-        # update the facing angle and position of the camera in the Vizard game scene
-        viz.MainView.setEuler(self.camAngle)
+        # update the position and facing angle of the camera in the Vizard game scene
         viz.MainView.setPosition(self.camCords)
+        viz.MainView.setEuler(self.camAngle)
         # update visuals about both hands and their animations
         for c in range(2):
             self.hand[c].sphere.setPosition(self.hand[c].cords)
@@ -68,8 +68,8 @@ class Main:
         the left joystick is used to control lateral position (X & Z axes), and the right joystick is used to control vertical position only (Y axis).
         when setting camVelocity[0] and camVelocity[2], the tilt of the left joystick about both its axes (since it can be tilted up/down AND left/right) are taken into account to allow full 360 degree motion.
         left/right movement is taken into account by reversing the trig functions and making their angle coefficients negative, since left/right is perpendicular to forward/back.
-        camAngle is used here to allow the camera to move relative to the current facing position rather than the world axes.
-        check out this link for the mathematical proof:
+        camAngle is used here to allow the camera to move relative to the current facing position rather than to the world axes.
+        check out this link for the mathematical proof: https://drive.google.com/file/d/1y_UX1Otwlxe1toA1COCcLJ8Q-jlt4qe9/view?usp=sharing
         """
         if controllers[1].getButtonState() == 2:
             self.camSpeed = maxCamSpeed

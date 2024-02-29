@@ -34,7 +34,7 @@ class Main:
         # add the hand object
         self.radius = handRadius
         self.hand = [Point()]  # draw the hand object
-        self.hand.append(self.hand[0])  # make an identical copy of the first hand to compensate for the fact that VR has 2 controllers. see point 4 in "For all files" for more info.
+        self.hand.append(self.hand[0])  # make an identical copy of the first hand to compensate for the fact that VR has 2 controllers
         # how far hand is from camera initially
         self.handDepth = 1
         self.handAngle = [[0, 0, 0]]
@@ -64,9 +64,7 @@ class Main:
 
     def updateView(self, cords):
         """
-        dx and dy are passed into updateView's own reference (self) when running viz.MOUSE_MOVE_EVENT
-        a handy feature in Vizard is that dx and dy represent the change in the mouse's position regardless of if it's on the border of the screen
-        tilt is always set to 0 to prevent camera from going upside down
+        :param cords: an object with attributes 'dy' (change in y mouse pos) and 'dx' (change in x mouse pos).
         """
         self.camAngle = viz.MainView.getEuler()
         self.camAngle = [self.camAngle[0] + (cords.dx * sensitivity), self.camAngle[1] - (cords.dy * sensitivity), 0]  # update the facing angle based on CHANGE in mouse position
@@ -74,7 +72,7 @@ class Main:
     def updateHandPos(self):
         vizact.onwheelup(self.addHand)  # make the hand go further away if scrolling up
         vizact.onwheeldown(self.subHand)  # make the hand come closer if scrolling down
-        # TODO: check out the link here to see the spherical coordinate geometry maths for updating the hand's position in the code below:
+        # check fig. 1 see the spherical coordinate geometry maths for updating the hand's position in the code below
         self.hand[0].cords[0] = self.camCords[0] + self.handDepth * math.sin(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
         self.hand[0].cords[1] = self.camCords[1] - self.handDepth * math.sin(math.radians(self.camAngle[1]))
         self.hand[0].cords[2] = self.camCords[2] + self.handDepth * math.cos(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
@@ -91,20 +89,21 @@ class Main:
         :param sinCos: used to handle exceptions in which there is left/right movement AND forward/back movement (sin), or left/right movement and NO forward/back movement (cos).
 
         left/right movement is taken into account by reversing the trig functions and making their angle coefficients negative, since left/right is perpendicular to forward/back.
-        velocity about the X/Z-axis is halved when moving diagonally to maintain a constant speed about the X and Z axes.
+        velocity about the X/Z-axis is multiplied by sqrt(2) when moving diagonally to maintain a constant speed about the X and Z axes.
         45 is used in 'sin' since 45 degrees is diagonal to 0 degrees, allowing for accurate diagonal movements while maintaining a constant speed about X and Z.
             diagonal movement happens when W/S AND A/D are pressed.
-        Y-velocity is independent of x and z velocity, so Y-velocity should always return itself.
-        check out this link for the mathematical proof:
+        Y-velocity is independent of x and z velocity, so Y-velocity always returns itself.
+        check out this link for the mathematical proof: https://drive.google.com/file/d/1y_UX1Otwlxe1toA1COCcLJ8Q-jlt4qe9/view?usp=sharing
         """
         if sinCos == 'sin':
-            return [self.camSpeed * forwardBackward * math.sin(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward), self.camVelocity[1], self.camSpeed * forwardBackward * math.cos(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward)]
+            return [self.camSpeed * forwardBackward * math.sin(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward), self.camVelocity[1],
+                    self.camSpeed * forwardBackward * math.cos(math.radians(self.camAngle[0]) + 45 * leftRight * forwardBackward)]
         elif sinCos == 'cos':
             return [self.camSpeed * forwardBackward * math.cos(-math.radians(self.camAngle[0])), self.camVelocity[1], self.camSpeed * leftRight * math.sin(-math.radians(self.camAngle[0]))]
 
     def moveCam(self):
         """
-        forward & backward/left & right/up & down movements are summed, cancelling each other out when both are pressed at the same time to result in no movement.
+        forward & backward, left & right, and up & down movements are summed, cancelling each other out when both are pressed at the same time to result in no movement
         """
         # forward & backward
         if viz.key.isDown('w'):
@@ -143,11 +142,7 @@ class Main:
             self.camSpeed = minCamSpeed
 
         # change movement based on facing angle
-        if viz.key.isDown('w'):
-            self.camVelocity = self.getCamVelocity(f + b, l + r, 'sin')
-            if viz.key.isDown('s'):
-                self.camVelocity = self.getCamVelocity(l + r, f + b, 'cos')
-        elif viz.key.isDown('s'):
+        if viz.key.isDown('w') or viz.key.isDown('s'):
             self.camVelocity = self.getCamVelocity(f + b, l + r, 'sin')
         elif viz.key.isDown('a') or viz.key.isDown('d'):
             self.camVelocity = self.getCamVelocity(l + r, l + r, 'cos')

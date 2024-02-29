@@ -1,8 +1,8 @@
 ---Introduction
-To navigate through these tutorials, press the arrows on my sides! (Press either trigger to do select.) Or, press the left/right arrow keys if you're on keyboard/mouse. To move around, press WASD or tilt the joysticks if you're in VR.
+To navigate through these tutorials, press ' ###select ' to select the arrows on my sides! (Or, press the left/right arrow keys if you're on keyboard/mouse.) To move around, press/tilt ' ###movement '.
 Welcome to Faiz's Mod, a Physics Sandbox in which you are a God who controls all!
 Since you are a God, you can do stuff a God would. The point(s) you see in front of you resonate with the spirits of angels, allowing you to interact with objects regardless of their size and mass. Check out the other guides to learn how to play! (Or don't. If you don't like reading, check out my video introduction!)
-To see the controls, press ' ###GUISelector ' and navigate to tutorials! But first, press the 'X' on any GUI or tutorial to close it. Now try closing me!
+To see the controls, press ' ###GUISelector ' and navigate to tutorials! But first, press the "X" on any GUI or tutorial to close it. Now, try closing this GUI!
 ---ControlsnewLine(Keyboard/Mouse)
 Press ' W/A/S/D ' to move around and move the mouse to look around.
 Left-click to select points while God's Hand intersects with a point. Keep left-click held to drag them around, and release left-click to throw them!
@@ -16,7 +16,7 @@ All GUIs can have their values reset by pressing ' ###reset ' once. By pressing 
 ---GUI Guide
 Press ' ###GUISelector ' to summon the GUI selector, where you'll be able to modify the physical quantities governing your world. ONLY IN SANDBOX: Reversed gravity? Maybe sideways? Super-stiff joints? Super-slow time? It's all yours to control.
 Once in the GUI selector, select a GUI by pressing ' ###select ' while a God's Hand is inside one of the boxes. Selecting "Slider" will allow you to modify the selected value via an interactive slider.
-This may summon another set of boxes, depending on the value selected. For example, since Gravity is directional, selecting boxes containing X, Y, and/or Z will change both its direction and size based on what was selected. If the quantity is not directional (like stiffness), then selecting these values will only affect the visual appearance of the GUI.
+This may summon another set of boxes, depending on the value selected. For example, since Gravity is directional, selecting boxes containing X, Y, and/or Z will change both its direction and size based on what was selected. If the quantity is not directional (like stiffness), then its axis selection won't be available.
 All GUIs can have their values reset by pressing ' ###reset ' once. By pressing ' ###reset ' twice in quick succession, their values will be set to their global default.
 All GUIs have an "X" button to dismiss that GUI. Manual input GUIs on keyboard/mouse can be dismissed by selecting them and pressing ' enter '.
 Tip: using your infinite strength, you can double-click ' ###select ' to change the radii and densities of individual points. ONLY IN SPRITECREATOR: The same can be done for boxes, to change their size and angle!
