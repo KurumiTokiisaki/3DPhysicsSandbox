@@ -222,14 +222,20 @@ def camAnglePos(camCords, pCords, disp):
     return facingAngle, pos
 
 
-def buttonPressed(button, *args):  # gets the button currently being pressed
+# gets the button currently being pressed
+def buttonPressed(button, *args):
+    """
+    :param button: name of the button in question
+    :param args: only used if in VR, since there are 2
+    :return: boolean value for if the button 'button' is being pressed
+    """
     if mode == 'k':
         if button == 'select':
             return viz.mouse.getState() == controls[button]
         else:
             return viz.key.isDown(controls[button])
     elif mode == 'vr':
-        return (args[0].getButtonState() % touchpad) == controls[button][args[1]]  # this value is modulo in case the sensitive controllers detect that the touchpad is being tapped
+        return (args[0].getButtonState() % touchpad) == controls[button][args[1]]  # there is a modulo here in case the sensitive controllers detect that the touchpad is being tapped
 
 
 def checkInList(arr, value):

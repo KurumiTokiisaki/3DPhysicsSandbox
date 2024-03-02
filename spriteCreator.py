@@ -47,8 +47,9 @@ controls = controlsConf.Main()
 
 viz.vsync(0)  # disable vsync (cuz it decreases max calcs/second)
 
-
-# mode = 'vr'  # uncomment for testing VR settings on keyboard/mouse
+# 'l/rControllerObj' are constants used for interacting with GUIs by passing these into classes in myGUI whenever GUIs are summoned
+lControllerObj = [controlsConf.controllers[0], controls.hand[0]]
+rControllerObj = [controlsConf.controllers[1], controls.hand[1]]
 
 
 def selectP(cIdx):
@@ -74,11 +75,15 @@ def getXCollisionPlane(b, cords):
 
 
 def getCubeCollision(cords, radius, b, yCollisionPlane):
-    return (cords[1] <= (collisionTolerance + yCollisionPlane['top']['y'] + radius / cos(b.angle[2]))) and (
-                cords[1] >= (-collisionTolerance + yCollisionPlane['bottom']['y'] - radius / cos(b.angle[2]))) and (
-                cords[1] <= (collisionTolerance + yCollisionPlane['right']['y'] + radius / sin(b.angle[2]))) and (
-            cords[1] >= (-collisionTolerance + yCollisionPlane['left']['y'] - radius / sin(b.angle[2]))) and (cords[2] <= (collisionTolerance + b.plane['front'] + radius)) and (
-                cords[2] >= (-collisionTolerance + b.plane['back'] - radius))
+    return (cords[1] <= (collisionTolerance + yCollisionPlane['top']['y'] + radius / cos(b.angle[2]))) and (cords[1] >= (-collisionTolerance + yCollisionPlane['bottom']['y'] - radius / cos(b.angle[2]))) and (cords[1] <= (collisionTolerance + yCollisionPlane['right']['y'] + radius / sin(b.angle[2]))) and (
+            cords[1] >= (-collisionTolerance + yCollisionPlane['left']['y'] - radius / sin(b.angle[2]))) and (cords[2] <= (collisionTolerance + b.plane['front'] + radius)) and (cords[2] >= (-collisionTolerance + b.plane['back'] - radius))
+
+
+def getSliderManual(xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text):
+    if mode == 'vr':
+        return myGUI.Slider(xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text, lControllerObj, rControllerObj)
+    elif mode == 'k':
+        return myGUI.Manual(xyz, referenceVar, globalDefaultVar, cords, text, lControllerObj, rControllerObj)
 
 
 class Main:
@@ -179,8 +184,7 @@ class Main:
             self.__GUI['Tutorials'][''].update({tNames[t]: None})  # update local value of tutorials in self.GUI
         f.close()
         if not imports:
-            self.__GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.__tutorialTexts['Introduction'], [], 0.3, [controlsConf.controllers[0], controls.hand[0]],
-                                                                         [controlsConf.controllers[1], controls.hand[1]])
+            self.__GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.__tutorialTexts['Introduction'], [], 0.3, lControllerObj, rControllerObj)
 
     def __getButtonReleased(self, cIdx):
         for b in self.__buttonHeld:
@@ -190,9 +194,7 @@ class Main:
     def addCollisionRect(self, cRect):
         self.collisionRect.append(cRect)
         # set all collisionRect keys to their index positions, so they can easily be referenced
-        self.__GUI.update({len(self.collisionRect) - 1: {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None, 'density': None, 'angle': None, 'viscosity': None},
-                                                         'slider': {0: None, 1: None, 2: None, 'density': None, 'angle': None, 'viscosity': None},
-                                                         'manual': {0: None, 1: None, 2: None, 'density': None, 'angle': None, 'viscosity': None}}})
+        self.__GUI.update({len(self.collisionRect) - 1: {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None, 'density': None, 'angle': None, 'viscosity': None}, 'slider': {0: None, 1: None, 2: None, 'density': None, 'angle': None, 'viscosity': None}, 'manual': {0: None, 1: None, 2: None, 'density': None, 'angle': None, 'viscosity': None}}})
 
     def addPoint(self, cords, radius, *cIdx):
         self.points.append(Point(cords, radius))
@@ -212,8 +214,7 @@ class Main:
             if (not self.__buttonHeld['GUISelector'][c]) and buttonPressed('GUISelector', controlsConf.controllers[c], c):
                 self.__buttonHeld['GUISelector'][c] = True
                 if self.__GUI['GUISelector']['']['main'] is None:
-                    self.__GUI['GUISelector']['']['main'] = myGUI.GUISelector(spriteCreatorVars, controls.hand[c].cords, [controlsConf.controllers[0], controls.hand[0]],
-                                                                              [controlsConf.controllers[1], controls.hand[1]])
+                    self.__GUI['GUISelector']['']['main'] = myGUI.GUISelector(spriteCreatorVars, controls.hand[c].cords, lControllerObj, rControllerObj)
                 else:
                     self.__GUI['GUISelector']['']['main'].drawn = False
                     self.__GUI['GUISelector']['']['main'].unDraw()
@@ -248,8 +249,7 @@ class Main:
                                 self.__buttonHeld['select'][c] = True
                                 for axis in range(3):
                                     self.__relPos[c][axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
-                                if self.__clickTime[
-                                    c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the density and radius of the double-clicked point
+                                if self.__clickTime[c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the density and radius of the double-clicked point
                                     self.__setRadiusDensityGUI(controls.hand[c].cords, p)
                                 else:
                                     self.__clickTime[c] = 0  # reset the time since last click, since this click IS the last click!
@@ -301,10 +301,7 @@ class Main:
                                 if self.__clickTime[
                                     c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the size and density of the double-clicked collision rect
                                     if self.__GUI['GUISelector']['']['pointRect'] is None:
-                                        self.__GUI['GUISelector']['']['pointRect'] = myGUI.GUISelector({'Size': None, 'Solid/\nLiquid': None},
-                                                                                                       [controls.hand[c].cords[0], controls.hand[c].cords[1] - 1, controls.hand[c].cords[2]],
-                                                                                                       [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]],
-                                                                                                       cr)
+                                        self.__GUI['GUISelector']['']['pointRect'] = myGUI.GUISelector({'Size': None, 'Solid/\nLiquid': None}, [controls.hand[c].cords[0], controls.hand[c].cords[1] - 1, controls.hand[c].cords[2]], lControllerObj, rControllerObj, cr)
                                     else:
                                         self.__GUI['GUISelector']['']['pointRect'].drawn = False
                                         self.__GUI['GUISelector']['']['pointRect'].unDraw()
@@ -340,32 +337,22 @@ class Main:
 
     def __setRadiusDensityGUI(self, cords, p):
         if self.__GUI[p + 1000]['slider']['radius'] is None:  # only summon if GUI is empty
-            if mode == 'vr':
-                self.__GUI[p + 1000]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, maxRadius, minRadius,
-                                                                        'Radius', [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
-            else:
-                self.__GUI[p + 1000]['slider']['radius'] = myGUI.Manual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 'Radius',
-                                                                        [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+            self.__GUI[p + 1000]['slider']['radius'] = getSliderManual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, maxRadius, minRadius, 'Radius')
         else:
             self.__GUI[p + 1000]['slider']['radius'].unDraw()
             self.__GUI[p + 1000]['slider']['radius'] = None
         if self.__GUI[p + 1000]['slider']['density'] is None:  # only summon if GUI is empty
+            self.__GUI[p + 1000]['slider']['density'] = getSliderManual(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, maxDensity, minDensity, 'Density')
             if mode == 'vr':
-                self.__GUI[p + 1000]['slider']['density'] = myGUI.Slider(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density',
-                                                                         [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
                 self.__GUI[p + 1000]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
-                self.__GUI[p + 1000]['slider']['density'].closeButton.cords[1] = cords[
-                                                                                     1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
-            else:
-                self.__GUI[p + 1000]['slider']['density'] = myGUI.Manual(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 'Density',
-                                                                         [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                self.__GUI[p + 1000]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
         else:
             self.__GUI[p + 1000]['slider']['density'].unDraw()
             self.__GUI[p + 1000]['slider']['density'] = None
 
     def __selectPointAnime(self, c):
         # unique animation for selecting points
-        if self.collP[c] is not None:  # only run animations if a point is intersecting with a controller
+        if self.collP[c] is not None:  # only run animations if a point is intersecting with a hand
             if self.dragP[c] is not None:  # only run the below if a point is being dragged
                 controls.anim[c].point = self.points[self.collP[c]]  # make the selection animation encapsulate the point
                 if self.__animeScale[c] > (self.points[self.collP[c]].radius / controls.anim[c].sphereRad):  # set the maximum size of the animation equal to the size of the selected point
@@ -382,22 +369,21 @@ class Main:
                 controls.anim[c].setScale(self.__animeScale[c])
                 controls.anim[c].setColor(self.__animeColor[c])
             elif not detectCollision(self.points[self.collP[c]].radius, controls.hand[c].radius, self.points[self.collP[c]].cords, controls.hand[c].cords):
-                controls.anim[c].point = controls.hand[c]
-                controls.anim[c].setScale(1)
-                self.collP[c] = None
-                controls.anim[c].pause = False
+                self.collP[c] = None  # the final else statement takes care of the rest
             else:
                 controls.anim[c].point = self.points[self.collP[c]]
                 self.__animeScale[c] = 1.2 * self.points[self.collP[c]].radius / controls.anim[c].sphereRad
                 self.__animeScaleSpeed = 0
-                controls.anim[c].setScale(self.__animeScale[c])
                 self.__animeColor[c] = [1, 0, 0]
-                controls.anim[c].setColor([1, 0, 0])
+                controls.anim[c].setScale(self.__animeScale[c])
+                controls.anim[c].setColor(self.__animeColor[c])
                 controls.anim[c].pause = False
-        else:  # return the animation to the controller
+        else:  # return the animation to the hand. this is a must since points can be deleted.
+            controls.anim[c].point = controls.hand[c]
             controls.anim[c].resetColor()
             controls.anim[c].resetScale()
-            controls.anim[c].point = controls.hand[c]
+            self.collP[c] = None
+            controls.anim[c].pause = False
 
     def removeConnectedJoints(self, pIdx):
         for j in self.joints:
@@ -452,7 +438,7 @@ class Main:
                     self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]].unDraw()
                     self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]] = None
                 self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [10, 0.2], self.__tutorialTexts[self.__GUIType[1][0]], [], 0.3,
-                                                                                         [controlsConf.controllers[0], controls.hand[0]], [controlsConf.controllers[1], controls.hand[1]])
+                                                                                         lControllerObj, rControllerObj)
             elif self.__GUIType[0] == 'Save & Exit':
                 self.__export()
             elif self.__GUIType[0] == 'Solid/\nLiquid':
@@ -470,17 +456,17 @@ class Main:
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].density, 1000,
                                                                                                              [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 1,
                                                                                                               controls.hand[0].cords[2]], 5, 50000, 10, 'Density',
-                                                                                                             [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                             [controlsConf.controllers[1], controls.hand[1]])
+                                                                                                             lControllerObj,
+                                                                                                             rControllerObj)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].angle[2], 0.001,
                                                                                                            [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 2, controls.hand[0].cords[2]],
-                                                                                                           5, 89.99999, 0.001, 'Angle', [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                           [controlsConf.controllers[1], controls.hand[1]])
+                                                                                                           5, 89.99999, 0.001, 'Angle', lControllerObj,
+                                                                                                           rControllerObj)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].viscosity, 1,
                                                                                                                [controls.hand[0].cords[0] + 2.5, controls.hand[0].cords[1] - 3,
                                                                                                                 controls.hand[0].cords[2]], 5, 20, 0, 'Viscosity',
-                                                                                                               [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                               [controlsConf.controllers[1], controls.hand[1]])
+                                                                                                               lControllerObj,
+                                                                                                               rControllerObj)
                     closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'].closeButton.cords
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'].closeButton.setPos(closeButtonCords, True)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'].closeButton.setPos(closeButtonCords, True)
@@ -495,8 +481,8 @@ class Main:
                         cords = copy.deepcopy(controls.hand[0].cords)
                         cords[axis] += 0.5 + size / 2
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis] = myGUI.Slider(axis, self.collisionRect[self.__GUIType[3][0]].size, [1, 1, 1], cords, size, 100, 0.1,
-                                                                                                            f'Size {axis}', [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                            [controlsConf.controllers[1], controls.hand[1]])
+                                                                                                            f'Size {axis}', lControllerObj,
+                                                                                                            rControllerObj)
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis].closeButton.setPos(closeButtonCords, True)
                 elif self.__GUIType[1][0] == 'Manual':
                     for axis in range(3):
@@ -516,25 +502,25 @@ class Main:
                             yDisp = -0.5
                             xDisp = 0.5
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis] = myGUI.Manual(axis, self.collisionRect[self.__GUIType[3][0]].size, [1, 1, 1], cords, f'Size {axis}',
-                                                                                                            [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                            [controlsConf.controllers[1], controls.hand[1]], False)
+                                                                                                            lControllerObj,
+                                                                                                            rControllerObj, False)
                         if mode == 'vr':
                             closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][0].closeButton.cords
                             if axis != 0:  # don't prevent the only closeButton remaining from being removed!
                                 self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][axis].closeButton.setPos(closeButtonCords, True)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'] = myGUI.Manual(0, self.collisionRect[self.__GUIType[3][0]].density, 1000,
                                                                                                              [controls.hand[0].cords[0], controls.hand[0].cords[1] + yDisp, controls.hand[0].cords[2]],
-                                                                                                             'Density', [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                             [controlsConf.controllers[1], controls.hand[1]], False)
+                                                                                                             'Density', lControllerObj,
+                                                                                                             rControllerObj, False)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'] = myGUI.Manual(0, self.collisionRect[self.__GUIType[3][0]].angle[2], 0.001,
                                                                                                            [controls.hand[0].cords[0] + xDisp, controls.hand[0].cords[1] + yDisp,
-                                                                                                            controls.hand[0].cords[2]], 'Angle', [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                           [controlsConf.controllers[1], controls.hand[1]], False)
+                                                                                                            controls.hand[0].cords[2]], 'Angle', lControllerObj,
+                                                                                                           rControllerObj, False)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'] = myGUI.Manual(0, self.collisionRect[self.__GUIType[3][0]].viscosity, 1,
                                                                                                                [controls.hand[0].cords[0] + xDisp * 2, controls.hand[0].cords[1] + yDisp,
                                                                                                                 controls.hand[0].cords[2]], 'Viscosity',
-                                                                                                               [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                               [controlsConf.controllers[1], controls.hand[1]], False)
+                                                                                                               lControllerObj,
+                                                                                                               rControllerObj, False)
 
                     if mode == 'vr':
                         for g in resetDicts:
@@ -549,33 +535,33 @@ class Main:
                     cRad = 10
                     if self.__GUIType[1][1] == '3D':
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['3D'] = myGUI.Dial(0, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords,
-                                                                                                          cRad, [20, 20, 20], [-20, -20, -20], 'XYZ', [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                          [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
+                                                                                                          cRad, [20, 20, 20], [-20, -20, -20], 'XYZ', lControllerObj,
+                                                                                                          rControllerObj, varOffset[0], varOffset[1], varOffset[2])
                         closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['3D'].closeButton.cords
                     else:
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XY'] = myGUI.Dial(1, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords,
-                                                                                                          cRad, [20, 20], [-20, -20], 'XY', [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                          [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
+                                                                                                          cRad, [20, 20], [-20, -20], 'XY', lControllerObj,
+                                                                                                          rControllerObj, varOffset[0], varOffset[1], varOffset[2])
                         closeButtonCords = self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XY'].closeButton.cords
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XZ'] = myGUI.Dial(0, self.collisionRect[self.__GUIType[3][0]].size, [-11, -11, -11], controls.hand[0].cords,
-                                                                                                          cRad, [20, 20], [-20, -20], 'XZ', [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                          [controlsConf.controllers[1], controls.hand[1]], varOffset[0], varOffset[1], varOffset[2])
+                                                                                                          cRad, [20, 20], [-20, -20], 'XZ', lControllerObj,
+                                                                                                          rControllerObj, varOffset[0], varOffset[1], varOffset[2])
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['XZ'].closeButton.setPos(closeButtonCords, True)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['density'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].density, 1000,
                                                                                                              [controls.hand[0].cords[0], controls.hand[0].cords[1] + 1,
                                                                                                               controls.hand[0].cords[2] - cRad - 0.2], 5, 50000, 10, 'Density',
-                                                                                                             [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                             [controlsConf.controllers[1], controls.hand[1]])
+                                                                                                             lControllerObj,
+                                                                                                             rControllerObj)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['angle'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].angle[2], 0.001,
                                                                                                            [controls.hand[0].cords[0], controls.hand[0].cords[1],
                                                                                                             controls.hand[0].cords[2] - cRad - 0.2], 5, 89.99999, 0.001, 'Angle',
-                                                                                                           [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                           [controlsConf.controllers[1], controls.hand[1]])
+                                                                                                           lControllerObj,
+                                                                                                           rControllerObj)
                     self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()]['viscosity'] = myGUI.Slider(0, self.collisionRect[self.__GUIType[3][0]].viscosity, 1,
                                                                                                                [controls.hand[0].cords[0], controls.hand[0].cords[1] - 1,
                                                                                                                 controls.hand[0].cords[2] - cRad - 0.2], 5, 20, 0, 'Viscosity',
-                                                                                                               [controlsConf.controllers[0], controls.hand[0]],
-                                                                                                               [controlsConf.controllers[1], controls.hand[1]])
+                                                                                                               lControllerObj,
+                                                                                                               rControllerObj)
                     for g in resetDicts:
                         self.__GUI[self.__GUIType[3][0]][self.__GUIType[1][0].lower()][g].closeButton.setPos(closeButtonCords, True)
 

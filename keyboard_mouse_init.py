@@ -20,8 +20,8 @@ maxCamSpeed = minCamSpeed * 2
 scrollSpeed = 0.01 / renderRate
 # hide the cursor
 viz.mouse.setCursor(0)
-controllers = [None, None]  # 2nd value here will always be None
-controllerAmt = 1  # set this to 1 since there's only 1 mouse!
+controllers = [None, None]  # all values here for keyboard/mouse will always be None
+controllerAmt = 1  # set this to 1 since there's only 1 controller, which is the mouse!
 
 
 # main class for keyboard & mouse

@@ -50,7 +50,15 @@ def selectP(cIdx):
     return buttonPressed('select', controlsConf.controllers[cIdx], cIdx)
 
 
-# Main class for main.py
+# this method is used to generalize slider/manual inputs with similar parameters
+def getSliderManual(xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text):
+    if mode == 'vr':
+        return myGUI.Slider(xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text, lControllerObj, rControllerObj)
+    elif mode == 'k':
+        return myGUI.Manual(xyz, referenceVar, globalDefaultVar, cords, text, lControllerObj, rControllerObj)
+
+
+# Main class for sandbox.py
 class Main:
     def __init__(self):
         self.pause = False  # stores if physics should be paused (all points have 0 velocity if True)
@@ -172,14 +180,13 @@ class Main:
         'p' and 'po' are indexes in the point list.
         the point at index 'p' will always be the one to have a cloth before any point at index 'po', so that its cloth value can spread to all other points in the same sprite. this logic is made possible by point 2 below.
         if statement analysis:
-            1. 'p != po': the current point isn't referring to itself.
-            2. 'po > p': don't compare points that have already been looped through (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not).
+            1. 'po > p': don't compare points that have already been looped through (e.g. [1, 5] and [5, 0] are unique, but [1, 5] and [5, 1] are not). also the current point won't ever be referring to itself.
                 this reduces the time complexity of the nested for loop from O(n²) to O(n² / 2), since 'p' can never be larger than 'po'.
-            3. '((jDat[0] == p) and (jDat[1] == po)) or ((jDat[1] == p) and (jDat[0] == po))': both point's indexes are equal to the point indexes of the joint, regardless of their order.
+            2. '((jDat[0] == p) and (jDat[1] == po)) or ((jDat[1] == p) and (jDat[0] == po))': both point's indexes are equal to the point indexes of the joint, regardless of their order.
         """
         for p in range(len(self.points)):
             for po in range(len(self.points)):
-                if (p != po) and (po > p) and (((jDat[0] == p) and (jDat[1] == po)) or ((jDat[1] == p) and (jDat[0] == po))):
+                if (po > p) and (((jDat[0] == p) and (jDat[1] == po)) or ((jDat[1] == p) and (jDat[0] == po))):
                     # if the point hasn't been assigned a cloth, make a new cloth with a unique key len(joints)
                     # len(joints) will always be unique since a new joint is appended to the joints list each time this method runs
                     if self.points[p].cloth == '':
@@ -360,7 +367,7 @@ class Main:
         """
         # detect & resolve collisions with all points
         for po in range(len(self.points)):
-            if (po > p) and (p != po) and (self.points[p].disabledPointCollisions[0] != po) and (self.points[po].disabledPointCollisions[0] != p):
+            if (po > p) and (self.points[p].disabledPointCollisions[0] != po) and (self.points[po].disabledPointCollisions[0] != p):
                 sumR = self.points[p].radius + self.points[po].radius
                 # detect collisions utilizing the cached values of dist
                 if self.diff[p][po] <= sumR:
@@ -393,9 +400,6 @@ class Main:
     def __getButtonReleased(self, cIdx):
         """
         :param cIdx: controller index value
-
-        this method is used to allow for single-click detection by setting buttonHeld to false if the button specified by 'config.controls' isn't being held.
-        when the button held is set to True, its code (the code that runs when said button is pressed) will not be able to run until it becomes False again, which only happens when it's released.
         """
         for b in self.__buttonHeld:
             if not buttonPressed(b, controlsConf.controllers[cIdx], cIdx):
@@ -411,14 +415,14 @@ class Main:
             else:
                 removeGUI(self.__GUI['GUISelector'][''][''])
 
-    # pause the physics if the 'pause' button is pressed
+    # pause all point and joint physics if the 'pause' button is pressed
     def __pauseGame(self, cIdx):
         if (not self.__buttonHeld['pause'][cIdx]) and buttonPressed('pause', controlsConf.controllers[cIdx], cIdx):
             self.__buttonHeld['pause'][cIdx] = True
             self.pause = not self.pause  # reciprocate between True and False
 
     def render(self):
-        self.__updateGUI()  # update all GUIs
+        self.__updateGUI()  # update all GUIs and their variables
         controls.main()  # runs the main function in the current control (keyboard/VR) setting
         for p in self.points:
             p.draw()
@@ -430,10 +434,9 @@ class Main:
                     if self.__GUI[g][gu][gui] is not None:
                         self.__GUI[g][gu][gui].draw(controls.camCords)
 
-    # used to drag points around using pointer/controller
+    # used to drag a point around using a hand, as well as running the animations for doing so
     def __dragPoint(self):
         """
-        this method is used to drag points around using a hand, as well as running the animations for doing so.
         process:
             1. loop through all controllers.
             2. detect for GUI interactions with the current hand.
@@ -467,8 +470,7 @@ class Main:
                             self.__buttonHeld['select'][c] = True
                             for axis in range(3):
                                 self.__relPos[c][axis] = self.points[p].cords[axis] - controls.hand[c].cords[axis]
-                            if self.__clickTime[
-                                c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the density and radius of the double-clicked point
+                            if self.__clickTime[c] < 0.25:  # if there's a double click, summon sliders (if in VR) or manual inputs (if in keyboard/mouse) to change the density and radius of the double-clicked point
                                 self.__setRadiusDensityGUI(controls.hand[c].cords, p)
                             else:
                                 self.__clickTime[c] = 0  # reset the time since last click, since this click IS the last click!
@@ -483,10 +485,10 @@ class Main:
 
             """
             8. if the controller is selecting a point, set its cords to the hand's cords, factoring in the relative position of selection to the hand.
-            9. run point selection animations.
+            9. run point selection animations for the selected point.
             10. if a point is no longer being selected, reset dragP for the current hand to indicate its deselection.
-            11. if the "recall" button is pressed/held, bring the last selected point (for that hand) (along with all other points in the same cloth) to the current hand's position.
-                teleport happens 1 frame after selection. classical movement happens from frame 2 onwards to allow Verlet integration to work.
+            11. if the "recall" button is pressed/held, bring the last selected point (along with all other points in the same cloth) to the current hand's position.
+                teleport for all points in the cloth happens 1 frame after selection. classical movement continues from frame 2 onwards to allow physics to apply to all other points in the cloth.
             """
             if self.__dragP[c] is not None:
                 # set the dragging point's position to the controller that's dragging said point
@@ -506,24 +508,15 @@ class Main:
 
     def __setRadiusDensityGUI(self, cords, p):
         if self.__GUI[p]['slider']['radius'] is None:  # only summon if GUI is empty
-            if mode == 'vr':
-                self.__GUI[p]['slider']['radius'] = myGUI.Slider(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, 0.1, maxRadius, minRadius, 'Radius',
-                                                                 lControllerObj, rControllerObj)
-            elif mode == 'k':
-                self.__GUI[p]['slider']['radius'] = myGUI.Manual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 'Radius', lControllerObj, rControllerObj)
+            self.__GUI[p]['slider']['radius'] = getSliderManual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, maxRadius, minRadius, 'Radius')
         else:
             self.__GUI[p]['slider']['radius'].unDraw()
             self.__GUI[p]['slider']['radius'] = None
         if self.__GUI[p]['slider']['density'] is None:  # only summon if GUI is empty
+            self.__GUI[p]['slider']['density'] = getSliderManual(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, maxDensity, minDensity, 'Density')
             if mode == 'vr':
-                self.__GUI[p]['slider']['density'] = myGUI.Slider(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 10, 0.1, 10000, 1, 'Density',
-                                                                  lControllerObj, rControllerObj)
-                self.__GUI[p]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are two Xs within each other
-                self.__GUI[p]['slider']['density'].closeButton.cords[1] = cords[
-                                                                              1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
-            elif mode == 'k':
-                self.__GUI[p]['slider']['density'] = myGUI.Manual(0, self.points[p].density, self.points[p].origDensity, [cords[0], cords[1] - 0.5, cords[2]], 'Density', lControllerObj,
-                                                                  rControllerObj)
+                self.__GUI[p]['slider']['density'].closeButton.cords[1] = cords[1] + 1  # offset this 'X' to be within the other 'X' so that they both act as one button to dismiss both radius and density GUIs simultaneously
+                self.__GUI[p]['slider']['density'].closeButton.unDraw()  # only one 'X' needs to be rendered, since there are now two Xs within each other
         else:
             self.__GUI[p]['slider']['density'].unDraw()
             self.__GUI[p]['slider']['density'] = None
@@ -531,15 +524,14 @@ class Main:
     # animates selecting points depending on if it's being hovered over or selected
     def __selectPointAnime(self, c):
         # unique animation for selecting points: https://drive.google.com/file/d/1KWI48WwJub0FmlYfQJStTQ83OMEIPDVs/view?usp=drive_link
-        if self.__collP[c] is not None:  # only run animations if a point is intersecting with a controller
+        if self.__collP[c] is not None:  # only run animations if a point is intersecting with a hand
             if self.__dragP[c] is not None:  # if the point is being selected, run the selection animation
                 controls.anim[c].point = self.points[self.__collP[c]]  # make the selection animation encapsulate the point
                 if self.__animeScale[c] > (self.points[self.__collP[c]].radius / controls.anim[c].sphereRad):
                     self.__animeScaleSpeed -= 0.1 / physicsTime
                     self.__animeScale[c] += self.__animeScaleSpeed  # accelerate the animation as it wraps around the point
-                    f = 6 / (renderRate * math.sqrt(
-                        self.points[self.__collP[c]].radius * 10))  # approximate function for changing color with time based on radius: f(x) = 6 / (frequency * sqrt(radius * 10))
-                    # green-shift the animation to make it feel like the point is being selected
+                    f = 6 / (renderRate * math.sqrt(self.points[self.__collP[c]].radius * 10))  # approximate function for changing color with time based on radius: f(x) = 6 / (frequency * sqrt(radius * 10))
+                    # green-shift the animation to give the user the impression that they're gripping the point
                     self.__animeColor[c][0] -= f
                     self.__animeColor[c][1] += f
                 else:
@@ -547,38 +539,38 @@ class Main:
                     controls.anim[c].pause = True
                 controls.anim[c].setScale(self.__animeScale[c])
                 controls.anim[c].setColor(self.__animeColor[c])
-            elif not detectCollision(self.points[self.__collP[c]].radius, controls.hand[c].radius, self.points[self.__collP[c]].cords,
-                                     controls.hand[c].cords):  # if the controller is not hovering over a point, return the animation to the controller
+
+            # if the controller is not hovering over a point, return the animation to the controller
+            elif not detectCollision(self.points[self.__collP[c]].radius, controls.hand[c].radius, self.points[self.__collP[c]].cords, controls.hand[c].cords):
                 controls.anim[c].point = controls.hand[c]
-                controls.anim[c].setScale(1)
+                controls.anim[c].resetScale()
+                controls.anim[c].resetColor()
                 self.__collP[c] = None
                 controls.anim[c].pause = False
-            else:  # if the controller is hovering over a point, run the hovering animation
+            else:  # if the hand is hovering over a point, run the hovering animation
                 controls.anim[c].point = self.points[self.__collP[c]]
-                self.__animeScale[c] = 1.2 * self.points[self.__collP[c]].radius / controls.anim[
-                    c].sphereRad  # makes the size of the animation 20% larger than the size of the point, taking into accrIdx that it's been scaled down to match the size of the controller
+                self.__animeScale[c] = 1.2 * self.points[self.__collP[c]].radius / controls.anim[c].sphereRad  # makes the size of the animation 20% larger than the size of the point, taking into account that the animation’s scale is a ratio of its initial size (size of the hand’s point) to its new size
                 self.__animeScaleSpeed = 0
-                controls.anim[c].setScale(self.__animeScale[c])
                 self.__animeColor[c] = [1, 0, 0]  # make the animation red
-                controls.anim[c].setColor([1, 0, 0])
+                controls.anim[c].setScale(self.__animeScale[c])
+                controls.anim[c].setColor(self.__animeColor[c])  # make the animation red
                 controls.anim[c].pause = False
-        else:  # return the animation to the controller
-            controls.anim[c].resetColor()
-            controls.anim[c].resetScale()
-            controls.anim[c].point = controls.hand[c]
 
-    # get the distance between each point
+    # calculate and cache the distance between every point to every other point
     def __getDist(self):
         for p in range(len(self.points)):
             for po in range(len(self.points)):
                 sumR = self.points[p].radius + self.points[po].radius
                 disp = displacement(self.points[p].cords, self.points[po].cords)
                 # don't detect for collisions if any diff value is greater than the sum of both points' radii. also don't get distance between 2 points if you already have it! this is a performance optimization that essentially halves the time complexity of this function, which is O(n²).
-                if (((disp[0] <= sumR) or (disp[1] <= sumR) or (disp[2] <= sumR)) or (self.points[p].cloth != '') and (self.points[po].cloth != '')) and (p != po) and (po > p):
+                if (((disp[0] <= sumR) or (disp[1] <= sumR) or (disp[2] <= sumR)) or (self.points[p].cloth != '') and (self.points[po].cloth != '')) and (po > p):
                     self.diff[p][po] = diffDistance(disp[0], disp[1], disp[2])
 
-    # add a point to the points list
+    # add a point object to the points list
     def addPoint(self, point):
+        """
+        :param point: point object to add to the points list
+        """
         self.points.append(point)
         for p in range(len(self.points)):
             self.points[p].pIdx = p
@@ -596,15 +588,15 @@ class Main:
             1. loop through each GUI. if the GUI exists, continue.
             2. if the GUI is drawn, continue. otherwise, remove the GUI object from the 'GUI' dictionary.
             3. handle an exception in which the GUI selector is summoned, since it'll return the selected GUI by the user to the 'GUIType' variable.
-            4. if the 'gVar' isn't an integer (meaning it's not a point index), then its GUI's reference variable must map to a variable in the 'globalVars' dictionary. if so:
-                a) if long as the GUI isn't a tutorial, its set its reference variable to the variable it maps to and update the variable it maps to its reference variable.
+            4. if the 'gVar' isn't an integer (meaning it's not a point index), then that must mean that the GUI's reference variable maps to a variable in the 'globalVars' dictionary. if so:
+                a) as long as the GUI isn't a tutorial, set its reference variable to the variable it maps to and update the variable it maps to its reference variable.
                 b) otherwise, if the GUI is a tutorial, just run its main function to check if it's being dismissed by the user.
             5. otherwise, that must mean that the current GUI's reference variable maps to either the radius or density of a point.
-                the index position of this point in the points list is represented by 'gVar' if 'gVar' is an integer.
+                the index position of this point in the points list is represented by 'gVar' ONLY if 'gVar' is an integer.
 
         'setVar' is used to update the variable of this GUI if multiple GUIs are summoned that have a common variable.
             this allows for multiple GUIs to affect each other, which looks very cool!
-        one line after every 'setVar', the variable that the GUI changes is updated. the reason this is after 'setVar' is to prevent a recursive state in which the variable never changes.
+        one line after 'setVar' is called, the variable that the GUI changes is updated. the reason this is after 'setVar' is to prevent a recursive state in which the variable never changes.
         """
         for gVar in self.__GUI:
             for gType in self.__GUI[gVar]:
@@ -639,24 +631,25 @@ class Main:
         this method is used to summon a GUI if 'GUIType' isn't None, running through all the possible case scenarios and exceptions for different variables and GUI types.
         different case scenarios cause the data returned from 'GUIType' to vary. this method also runs through all these scenarios.
         all GUIs summoned first check to see if they have been summoned previously. if so, they are removed and re-summoned at the hand's position.
-        all GUI objects are provided with the objects of both controllers so that they can detect interactions between them ('lController' & 'rController').
+        all GUI objects are provided with the objects of both controllers so that they can detect interactions between them ('lController' & 'rController' constants).
 
         process:
-            1. if a cloth was selected from the GUI selector, summon it to the controller's position.
+            1. if a cloth was selected from the GUI selector, teleport it to the controller's position.
+                this is the only non-GUI option from the GUI selector.
             2. if a tutorial was selected from the GUI selector, summon the selected tutorial to the hand's position.
             3. if a variable was selected, check for its type:
                 a) if the selected GUI type is a slider:
                     1) pass in the necessary variables to initialize the slider.
-                b) if the selected GUI type is a dial (this option is only present if the reference variable is a vector):
-                    1) make a copy the dimension of the dial (2D/3D) and append it to the end of the 'GUIType' list.
-                        this is used generalize the dial's reference in the 'GUI' dictionary to indicate if the dial is 3D.
-                    2) if the dial is 2D, get the two axes on which the reference variable is to be changed mapping the axes selected to two indexes.
-                        indicate this by making the length of the 'maxi' and 'mini' values passed into the Dial class to 2.
-                    3) if the dial is 3D, all three axes will always being changed.
+                b) if the selected GUI type is a dial (user can only select this option if the reference variable is a vector quantity):
+                    1) append a copy of the dimension of the dial (2D/3D) to the end of the GUIType list.
+                        this is used to generalize the dial's reference in the 'GUI' dictionary to indicate if the dial is 3D.
+                    2) if the dial is 2D, get the two axes on which the reference variable is to be changed, mapping the axes selected to two indexes.
+                        indicate this by making the length of the 'maxi' and 'mini' lists passed into the Dial class to 2.
+                    3) if the dial is 3D, all three axes will always be changed.
                         indicate this by making the length of the 'maxi' and 'mini' values passed into the Dial class to 3.
                 c) if the selected GUI type is a manual input:
                     1) pass in the necessary variables to initialize the manual input.
-            4. after this, always reset the value of 'GUIType' to None so that only 1 GUI is summoned at a time.
+            4. after this, always reset the value of 'GUIType' to None so that only one GUI is summoned.
         """
         if self.__GUIType is not None:
             if self.__GUIType[0] == 'cloths':
@@ -665,9 +658,9 @@ class Main:
                 if self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]] is not None:
                     self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]].unDraw()
                     self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]] = None
-                self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [10, 0.2], self.__tutorialTexts[self.__GUIType[1][0]], [], 0.3, lControllerObj,
-                                                                                         rControllerObj)
+                self.__GUI[self.__GUIType[0]][''][self.__GUIType[1][0]] = myGUI.Tutorial(controls.hand[0].cords, [10, 0.2], self.__tutorialTexts[self.__GUIType[1][0]], [], 0.3, lControllerObj, rControllerObj)
             else:
+                # make some aliases for long variable names
                 maxValue = globalRanges[self.__GUIType[0]][0]
                 minValue = globalRanges[self.__GUIType[0]][1]
                 refVar = globalVars[self.__GUIType[0]]
@@ -690,8 +683,7 @@ class Main:
                         else:
                             xyz = 2
                         self.__GUI[self.__GUIType[0]][self.__GUIType[1][0].lower()][self.__GUIType[1][2]] = myGUI.Dial(xyz, refVar, defRefVar, controls.hand[0].cords, 5, [maxValue, maxValue], [minValue, minValue], self.__GUIType[1][2], lControllerObj, rControllerObj)
-                    elif self.__GUIType[1][
-                        1] == '3D':  # if the dial is 3D, no axis needs to be provided since it will change all three of the variable's values in its list (basically means axis is XYZ)
+                    elif self.__GUIType[1][1] == '3D':  # if the dial is 3D, no axis needs to be provided since it will change all three of the variable's values in its list (basically means axis is XYZ)
                         self.__GUI[self.__GUIType[0]][self.__GUIType[1][0].lower()][self.__GUIType[1][2]] = myGUI.Dial(0, refVar, defRefVar, controls.hand[0].cords, 5, [maxValue, maxValue, maxValue], [minValue, minValue, minValue], 'XYZ', lControllerObj, rControllerObj)
 
                 elif self.__GUIType[1][0] == 'Manual':
@@ -702,6 +694,9 @@ class Main:
 
     # set up the GUI and axes of a slider or manual GUI
     def __setupSliderManual(self):
+        """
+        :return: index position of the axis about which the GUI is situated.
+        """
         if self.__GUI[self.__GUIType[0]][self.__GUIType[1][0].lower()][self.__GUIType[1][1]] is not None:
             self.__GUI[self.__GUIType[0]][self.__GUIType[1][0].lower()][self.__GUIType[1][1]].unDraw()
             self.__GUI[self.__GUIType[0]][self.__GUIType[1][0].lower()][self.__GUIType[1][1]] = None
@@ -718,7 +713,7 @@ class Main:
 # class for spheres
 class Point:
     def __init__(self, radius, density, show, *disabledPointCollisions):
-        self.show = show  # boolean of whether to draw the point in the Vizard game scene
+        self.show = show  # boolean value of whether to draw the point in the Vizard game scene
         self.radius = radius
         self.origRadius = radius
         if self.show:
@@ -746,25 +741,24 @@ class Point:
         self.cubeCollision = []
         self.cubeCollisionCalc = []
         self.cubeSubmersion = []
-        self.collision = []  # self.collision[crIdx] represents the surface of a collision cuboid that the point is CURRENTLY (hence making self.collision[crIdx] = '' in else cases) in front of, using only its center point as reference
+        self.collision = []  # stores the surface of every collisionRect that the point's center is CURRENTLY in front
         self.lastCollision = []
-        self.__vertexState = ''  # closest vertex plane
-        self.e = 1  # elasticity constant
+        self.__vertexState = ''  # nearest vertex plane's axis
+        self.e = 1  # elasticity coefficient
         self.sf = globalVars['friction']  # surface friction coefficient
-        self.__multiplier = []  # variable for movement calcs
+        self.__multiplier = []  # stores values used in calculations to get direction of motion
         self.cloth = ''
-        self.__movingAngle = [0, 0, 0]  # direction of movement
-        self.__collisionState = ''
-        self.__bAngle = [0, 0, 0]  # stores angle of b.angle
-        self.__collAngle = [0, 0, 0]  # angle of collision point
+        self.__movingAngle = [0, 0, 0]  # direction of motion
+        self.__collisionState = ''  # indicate whether to use 'y = mx + c' or 'x = my + c'
+        self.__bAngle = [0, 0, 0]  # stores a copy of the angle of the current collisionRect
         self.colliding = []
         self.pIdx = ''
         self.__submergedVolume = 0
         self.__submergedArea = 0
         self.__submergedRadius = 0
-        self.disabledPointCollisions = ['']
         self.__xCollisionLine = None
         self.__yCollisionLine = None
+        self.disabledPointCollisions = ['']  # variable for the experimental Joint.snap() method
         if len(disabledPointCollisions) > 0:
             self.disabledPointCollisions = disabledPointCollisions
 
@@ -786,8 +780,7 @@ class Point:
             self.sphere.setScale([self.radius, self.radius, self.radius])
 
     def move(self):
-        self.__weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1],
-                         self.mass * globalVars['gField'][2]]  # update weight of the point since gField can be changed in a GUI
+        self.__weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]  # update weight of the point since gField can be changed in a GUI
 
         if not game.pause:
             self.__physics()
@@ -827,20 +820,19 @@ class Point:
             8. calculate the direction of motion for use in friction calculations.
         """
         for axis in range(3):
-            self.__gasDrag[axis] = 0.5 * globalVars['gasDensity'] * -getSign(self.velocity[axis]) * math.pi * (self.radius ** 2) * (
-                    (self.velocity[axis] / physicsTime) ** 2)  # divide velocity by 'physicsTime' so that gasDrag can always remain constant
+            self.__gasDrag[axis] = 0.5 * globalVars['gasDensity'] * -getSign(self.velocity[axis]) * math.pi * (self.radius ** 2) * ((self.velocity[axis] / physicsTime) ** 2)  # divide velocity by 'physicsTime' so that gasDrag can always remain constant
             self.__gasUpthrust[axis] = -(4 / 3) * math.pi * (self.radius ** 3) * globalVars['gasDensity'] * globalVars['gField'][axis]
 
-            self.__force[axis] = self.__gasDrag[axis] + self.__liquidDrag[axis] + self.__gasUpthrust[axis] + self.__liquidUpthrust[axis] + self.__weight[axis] + self.constrainForce[
-                axis]  # get resultant force
+            self.__force[axis] = self.__gasDrag[axis] + self.__liquidDrag[axis] + self.__gasUpthrust[axis] + self.__liquidUpthrust[axis] + self.__weight[axis] + self.constrainForce[axis]  # get resultant force
 
         self.__resolveRectCollisions()
 
         # add all forces together and calculate acceleration from this resultant force
         for axis in range(3):
             self.__force[axis] += self.__normalForce[axis] + self.__friction[axis] + self.__impulse[axis]
-            self.__acc[axis] = self.__force[axis] / self.mass  # F = ma, thus a = F / m
-            self.oldCords[axis] -= self.__acc[axis] / (physicsTime ** 2)  # divide by time since d(s) = a / d(f)²
+            if self.mass != 0:  # only run physics if the particle's radius isn't 0 to prevent ZeroDivisionError
+                self.__acc[axis] = self.__force[axis] / self.mass  # F = ma, thus a = F / m
+                self.oldCords[axis] -= self.__acc[axis] / (physicsTime ** 2)  # divide by time since d(s) = a / d(f)²
         self.constrainForce = [0, 0, 0]
 
         # direction of motion relative to each axis in the form [x:y, x:z, y:z]
@@ -877,8 +869,7 @@ class Point:
         for crIdx in range(len(game.collisionRect)):
             cr = game.collisionRect[crIdx]  # alias for current collisionRect
             if self.cubeCollisionCalc[crIdx] and (cr.type == 's'):
-                self.__bAngle = copy.deepcopy(
-                    cr.angle)  # assign collisionRect angle to a private variable, so it can be changed (for the sake of calculation) without actually changing the collisionRect's angle
+                self.__bAngle = copy.deepcopy(cr.angle)  # assign collisionRect angle to a private variable, so it can be changed (for the sake of calculation) without actually changing the collisionRect's angle
 
                 resultF = 0
                 if (self.collision[crIdx] == 'top') or (self.collision[crIdx] == 'bottom'):
@@ -903,23 +894,23 @@ class Point:
                         self.__friction[plane] = -getSign(self.velocity[plane]) * resultF * self.sf * cr.sf * sin(abs(self.__movingAngle[0]))
 
                 if (self.collision[crIdx] != 'front') and (self.collision[crIdx] != 'back'):
-                    self.__normalForce[0] = -resultF * sin(self.__collAngle[2]) * self.__multiplier[crIdx] * 0.999999
-                    self.__normalForce[1] = resultF * cos(self.__collAngle[2]) * self.__multiplier[crIdx] * 0.999999
+                    self.__normalForce[0] = -resultF * sin(self.__bAngle[2]) * self.__multiplier[crIdx] * 0.999999
+                    self.__normalForce[1] = resultF * cos(self.__bAngle[2]) * self.__multiplier[crIdx] * 0.999999
                     # negative coefficients used for friction here since it always acts in the opposite direction to motion
                     if self.__collisionState == 'y':
                         # negative coefficients used for normalForce here since it always acts in the opposite direction to resultant force
-                        self.__friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.__collAngle[2]) * self.sf * cr.sf * sin(abs(self.__movingAngle[1]))
-                        self.__friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.__collAngle[2]) * self.sf * cr.sf * cos(abs(self.__movingAngle[1]))
+                        self.__friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.__bAngle[2]) * self.sf * cr.sf * sin(abs(self.__movingAngle[1]))
+                        self.__friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.__bAngle[2]) * self.sf * cr.sf * cos(abs(self.__movingAngle[1]))
                     elif self.__collisionState == 'x':
                         # no need for negative coefficients here since collAngle is negative
-                        self.__friction[1] = getSign(self.velocity[1]) * resultF * sin(self.__collAngle[2]) * self.sf * cr.sf * cos(abs(self.__movingAngle[2]))
-                        self.__friction[2] = getSign(self.velocity[2]) * resultF * sin(self.__collAngle[2]) * self.sf * cr.sf * sin(abs(self.__movingAngle[2]))
+                        self.__friction[1] = getSign(self.velocity[1]) * resultF * sin(self.__bAngle[2]) * self.sf * cr.sf * cos(abs(self.__movingAngle[2]))
+                        self.__friction[2] = getSign(self.velocity[2]) * resultF * sin(self.__bAngle[2]) * self.sf * cr.sf * sin(abs(self.__movingAngle[2]))
 
     # check this out to see how I use lines, domains, and ranges for collision detection: https://drive.google.com/file/d/1a0McNZn3RdBdNACSEkrpEFIMrSON3MYZ/view?usp=sharing
     # check this out to see how I get the formulae of the lines: https://drive.google.com/file/d/1xwD0r6H49mgiumBW7Ax1TiJFgu5GsMbu/view?usp=sharing
     def __yCollisionPlane(self, b):  # find "y" from the mathematical form: "y = mx + c" for each collision plane
         """
-        :param b: collisionRect object
+        :param b: collisionRect object.
         :return: dictionary of all values for each equation.
 
         all 'b.vertex' values represent reference points on the collisionRect's vertices, so that y-intercept can be calculated.
@@ -936,7 +927,7 @@ class Point:
 
     def __xCollisionPlane(self, b):  # find "x" from the mathematical form: "x = my + c" for each collision plane
         """
-        :param b: collisionRect object
+        :param b: collisionRect object.
         :return: dictionary of all values for each equation.
 
         all 'b.vertex' values represent reference points on the collisionRect's vertices, so that x-intercept can be calculated.
@@ -997,8 +988,7 @@ class Point:
         for crIdx in range(len(game.collisionRect)):
             cr = game.collisionRect[crIdx]  # alias for current collisionRect
 
-            self.__bAngle = copy.deepcopy(
-                cr.angle)  # assign collisionRect angle to a private variable, so it can be changed (for the sake of calculation) without actually changing the collisionRect's angle
+            self.__bAngle = copy.deepcopy(cr.angle)  # assign collisionRect angle to a private variable, so it can be changed (for the sake of calculation) without actually changing the collisionRect's angle
             self.__yCollisionLine = self.__yCollisionPlane(cr)
             self.__xCollisionLine = self.__xCollisionPlane(cr)
 
@@ -1011,21 +1001,12 @@ class Point:
             radOffsetSin = self.radius / sin(self.__bAngle[2])
 
             # it's appropriate to use y = mx + c for collision detection here (even for large angles) since floating point error has negligible effect on detection
-            self.cubeCollisionCalc[crIdx] = (self.cords[1] <= (collisionCalcTolerance + topY + radOffsetCos)) and (self.cords[1] >= (-collisionCalcTolerance + bottomY - radOffsetCos)) and (
-                    self.cords[1] <= (collisionCalcTolerance + rightY + radOffsetSin)) and (self.cords[1] >= (-collisionCalcTolerance + leftY - radOffsetSin)) and (
-                                                    self.cords[2] <= (collisionCalcTolerance + cr.plane['front'] + self.radius)) and (
-                                                    self.cords[2] >= (-collisionCalcTolerance + cr.plane[
-                                                'back'] - self.radius))  # True if any part of the point is inside a collisionRect, given a collisionCalcTolerance
-            self.cubeCollision[crIdx] = (self.cords[1] <= (collisionTolerance + topY + radOffsetCos)) and (self.cords[1] >= (-collisionTolerance + bottomY - radOffsetCos)) and (
-                    self.cords[1] <= (collisionTolerance + rightY + radOffsetSin)) and (self.cords[1] >= (-collisionTolerance + leftY - radOffsetSin)) and (
-                                                self.cords[2] <= (collisionTolerance + cr.plane['front'] + self.radius)) and (
-                                                self.cords[2] >= (
-                                                -collisionTolerance + cr.plane['back'] - self.radius))  # True if any part of the point is inside a collisionRect, given a collisionTolerance
-            self.cubeSubmersion[crIdx] = (self.cords[1] <= (collisionTolerance + topY - radOffsetCos)) and (self.cords[1] >= (-collisionTolerance + bottomY + radOffsetCos)) and (
-                    self.cords[1] <= (collisionTolerance + rightY - radOffsetSin)) and (self.cords[1] >= (-collisionTolerance + leftY + radOffsetSin)) and (
-                                                 self.cords[2] <= (collisionTolerance + cr.plane['front'] - self.radius)) and (
-                                                 self.cords[2] >= (
-                                                 -collisionTolerance + cr.plane['back'] + self.radius))  # cubeCollision but with reversed radii calcs, since this is cubeSUBMERSION after all!
+            self.cubeCollisionCalc[crIdx] = (self.cords[1] <= (collisionCalcTolerance + topY + radOffsetCos)) and (self.cords[1] >= (-collisionCalcTolerance + bottomY - radOffsetCos)) and (self.cords[1] <= (collisionCalcTolerance + rightY + radOffsetSin)) and (self.cords[1] >= (-collisionCalcTolerance + leftY - radOffsetSin)) and (
+                    self.cords[2] <= (collisionCalcTolerance + cr.plane['front'] + self.radius)) and (self.cords[2] >= (-collisionCalcTolerance + cr.plane['back'] - self.radius))  # True if any part of the point is inside a collisionRect, given a collisionCalcTolerance
+            self.cubeCollision[crIdx] = (self.cords[1] <= (collisionTolerance + topY + radOffsetCos)) and (self.cords[1] >= (-collisionTolerance + bottomY - radOffsetCos)) and (self.cords[1] <= (collisionTolerance + rightY + radOffsetSin)) and (self.cords[1] >= (-collisionTolerance + leftY - radOffsetSin)) and (self.cords[2] <= (collisionTolerance + cr.plane['front'] + self.radius)) and (
+                    self.cords[2] >= (-collisionTolerance + cr.plane['back'] - self.radius))  # True if any part of the point is inside a collisionRect, given a collisionTolerance
+            self.cubeSubmersion[crIdx] = (self.cords[1] <= (collisionTolerance + topY - radOffsetCos)) and (self.cords[1] >= (-collisionTolerance + bottomY + radOffsetCos)) and (self.cords[1] <= (collisionTolerance + rightY - radOffsetSin)) and (self.cords[1] >= (-collisionTolerance + leftY + radOffsetSin)) and (self.cords[2] <= (collisionTolerance + cr.plane['front'] - self.radius)) and (
+                    self.cords[2] >= (-collisionTolerance + cr.plane['back'] + self.radius))  # cubeCollision but with reversed radii calcs, since this is cubeSUBMERSION after all!
 
             # check out the logic here: https://drive.google.com/file/d/1B-GqxPcpGkWAE_ogzMvYntTNmt8R99gT/view?usp=drive_link
             self.__vertexState = ''  # stores the facing axis of the nearest vertex
@@ -1076,8 +1057,7 @@ class Point:
                     self.collision[crIdx] = 'back'
 
             # get the distance until edge/vertex collision
-            if (self.collision[crIdx] == '') or (
-                    self.__vertexState != ''):  # "why should we resolve vertex/edge collisions if the point is in front of a face on the collision rect?" hence, this if statement is used to optimize performance.
+            if (self.collision[crIdx] == '') or (self.__vertexState != ''):  # "why should we resolve vertex/edge collisions if the point is in front of a face on the collision rect?" hence, this if statement is used to optimize performance.
                 minDist, vertexIdx = self.__getVertexDist(cr)  # get the distance to a vertex/edge collision as well as the index of the vertex/vertices, respectively
 
             # here's why I use 'multiplier': https://drive.google.com/file/d/1Gpy3J38fYBKXRfSFU2cz9M1vn91dDYWK/view?usp=drive_link
@@ -1184,7 +1164,6 @@ class Point:
             # angle is subtracted since all movement is reversed since it's, well... perpendicular
             # this also makes dealing with gradients easier (I only have to get magnitude of gradient, not whether its positive or negative)
             self.__bAngle[2] -= math.pi / 2
-        self.__collAngle = copy.deepcopy(self.__bAngle)
 
         # determine whether to use y = mx + c or x = my + c based on the size of bAngle (which directly affects gradient m)
         # if m is too large for y = mx + c, use x = my + c for a much smaller gradient m (to increase floating point precision)
@@ -1208,8 +1187,7 @@ class Point:
         if (self.collision[crIdx] == 'front') or (self.collision[crIdx] == 'back'):
             submergedAmt = abs((cr.plane[self.collision[crIdx]] + (self.__multiplier[crIdx] * self.radius) - self.cords[2]))
         elif self.__collisionState == 'y':
-            submergedAmt = abs(self.__multiplier[crIdx] * self.radius + (-self.cords[1] + self.__yCollisionLine[self.collision[crIdx]]['y']) * cos(
-                self.__bAngle[2]))  # check out the maths for this here: https://drive.google.com/file/d/1aLbunKXn89LqLVKGvRz2rTGpkQcK_hSD/view?usp=drive_link
+            submergedAmt = abs(self.__multiplier[crIdx] * self.radius + (-self.cords[1] + self.__yCollisionLine[self.collision[crIdx]]['y']) * cos(self.__bAngle[2]))  # check out the maths for this here: https://drive.google.com/file/d/1aLbunKXn89LqLVKGvRz2rTGpkQcK_hSD/view?usp=drive_link
         elif self.__collisionState == 'x':
             submergedAmt = abs(self.__multiplier[crIdx] * self.radius - (-self.cords[0] + self.__xCollisionLine[self.collision[crIdx]]['x']) * sin(self.__bAngle[2]))
         self.__submergedVolume = capVolume(submergedAmt, self.radius)
@@ -1388,8 +1366,7 @@ class Joint:
         game.points[self.pOne].disabledPointCollisions = [len(game.points) - 1]
         game.points[-1].cords = copy.deepcopy(self.cords)
         game.points[-1].oldCords = copy.deepcopy(self.cords)
-        game.joints.append(Joint(True, self.origLength * 2, self.stiffness / 8, self.pOne, len(game.points) - 1, self.dampingConst,
-                                 self.maxStrain * 2))  # maxStrain is increased since whenever materials break, since they pass their elastic limit in reality
+        game.joints.append(Joint(True, self.origLength * 2, self.stiffness / 8, self.pOne, len(game.points) - 1, self.dampingConst, self.maxStrain * 2, game))  # maxStrain is increased since whenever materials break, since they pass their elastic limit in reality
         game.points[self.pOne].cloth = self.pOne * len(game.points)  # unique cloth key
         game.points[-1].cloth = self.pOne * len(game.points)
         game.updateLists()  # more points and joints means that relevant info needs to be updated for each point

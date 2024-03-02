@@ -19,6 +19,8 @@ jointRadius = 0.015  # radius of all joints
 animSpeed = 1 / renderRate  # speed of animations
 minRadius = 0.05  # minimum radius of points
 maxRadius = 2  # maximum radius of points
+maxDensity = 10000  # maximum density of points/collisionRects
+minDensity = 1  # minimum density of points/collisionRects
 GUItypes = {
     'Slider': {'X': None, 'Y': None, 'Z': None},
     'Dial': {'2D': {'XY': None, 'YZ': None, 'XZ': None}, '3D': None},
@@ -84,8 +86,8 @@ collisionRectTypes = {
 }
 
 mode = 'k'  # controller mode (keyboard/mouse or VR)
-calcRate = 144  # physics calculations/second (higher number means more accurate physics but lower performance). Sadly this value cannot exceed 90 for some VR headsets due to their un-overrideable vsync!
-physicsTime = calcRate / globalVars['gameSpeed']  # inverse of physics speed (cannot be larger than frame-rate or smaller than 60)
+calcRate = 200  # physics calculations/second (higher number means more accurate physics but lower performance). sadly, this value cannot exceed 90 for some VR headsets due to their un-overrideable vsync setting!
+physicsTime = calcRate / globalVars['gameSpeed']  # inverse of physics speed (can't be too small or else program will break)
 touchpad = 16
 
 # controls for keyboard/VR
