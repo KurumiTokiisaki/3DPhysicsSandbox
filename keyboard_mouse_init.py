@@ -32,7 +32,6 @@ class Main:
         self.camVelocity = [0, 0, 0]
 
         # add the hand object
-        self.radius = handRadius
         self.hand = [Point()]  # draw the hand object
         self.hand.append(self.hand[0])  # make an identical copy of the first hand to compensate for the fact that VR has 2 controllers
         # how far hand is from camera initially

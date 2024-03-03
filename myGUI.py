@@ -15,6 +15,12 @@ jetBrainsFontSize = 1.69  # font size of 1.69 equates to 1 unit of distance per 
 
 # mode = 'vr'  # uncomment for testing VR settings on keyboard/mouse
 
+def getCollision(collisionList):
+    collision = False
+    for coll in collisionList:
+        collision = collision or coll
+    return collision
+
 
 class Slider:
     def __init__(self, xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text, lController, rController):
@@ -41,11 +47,10 @@ class Slider:
         self.pointer = Point(0.15, True)
         self.pointer.cords = copy.deepcopy(self.cords)
         self.pointer.oldCords = copy.deepcopy(self.cords)
-        self.sliders = [vizshape.addCylinder(length + self.pointer.radius * 2, 0.05), vizshape.addCylinder(self.pointer.radius * 2, 0.02),
-                        vizshape.addCylinder(self.pointer.radius * 2, 0.02)]  # add the main slider, and then two tiny cylinders on both ends of the slider
+        self.sliders = [vizshape.addCylinder(length + self.pointer.radius * 2, 0.05), vizshape.addCylinder(self.pointer.radius * 2, 0.02), vizshape.addCylinder(self.pointer.radius * 2, 0.02)]  # add the main slider, and then two tiny cylinders on both ends of the slider
         self.varText = viz.addText3D('', fontSize=0.1)
-        self.collision = False  # stores if there's a collision between the slider's pointer and a hand
-        self.dragging = False  # stores if the slider's pointer is being dragged by a hand
+        self.collision = [False, False]  # stores if there's a collision between the slider's pointer and a hand
+        self.dragging = [False, False]  # stores if the slider's pointer is being dragged by a hand
         self.descText = viz.addText3D(f'{text}', fontSize=0.2)
         self.textPos = [0, 0, 0]
         self.closeButton = XSymbol(0.5, self.cords)
@@ -126,7 +131,8 @@ class Slider:
             self.globalVar = var
             var = var[self.xyz]
         var = float(var)
-        if (not self.dragging) or (not self.collision):
+        collision = getCollision(self.collision)
+        if not collision:
             self.pointer.cords[self.xyz] = self.limits[0] + ((var + abs(self.min) * -getSign(self.min)) / self.range) * self.length
 
     def drag(self, cIdx, dragging):
@@ -142,11 +148,13 @@ class Slider:
             2. if there's a collision, set the position of the point to the current hand's position.
                 since sliders are 1D, only do this about the axis on which it is summoned.
         """
-        self.dragging = dragging
-        if dragging:
-            self.collision = detectCollision(self.cDat[cIdx].radius, self.pointer.radius, self.cDat[cIdx].cords, self.pointer.cords)
-            if self.collision:
+        self.dragging[cIdx] = dragging
+        if self.dragging[cIdx]:
+            self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.pointer.radius, self.cDat[cIdx].cords, self.pointer.cords)
+            if self.collision[cIdx]:
                 self.pointer.cords[self.xyz] = copy.deepcopy(self.cDat[cIdx].cords[self.xyz])
+        else:
+            self.collision[cIdx] = False
 
     def main(self):
         """
@@ -193,8 +201,8 @@ class Slider:
 
         self.pointer.oldCords[self.xyz] += 0.015 * getSign(self.pVelocity[self.xyz]) / renderRate  # adds some drag on the slider
 
-        if (abs(self.pVelocity[self.xyz]) < (10 ** -4)) and (
-                not self.collision or not self.dragging):  # if there is to be frictional force on the slider's pointer and velocity is very small, make velocity 0 to prevent vibration
+        collision = getCollision(self.collision)
+        if (abs(self.pVelocity[self.xyz]) < (10 ** -4)) and (not collision):  # if there is to be frictional force on the slider's pointer and velocity is very small, make velocity 0 to prevent vibration
             self.pointer.oldCords[self.xyz] = copy.deepcopy(self.pointer.cords[self.xyz])
 
         # Verlet integration
@@ -362,8 +370,8 @@ class Dial:
             self.axes = [0, 1, 2]
         self.text = text
         self.varText = viz.addText3D('', fontSize=0.15)
-        self.collision = False
-        self.dragging = False
+        self.collision = [False, False]
+        self.dragging = [False, False]
         self.anim = None
         if self.tDim:
             self.anim = CircleAnim(self.p, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -3, 3, 5)
@@ -415,14 +423,14 @@ class Dial:
         self.globalVar = var
         for v in self.axes:
             var[v] = float(var[v])
-        for c in range(controllerCount):
-            if (not self.dragging) or (not self.collision):
-                if self.tDim:
-                    for axis in range(3):
-                        self.p.cords[axis] = self.cords[axis] + (var[axis] / self.range[axis]) * self.cRad * 2
-                else:
-                    self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (var[self.axes[0]] / self.range[0]) * self.cRad * 2
-                    self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (var[self.axes[1]] / self.range[1]) * self.cRad * 2
+        collision = getCollision(self.collision)
+        if not collision:
+            if self.tDim:
+                for axis in range(3):
+                    self.p.cords[axis] = self.cords[axis] + (var[axis] / self.range[axis]) * self.cRad * 2
+            else:
+                self.p.cords[self.axes[0]] = self.cords[self.axes[0]] + (var[self.axes[0]] / self.range[0]) * self.cRad * 2
+                self.p.cords[self.axes[1]] = self.cords[self.axes[1]] + (var[self.axes[1]] / self.range[1]) * self.cRad * 2
 
     def drag(self, cIdx, dragging):
         """
@@ -437,15 +445,17 @@ class Dial:
             2. if there's a collision, set the position of the point to the current hand's position.
                 if the dial is 2D, only do this about the axes on which it is summoned.
         """
-        self.dragging = dragging
-        if dragging:
-            self.collision = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
-            if self.collision:
+        self.dragging[cIdx] = dragging
+        if self.dragging[cIdx]:
+            self.collision[cIdx] = detectCollision(self.cDat[cIdx].radius, self.p.radius, self.cDat[cIdx].cords, self.p.cords)
+            if self.collision[cIdx]:
                 if not self.tDim:
                     self.p.cords[self.axes[0]] = copy.deepcopy(self.cDat[cIdx].cords[self.axes[0]])
                     self.p.cords[self.axes[1]] = copy.deepcopy(self.cDat[cIdx].cords[self.axes[1]])
                 else:
                     self.p.cords = copy.deepcopy(self.cDat[cIdx].cords)
+        else:
+            self.collision[cIdx] = False
 
     def interpolate(self):
         relDist = []
@@ -510,11 +520,10 @@ class Dial:
             self.p.oldCords[1] += 0.015 * getSign(self.p.velocity[1]) * sin(movingAngle[1]) / renderRate
             self.p.oldCords[2] += 0.015 * getSign(self.p.velocity[2]) * cos(movingAngle[1]) * cos(movingAngle[0]) / renderRate
 
+        collision = getCollision(self.collision)
         for axis in range(len(self.var)):
-            for c in range(controllerCount):
-                if (abs(self.p.velocity[axis]) < (10 ** -4)) and (
-                        not self.dragging or not self.collision):  # if there is to be frictional force on the dial's pointer and velocity is very small, make velocity 0 to prevent vibrations
-                    self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
+            if (abs(self.p.velocity[axis]) < (10 ** -4)) and (not collision):  # if there is to be frictional force on the dial's pointer and velocity is very small, make velocity 0 to prevent vibrations
+                self.p.oldCords[axis] = copy.deepcopy(self.p.cords[axis])
 
         # Verlet integration
         for axis in range(3):

@@ -204,7 +204,7 @@ class Main:
                 self.points[p].cubeCollision.append(False)
                 self.points[p].cubeCollisionCalc.append(False)
                 self.points[p].cubeSubmersion.append(False)
-                self.points[p].addMultiplier()
+                self.points[p].incrementMultiplier()
 
             self.diff.append([])
             for _ in range(len(self.points)):
@@ -227,7 +227,7 @@ class Main:
             self.points[-1].cubeCollision.append(False)
             self.points[-1].cubeCollisionCalc.append(False)
             self.points[-1].cubeSubmersion.append(False)
-            self.points[-1].addMultiplier()
+            self.points[-1].incrementMultiplier()
         self.diff.append([])
         for p in range(len(self.points) - 1):
             self.diff[p].append(0)
@@ -343,7 +343,7 @@ class Main:
 
     def __pointCollision(self, p):
         """
-        :param p: index of the reference point to check for collisions with.
+        :param p: index position of the reference point to check for collisions with.
 
         this method is used to detect and resolve the collisions between two points.
         currently, it only works with 100% elasticity since I can't figure out what this means: https://en.wikipedia.org/wiki/Collision_response#Impulse-based_reaction_model
@@ -368,8 +368,8 @@ class Main:
         # detect & resolve collisions with all points
         for po in range(len(self.points)):
             if (po > p) and (self.points[p].disabledPointCollisions[0] != po) and (self.points[po].disabledPointCollisions[0] != p):
-                sumR = self.points[p].radius + self.points[po].radius
-                # detect collisions utilizing the cached values of dist
+                # detect for point<>point collisions, utilizing the cached values of dist
+                sumR = self.points[p].radius + self.points[po].radius  # alias for summing radii of both points
                 if self.diff[p][po] <= sumR:
                     mOne = copy.deepcopy(self.points[p].mass)
                     mTwo = copy.deepcopy(self.points[po].mass)
@@ -378,7 +378,8 @@ class Main:
                     normal = getAbsThreeDAngle(self.points[p].cords, self.points[po].cords, 'y')  # get the size of the collision normal's angle
                     vRel = [abs(vOne[0] - vTwo[0]), abs(vOne[1] - vTwo[1]), abs(vOne[2] - vTwo[2])]
                     resultS = (vRel[0] * cos(normal[1]) * sin(normal[0])) + (vRel[1] * sin(normal[1])) + (vRel[2]) * cos(normal[1]) * cos(normal[0])  # calculate resultant speed of each point relative to the normal
-                    deltaP = ((mOne * mTwo) / (mOne + mTwo)) * resultS * 2  # calculate change in momentum
+                    deltaP = ((mOne * mTwo) / (mOne + mTwo)) * resultS * 2  # calculate change in momentum of both points
+
                     # determine the direction at which each point should be deflected
                     multiplier = [1, 1, 1]
                     if self.points[p].cords[0] > self.points[po].cords[0]:
@@ -387,6 +388,7 @@ class Main:
                         multiplier[1] = -1
                     if self.points[p].cords[2] > self.points[po].cords[2]:
                         multiplier[2] = -1
+
                     # calculate resultant velocity of each point and resolve the collision
                     # changing cords will change velocity due to Verlet integration
                     self.points[p].cords[0] -= deltaP * multiplier[0] * cos(normal[1]) * sin(normal[0]) / (self.points[p].mass * calcRate)
@@ -407,6 +409,9 @@ class Main:
 
     # summon the GUI selector if the 'GUISelector' button is pressed
     def __summonGUISelector(self, cIdx):
+        """
+        :param cIdx: controller index value
+        """
         # only summon if the GUISelector button isn't being held down
         if (not self.__buttonHeld['GUISelector'][cIdx]) and buttonPressed('GUISelector', controlsConf.controllers[cIdx], cIdx):
             self.__buttonHeld['GUISelector'][cIdx] = True
@@ -417,6 +422,9 @@ class Main:
 
     # pause all point and joint physics if the 'pause' button is pressed
     def __pauseGame(self, cIdx):
+        """
+        :param cIdx: controller index value
+        """
         if (not self.__buttonHeld['pause'][cIdx]) and buttonPressed('pause', controlsConf.controllers[cIdx], cIdx):
             self.__buttonHeld['pause'][cIdx] = True
             self.pause = not self.pause  # reciprocate between True and False
@@ -456,7 +464,7 @@ class Main:
         # loop through all drag code for each controller
         for c in range(controlsConf.controllerAmt):
             if self.__clickTime[c] <= 0.25:
-                self.__clickTime[c] += 1 / calcRate  # increase since the last click
+                self.__clickTime[c] += 1 / calcRate  # increase time since the last click
             for gVar in self.__GUI:
                 for gType in self.__GUI[gVar]:
                     for gAxis in self.__GUI[gVar][gType]:
@@ -507,6 +515,10 @@ class Main:
                     self.__buttonHeld['recall'][c] = True
 
     def __setRadiusDensityGUI(self, cords, p):
+        """
+        :param cords: position at which the GUI should be summoned.
+        :param p: index position of the clicked point in the points list.
+        """
         if self.__GUI[p]['slider']['radius'] is None:  # only summon if GUI is empty
             self.__GUI[p]['slider']['radius'] = getSliderManual(0, self.points[p].radius, self.points[p].origRadius, [cords[0], cords[1] + 0.5, cords[2]], 10, maxRadius, minRadius, 'Radius')
         else:
@@ -523,6 +535,9 @@ class Main:
 
     # animates selecting points depending on if it's being hovered over or selected
     def __selectPointAnime(self, c):
+        """
+        :param c: controller index value
+        """
         # unique animation for selecting points: https://drive.google.com/file/d/1KWI48WwJub0FmlYfQJStTQ83OMEIPDVs/view?usp=drive_link
         if self.__collP[c] is not None:  # only run animations if a point is intersecting with a hand
             if self.__dragP[c] is not None:  # if the point is being selected, run the selection animation
@@ -540,13 +555,14 @@ class Main:
                 controls.anim[c].setScale(self.__animeScale[c])
                 controls.anim[c].setColor(self.__animeColor[c])
 
-            # if the controller is not hovering over a point, return the animation to the controller
+            # if the controller is not hovering over a point, return the animation to the hand
             elif not detectCollision(self.points[self.__collP[c]].radius, controls.hand[c].radius, self.points[self.__collP[c]].cords, controls.hand[c].cords):
                 controls.anim[c].point = controls.hand[c]
                 controls.anim[c].resetScale()
                 controls.anim[c].resetColor()
                 self.__collP[c] = None
                 controls.anim[c].pause = False
+
             else:  # if the hand is hovering over a point, run the hovering animation
                 controls.anim[c].point = self.points[self.__collP[c]]
                 self.__animeScale[c] = 1.2 * self.points[self.__collP[c]].radius / controls.anim[c].sphereRad  # makes the size of the animation 20% larger than the size of the point, taking into account that the animation’s scale is a ratio of its initial size (size of the hand’s point) to its new size
@@ -762,15 +778,23 @@ class Point:
         if len(disabledPointCollisions) > 0:
             self.disabledPointCollisions = disabledPointCollisions
 
-    # setter method
-    def addMultiplier(self):
+    # setter method that increments the size of the __multiplier list
+    def incrementMultiplier(self):
         self.__multiplier.append(1)
 
     def teleport(self, cords):
+        """
+        :param cords: position to which this point (self) should be teleported to.
+        """
         self.cords = copy.deepcopy(cords)
         self.oldCords = copy.deepcopy(cords)
 
+    # this setter method is used to set the values for radius and density so that volume, surface area, and mass can be recalculated
     def setRadiusDensity(self, radius, density):
+        """
+        :param radius: new radius of this point.
+        :param density: new density of this point.
+        """
         self.radius = radius
         self.density = density
         self.__volume = 4 / 3 * math.pi * self.radius ** 3
@@ -802,26 +826,28 @@ class Point:
 
     def __physics(self):
         """
-        this method is used to calculate and manage all the physics for a point.
+        this method is used to calculate and manage all the physics for this point.
 
         process:
             1. loop through all three axes XYZ.
-            2. calculate drag caused by the air using the formula: "1/2 * density * area * velocity² * -getSign(velocity)"
+            2. calculate drag caused by the air using the following formula: "1/2 * density * area * velocity² * -getSign(velocity)"
+                this formula was obtained from https://en.wikipedia.org/wiki/Drag_equation
                 gas drag acts in the opposite direction to motion, hence getting the opposite sign of velocity.
-            3. calculate upthrust caused by the air using the formula: "-volume * weight"
+            3. calculate upthrust caused by the air using the following formula: "-volume * weight"
                 negative coefficient used here since upthrust always acts in the opposite direction to gField.
             4. sum all the forces together in a resultant force value.
-                different forces are stored in different variables since it makes them a lot easier to identify and manage, and also to reassign in each frame.
-            5. check for any collisions with collisionRects.
+                different types of forces are stored in different variables since it makes them a lot easier to identify and manage, and also to reassign each frame.
+            5. check for collisions with any collisionRect.
             6. add normal reaction force, friction, and impulse caused by a collision with a collisionRect to resultant force.
                 these values are all 0 if there's no collision with a collisionRect.
-            7. calculate acceleration using "a = F / m", and update oldCords to cause a change in velocity from verlet integration.
+                these values are added to the resultant force last, since they are external forces that depend on the magnitude and direction of all other forces.
+            7. calculate acceleration using "a = F / m", and update oldCords to cause a change in velocity from Verlet integration.
                 v = d / t and a = v / t, thus d = a * t². t² is actually divided instead of multiplied since physicsTime is a frequency.
             8. calculate the direction of motion for use in friction calculations.
         """
         for axis in range(3):
-            self.__gasDrag[axis] = 0.5 * globalVars['gasDensity'] * -getSign(self.velocity[axis]) * math.pi * (self.radius ** 2) * ((self.velocity[axis] / physicsTime) ** 2)  # divide velocity by 'physicsTime' so that gasDrag can always remain constant
-            self.__gasUpthrust[axis] = -(4 / 3) * math.pi * (self.radius ** 3) * globalVars['gasDensity'] * globalVars['gField'][axis]
+            self.__gasDrag[axis] = 0.5 * globalVars['gasDensity'] * -getSign(self.velocity[axis]) * math.pi * (self.radius ** 2) * ((self.velocity[axis] / physicsTime) ** 2)  # divide velocity by 'physicsTime' so that the magnitude of gasDrag can always remain constant, regardless of physicsTime
+            self.__gasUpthrust[axis] = -(self.__volume - self.__submergedVolume) * globalVars['gasDensity'] * globalVars['gField'][axis]
 
             self.__force[axis] = self.__gasDrag[axis] + self.__liquidDrag[axis] + self.__gasUpthrust[axis] + self.__liquidUpthrust[axis] + self.__weight[axis] + self.constrainForce[axis]  # get resultant force
 
@@ -855,21 +881,21 @@ class Point:
 
         process:
             1. loop through all collisionRects and detect for collisions with solids.
-            2) get components of forces acting in the direction of the collision plane and add them to 'resultF', since that's what normal reaction force is.
-                imagine this: you put a ball next to a perfectly straight-up wall. the wall won't push on it, since it's not pushing on the wall!
-            3) if colliding with the right/left faces of a collisionRect, subtract 90 degrees from all angle calculations, since left/right is perpendicular to top/bottom.
+            2) get the components of forces acting in the direction of the collision plane and add them to 'resultF', since that's what normal reaction force is.
+                imagine this: you place a ball next to a perfectly straight-up wall on a perfectly flat surface on Earth. the wall won't push on it, since it's not pushing on the wall!
+            3) if colliding with the right/left faces of a collisionRect, subtract 90 degrees (π/2 radians) from all angle calculations, since left/right is perpendicular to top/bottom.
             4) calculate the X and Y components of 'resultF' as the normal reaction force about X and Y.
-                normal force about Z has an exception case since the collisionRect can't rotate about the Z-axis.
+                normal force about Z is an exception to this since collisionRects (currently) can't rotate about the Z-axis.
 
-            the logic behind normal force calculations can be seen here: https://drive.google.com/file/d/1bkBZ3yYHVgOEAl8abxuTd2Ed1gnEsUrB/view?usp=sharing
+            the maths and logic behind normal force calculations can be seen here: https://drive.google.com/file/d/1bkBZ3yYHVgOEAl8abxuTd2Ed1gnEsUrB/view?usp=sharing
 
-        note that all normalForce values will be multiplied by 0.999999 to compensate for floating point error, since it'll return a normalForce value that's too low/high otherwise.
-            higher normalForce than its actual value is a problem since it'll cause a point to accelerate off the surface (which violates Newton's 3rd law). thus, its value is lowered by 0.001%.
+        note that all normalForce values will be multiplied by 0.999999 to compensate for floating point error, since it may otherwise return a normalForce value that's too high.
+            higher normalForce than its actual value is a problem since it'll cause a point to accelerate off the surface (which violates Newton's 3rd law). thus, its value is lowered by 0.0001%.
         """
         for crIdx in range(len(game.collisionRect)):
             cr = game.collisionRect[crIdx]  # alias for current collisionRect
             if self.cubeCollisionCalc[crIdx] and (cr.type == 's'):
-                self.__bAngle = copy.deepcopy(cr.angle)  # assign collisionRect angle to a private variable, so it can be changed (for the sake of calculation) without actually changing the collisionRect's angle
+                self.__bAngle = copy.deepcopy(cr.angle)  # copy the collisionRect's angle to a private variable, so it can be changed (purely for the sake of calculations) without actually changing the collisionRect's stored 'angle' value
 
                 resultF = 0
                 if (self.collision[crIdx] == 'top') or (self.collision[crIdx] == 'bottom'):
@@ -902,62 +928,60 @@ class Point:
                         self.__friction[0] = -getSign(self.velocity[0]) * resultF * cos(self.__bAngle[2]) * self.sf * cr.sf * sin(abs(self.__movingAngle[1]))
                         self.__friction[2] = -getSign(self.velocity[2]) * resultF * cos(self.__bAngle[2]) * self.sf * cr.sf * cos(abs(self.__movingAngle[1]))
                     elif self.__collisionState == 'x':
-                        # no need for negative coefficients here since collAngle is negative
+                        # no need for negative coefficients here since 'bAngle' will already be negative
                         self.__friction[1] = getSign(self.velocity[1]) * resultF * sin(self.__bAngle[2]) * self.sf * cr.sf * cos(abs(self.__movingAngle[2]))
                         self.__friction[2] = getSign(self.velocity[2]) * resultF * sin(self.__bAngle[2]) * self.sf * cr.sf * sin(abs(self.__movingAngle[2]))
 
     # check this out to see how I use lines, domains, and ranges for collision detection: https://drive.google.com/file/d/1a0McNZn3RdBdNACSEkrpEFIMrSON3MYZ/view?usp=sharing
     # check this out to see how I get the formulae of the lines: https://drive.google.com/file/d/1xwD0r6H49mgiumBW7Ax1TiJFgu5GsMbu/view?usp=sharing
-    def __yCollisionPlane(self, b):  # find "y" from the mathematical form: "y = mx + c" for each collision plane
+    def __yCollisionPlane(self, b):  # find "y" from the mathematical formula: "y = mx + c" for each collision plane of a collisionRect
         """
         :param b: collisionRect object.
-        :return: dictionary of all values for each equation.
+        :return: dictionary of 'y' values for each collision plane's equation.
 
         all 'b.vertex' values represent reference points on the collisionRect's vertices, so that y-intercept can be calculated.
         some reference points are repeated since multiple lines can share the same reference points.
-            'left' at 'top' both intersect at the top-left vertex, so their x-coordinates are used for both lines.
-
+            for example, 'left' and 'top' both intersect at the top-left vertex, so their x-coordinates are used for both lines.
         """
         return {
-            'left': {'y': (b.grad['y'] * self.cords[0]) + (b.vertex[1][1] - (b.grad['y'] * b.vertex[1][0])), 'm': b.grad['y'], 'c': b.vertex[1][1] - (b.grad['y'] * b.vertex[1][0])},
-            'right': {'y': (b.grad['y'] * self.cords[0]) + (b.vertex[0][1] - (b.grad['y'] * b.vertex[0][0])), 'm': b.grad['y'], 'c': b.vertex[0][1] - (b.grad['y'] * b.vertex[0][0])},
-            'top': {'y': (b.grad['x'] * self.cords[0]) + (b.vertex[1][1] - (b.grad['x'] * b.vertex[1][0])), 'm': b.grad['x'], 'c': b.vertex[1][1] - (b.grad['x'] * b.vertex[1][0])},
-            'bottom': {'y': (b.grad['x'] * self.cords[0]) + (b.vertex[7][1] - (b.grad['x'] * b.vertex[7][0])), 'm': b.grad['x'], 'c': b.vertex[7][1] - (b.grad['x'] * b.vertex[7][0])},
+            'left': (b.grad['y'] * self.cords[0]) + (b.vertex[1][1] - (b.grad['y'] * b.vertex[1][0])),
+            'right': (b.grad['y'] * self.cords[0]) + (b.vertex[0][1] - (b.grad['y'] * b.vertex[0][0])),
+            'top': (b.grad['x'] * self.cords[0]) + (b.vertex[1][1] - (b.grad['x'] * b.vertex[1][0])),
+            'bottom': (b.grad['x'] * self.cords[0]) + (b.vertex[7][1] - (b.grad['x'] * b.vertex[7][0])),
         }
 
-    def __xCollisionPlane(self, b):  # find "x" from the mathematical form: "x = my + c" for each collision plane
+    def __xCollisionPlane(self, b):  # find "x" from the mathematical formula: "x = my + c" for each collision plane of a collisionRect
         """
         :param b: collisionRect object.
-        :return: dictionary of all values for each equation.
+        :return: dictionary of 'x' values for each collision plane's equation.
 
         all 'b.vertex' values represent reference points on the collisionRect's vertices, so that x-intercept can be calculated.
         some reference points are repeated since multiple lines can share the same reference points.
-            'left' at 'top' both intersect at the top-left vertex, so their y-coordinates are used for both lines.
+            for example, 'left' and 'top' both intersect at the top-left vertex, so their y-coordinates are used for both lines.
         all values for 'b.grad' are swapped and negated since "x = my + c" is essentially the normal to "y = mx + c".
-            thus, "m" must be negated and reciprocated, meaning m(X) = -(1 / m(Y)) and m(Y) = -(1 / m(X)).
+            thus, gradient "m" must be negated and reciprocated, meaning m(X) = -(1 / m(Y)) and m(Y) = -(1 / m(X)).
         """
         return {
-            'left': {'x': - (b.grad['x'] * self.cords[1]) + (b.vertex[1][0] + (b.grad['x'] * b.vertex[1][1])), 'm': -b.grad['x'], 'c': b.vertex[1][0] + (b.grad['x'] * b.vertex[1][1])},
-            'right': {'x': - (b.grad['x'] * self.cords[1]) + (b.vertex[0][0] + (b.grad['x'] * b.vertex[0][1])), 'm': -b.grad['x'], 'c': b.vertex[0][0] + (b.grad['x'] * b.vertex[0][1])},
-            'top': {'x': - (b.grad['y'] * self.cords[1]) + (b.vertex[1][0] + (b.grad['y'] * b.vertex[1][1])), 'm': -b.grad['y'], 'c': b.vertex[1][0] + (b.grad['y'] * b.vertex[1][1])},
-            'bottom': {'x': - (b.grad['y'] * self.cords[1]) + (b.vertex[7][0] + (b.grad['y'] * b.vertex[7][1])), 'm': -b.grad['y'], 'c': b.vertex[7][0] + (b.grad['y'] * b.vertex[7][1])}
+            'left': -(b.grad['x'] * self.cords[1]) + (b.vertex[1][0] + (b.grad['x'] * b.vertex[1][1])),
+            'right': -(b.grad['x'] * self.cords[1]) + (b.vertex[0][0] + (b.grad['x'] * b.vertex[0][1])),
+            'top': -(b.grad['y'] * self.cords[1]) + (b.vertex[1][0] + (b.grad['y'] * b.vertex[1][1])),
+            'bottom': -(b.grad['y'] * self.cords[1]) + (b.vertex[7][0] + (b.grad['y'] * b.vertex[7][1]))
         }
 
     # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
     def __boxCollision(self):
         """
-        this method detects and resolves collisions between spheres (points) and static cuboids (collision rects).
-        my method uses AABB collision detection.
+        this method is used to detect and resolve collisions between spheres (points) and static cuboids (collisionRects) using my own algorithm for AABB collision detection.
 
         process:
             1. loop through all collisionRects.
             2. get the line equations for X and Y to enable plane collision detection.
                 y = mx + c is used for smaller values of bAngle (<=45°) since gradient m will always be <=1 (since tan(45) = 1).
-                x = my + c is used for larger values of bAngle (>45°) since tan(bAngle) will get extremely large, causing large floating point error uncertainty.
-                    if this is not used, large value of bAngle (on the colliding plane) will cause colliding points to skyrocket instantly due to extremely large values of gradient m.
+                x = my + c is used for larger values of bAngle (>45°) since tan(bAngle) will get extremely large, causing large uncertainties in floating point precision.
+                    if this is not used, large value for bAngle (on the colliding plane) will cause colliding points to skyrocket instantly due to extremely large values of gradient m.
             3. if a point is:
                 a) intersecting a collisionRect with a large tolerance 'collisionCalcTolerance', apply normal reaction force and friction.
-                b) intersecting a collisionRect with a small tolerance 'collisionTolerance', teleport the point to the collisionRect surface and apply an impulse.
+                b) intersecting a collisionRect with a small tolerance collisionTolerance, teleport the point to the collisionRect’s surface to apply an impulse.
                 c) fully within a collisionRect with a small tolerance 'collisionTolerance', apply liquid physics if the collisionRect is a liquid.
                 detection is done using domains/ranges of lines: https://drive.google.com/file/d/1a0McNZn3RdBdNACSEkrpEFIMrSON3MYZ/view?usp=sharing
                 these tolerances are used to compensate for floating point error.
@@ -971,17 +995,19 @@ class Point:
                 vertexState will be used to fetch the indexes of the grouped vertices depending on its axis.
                     here's why this must be done: https://drive.google.com/file/d/1llq6UTfJHZ2GJic5s8510RJoKKEBbg1Y/view?usp=sharing
                 ultimately, this will allow a point to determine the 2 closest vertices of each collisionRect to the point to allow for edge collision detection.
-                here's how 'vertexState' is determined: https://drive.google.com/file/d/1PQrnfejqzLJlD6GdVNaNNZzTivElZJHb/view?usp=sharing
+                here's how 'vertexState' is determined: https://drive.google.com/file/d/1B-GqxPcpGkWAE_ogzMvYntTNmt8R99gT/view?usp=drive_link, https://drive.google.com/file/d/1PQrnfejqzLJlD6GdVNaNNZzTivElZJHb/view?usp=sharing
                     here's a 2D-ish visualization of this: https://drive.google.com/file/d/1Ne9uYwj5Y1x832fyxHiSnWMDw0zEPRHm/view?usp=sharing, https://drive.google.com/file/d/1dtp28rJAdf8S78__yX-8-ykr1pub44e5/view?usp=sharing
             5. if the point is in front of a plane, set 'lastCollision' to the plane it's in front of. also factors in the point's radius.
-                this value should never reset to allow for accurate liquid physics calculations.
+                this value never resets in order to allow for accurate liquid physics calculations, since being submerged within a collisionRect causes the point to be behind all the collisionRect’s planes.
                 radius is added when the plane is 'right'/'top'/'front', since those planes face the positive x/y/z axes (respectively).
                 radius is subtracted when the plane is 'left'/'bottom'/'back', since those planes face the negative x/y/z axes (respectively).
             6. if the point's CENTER is in front of a plane, set 'collision' to the plane it's in front of.
-                this value resets if the point isn't in front of a plane anymore.
+                unlike 'lastCollision', this value resets if the point isn't in front of a plane anymore.
                 'collision' is used to get what plane a point is currently in front of, so that the appropriate calculations for collision resolution can be applied, e.g.:
                     whether to use y = mx + c OR x = my + c, direction of resultant and normal reaction forces, direction & magnitude of impulse.
-            see below for point 7 onwards.
+            7. determine a value for 'multiplier' to get the direction in which the point should be displaced when colliding with a collisionRect’s plane.
+                check this out to see how and why this is done: https://drive.google.com/file/d/1Gpy3J38fYBKXRfSFU2cz9M1vn91dDYWK/view?usp=drive_link
+            see below for point 8 onwards.
         """
         cubeCollision = False
         cubeSubmersion = False
@@ -993,10 +1019,10 @@ class Point:
             self.__xCollisionLine = self.__xCollisionPlane(cr)
 
             # aliasing variables for increased readability
-            topY = self.__yCollisionLine['top']['y']
-            bottomY = self.__yCollisionLine['bottom']['y']
-            rightY = self.__yCollisionLine['right']['y']
-            leftY = self.__yCollisionLine['left']['y']
+            topY = self.__yCollisionLine['top']
+            bottomY = self.__yCollisionLine['bottom']
+            rightY = self.__yCollisionLine['right']
+            leftY = self.__yCollisionLine['left']
             radOffsetCos = self.radius / cos(self.__bAngle[2])
             radOffsetSin = self.radius / sin(self.__bAngle[2])
 
@@ -1008,7 +1034,6 @@ class Point:
             self.cubeSubmersion[crIdx] = (self.cords[1] <= (collisionTolerance + topY - radOffsetCos)) and (self.cords[1] >= (-collisionTolerance + bottomY + radOffsetCos)) and (self.cords[1] <= (collisionTolerance + rightY - radOffsetSin)) and (self.cords[1] >= (-collisionTolerance + leftY + radOffsetSin)) and (self.cords[2] <= (collisionTolerance + cr.plane['front'] - self.radius)) and (
                     self.cords[2] >= (-collisionTolerance + cr.plane['back'] + self.radius))  # cubeCollision but with reversed radii calcs, since this is cubeSUBMERSION after all!
 
-            # check out the logic here: https://drive.google.com/file/d/1B-GqxPcpGkWAE_ogzMvYntTNmt8R99gT/view?usp=drive_link
             self.__vertexState = ''  # stores the facing axis of the nearest vertex
             if ((self.cords[1] > rightY) or (self.cords[1] < leftY)) and ((self.cords[1] > topY) or (self.cords[1] < bottomY)) and (
                     (self.cords[2] <= cr.plane['front']) and (self.cords[2] >= cr.plane['back'])):  # x > right, x < left, y > top, y < bottom, back < z < front
@@ -1060,21 +1085,20 @@ class Point:
             if (self.collision[crIdx] == '') or (self.__vertexState != ''):  # "why should we resolve vertex/edge collisions if the point is in front of a face on the collision rect?" hence, this if statement is used to optimize performance.
                 minDist, vertexIdx = self.__getVertexDist(cr)  # get the distance to a vertex/edge collision as well as the index of the vertex/vertices, respectively
 
-            # here's why I use 'multiplier': https://drive.google.com/file/d/1Gpy3J38fYBKXRfSFU2cz9M1vn91dDYWK/view?usp=drive_link
             if (self.lastCollision[crIdx] == 'right') or (self.lastCollision[crIdx] == 'top') or (self.lastCollision[crIdx] == 'front'):
                 self.__multiplier[crIdx] = 1
             else:
                 self.__multiplier[crIdx] = -1  # radius displacement is reversed for left, bottom, and back since they face the negative x/y/z axes, respectively
 
             """
-            7. detect collisions between points and planes:
-                if the point is in front of a plane (vertexState == '' and collision != '') AND a collisionRect is being collided with (cubeCollisionCalc).
-            8. detect collisions between points and edges:
+            8. detect collisions between points and planes:
+                if the point is in front of a plane (vertexState == '' and collision != '') AND a collisionRect is being collided with (cubeCollisionCalc is True).
+            9. detect collisions between points and edges:
                 if the point is in front of an edge (vertexState != '') AND https://drive.google.com/file/d/14ooXx_oDUzhqFVb1EDGZTB3ShXxDIFNU/view?usp=sharing AND the collisionRect is a solid (cr.type == 's').
-            9. detect collisions between points and vertices:
+            10. detect collisions between points and vertices:
                 if the point's distance to the nearest vertex is ever less than its radius.
-            10. if steps 7, 8, 9 are all False, reset 'colliding' to False so that an impulse can be applied on the next collision.
-            11. if the point isn't colliding with any collisionRect, reset all values that depend on undergoing a collision to 0.
+            11. if steps 8, 9, and 10 are all False, reset 'colliding' to False so that an impulse can be applied on the next collision.
+            12. if the point isn't colliding with any collisionRect, reset all values that depend on undergoing a solid/liquid collision to 0.
             """
 
             # detect collisions between points and planes (flat surfaces) on a collision rect (cuboid)
@@ -1084,25 +1108,23 @@ class Point:
             # detect collisions between points and edges on a SOLID collision rect (cuboid)
             # see the 'getVertexDist' method for the logic behind 'minDist'
             elif (self.__vertexState != '') and (minDist <= (distance(cr.vertex[vertexIdx[0]], cr.vertex[vertexIdx[1]]))) and (cr.type == 's'):
-                self.cords = copy.deepcopy(self.oldCords)  # freeze the point (unfinished/failed implementation)
+                self.cords = copy.deepcopy(self.oldCords)  # freeze the point (since incomplete edge collision resolution implementation)
 
             # detect collisions between points and vertices (corners) on a SOLID collision rect (cuboid)
             # see the 'getVertexDist' method for the logic behind 'cr.vertex[vertexIdx]' (closest vertex to the point at index 'vertexIdx')
             elif (self.collision[crIdx] == '') and (self.__vertexState == '') and (distance(cr.vertex[vertexIdx], self.cords) <= self.radius) and (cr.type == 's'):
-                self.cords = copy.deepcopy(self.oldCords)  # freeze the point (unfinished/failed implementation)
+                self.cords = copy.deepcopy(self.oldCords)  # freeze the point (since incomplete vertex collision resolution implementation)
 
             # if none of the cases above are True, then the point isn't colliding with any collisionRect
             else:
                 self.colliding[crIdx] = False
 
             cubeCollision = cubeCollision or self.cubeCollisionCalc[crIdx]  # True if cubeCollisionCalc is ever True
-            cubeSubmersion = cubeSubmersion or self.cubeSubmersion[crIdx]  # True if cubeSubmersion is ever True
 
-        if not cubeCollision:  # reset values that depend on a solid cube collision when not colliding with ANY collisionRect
+        if not cubeCollision:  # reset values that depend on a solid/liquid cube collision when not colliding with ANY collisionRect
             self.__normalForce = [0, 0, 0]
             self.__friction = [0, 0, 0]
             self.__impulse = [0, 0, 0]
-        if not cubeSubmersion:  # reset values that depend on being submerged in a liquid when not submerged in ANY collisionRect
             self.__liquidUpthrust = [0, 0, 0]
             self.__liquidDrag = [0, 0, 0]
             self.__submergedVolume = 0
@@ -1111,15 +1133,16 @@ class Point:
 
     def __getVertexDist(self, cr):
         """
-        :param cr: collisionRect object.
+        :param cr:current collisionRect object.
+        :return: minimum distance to the nearest vertex, and the index(es) of the nearest vertex(es)
 
         this method is used to get the distance and index(es) to the nearest vertex(es), which will be used for vertex/edge collision detection.
-        due to this method's highly mathematical and logical approach, all comments will be in-line for increased readability.
+        due to this method's highly mathematical approach, all comments will be in-line for increased readability.
         """
         vertexDist = []  # distance to each edge/vertex, depending on the type of collision
         vIdx = []  # stores (specific) index values in a specific order from the collisionRect.vertex list
         vertexIdx = []  # stores index of closest vertex indexes
-        minDist = float('inf')  # context of value changes depending on type of collision (see the bookmark below)
+        minDist = float('inf')  # context of value changes depending on type of collision
 
         # group vertices based on 'vertexState' because of this: https://drive.google.com/file/d/1llq6UTfJHZ2GJic5s8510RJoKKEBbg1Y/view?usp=drive_link
         if self.__vertexState == 'x':
@@ -1141,8 +1164,7 @@ class Point:
                     tempDist = distance(cr.vertex[vIdx[d][h]], self.cords)  # value of d1 when h == 0, and d2 when h == 1
                     if tempDist >= self.radius:  # used to prevent sqrt(-number)
                         # check out the maths & logic for this here: https://drive.google.com/file/d/14ooXx_oDUzhqFVb1EDGZTB3ShXxDIFNU/view?usp=sharing (edge-collision-detection.JPG)
-                        dist[d].append(
-                            math.sqrt(tempDist ** 2 - self.radius ** 2))  # gets the distance from each vertex to the current sphere's position (value of v1/v2 from edge-collision-detection.JPG)
+                        dist[d].append(math.sqrt(tempDist ** 2 - self.radius ** 2))  # gets the distance from each vertex to the current sphere's position (value of v1/v2 from edge-collision-detection.JPG)
                         vertexDist[d] += dist[d][h]  # sum of v1 and v2 as seen in edge-collision-detection.JPG, where dist[d][0] = v1 and dist[d][1] = v2
                     else:  # if tempDist < radius, then a collision is happening
                         dist[d].append(0)
@@ -1159,21 +1181,25 @@ class Point:
         return minDist, vertexIdx
 
     def __planeCollision(self, crIdx, cr):
+        """
+        :param crIdx: index position of the colliding collisionRect.
+        :param cr: colliding collisionRect object.
+        """
         if (self.collision[crIdx] == 'right') or (self.collision[crIdx] == 'left'):
             # shift angle by 90° since perpendicular surfaces to the collision rect (left & right) are, well... perpendicular (to top & bottom)
             # angle is subtracted since all movement is reversed since it's, well... perpendicular
-            # this also makes dealing with gradients easier (I only have to get magnitude of gradient, not whether its positive or negative)
+            # this also makes dealing with gradients easier (I only have to get magnitude of gradient, not whether it's positive or negative)
             self.__bAngle[2] -= math.pi / 2
 
-        # determine whether to use y = mx + c or x = my + c based on the size of bAngle (which directly affects gradient m)
-        # if m is too large for y = mx + c, use x = my + c for a much smaller gradient m (to increase floating point precision)
+        # determine whether to use y = mx + c or x = my + c based on the size of bAngle in order to keep the size of gradient m less than or equal to 1
+        # if gradient m is too large (m > 1) for y = mx + c, use x = my + c instead for a smaller gradient m (m <= 1), increasing floating point precision
         # check out this link to see the logic behind this: https://drive.google.com/file/d/1s67QaMXnC3LGD11jn75S9DDp1HxjND_O/view?usp=sharing
         if abs(math.degrees(self.__bAngle[2])) <= 45:
             self.__collisionState = 'y'
         else:
             self.__collisionState = 'x'
 
-        # determine which collision calculations to use if the collisionRect is a solid or liquid
+        # determine which type of collision calculations to use depending on if the collisionRect is a solid or liquid
         if self.cubeCollision[crIdx]:
             if cr.type == 's':
                 self.__planeCollisionSolid(crIdx)
@@ -1181,15 +1207,17 @@ class Point:
                 self.__planeCollisionLiquid(crIdx, cr)
 
     def __planeCollisionLiquid(self, crIdx, cr):
-        # get cap volume with submerged radius, etc.
-        # also disable gas upthrust for submerged parts
+        """
+        :param crIdx: index position of the colliding collisionRect.
+        :param cr: colliding collisionRect object.
+        """
         submergedAmt = 0
         if (self.collision[crIdx] == 'front') or (self.collision[crIdx] == 'back'):
             submergedAmt = abs((cr.plane[self.collision[crIdx]] + (self.__multiplier[crIdx] * self.radius) - self.cords[2]))
         elif self.__collisionState == 'y':
-            submergedAmt = abs(self.__multiplier[crIdx] * self.radius + (-self.cords[1] + self.__yCollisionLine[self.collision[crIdx]]['y']) * cos(self.__bAngle[2]))  # check out the maths for this here: https://drive.google.com/file/d/1aLbunKXn89LqLVKGvRz2rTGpkQcK_hSD/view?usp=drive_link
+            submergedAmt = abs(self.__multiplier[crIdx] * self.radius + (-self.cords[1] + self.__yCollisionLine[self.collision[crIdx]]) * cos(self.__bAngle[2]))  # check out the maths for this here: https://drive.google.com/file/d/1aLbunKXn89LqLVKGvRz2rTGpkQcK_hSD/view?usp=drive_link
         elif self.__collisionState == 'x':
-            submergedAmt = abs(self.__multiplier[crIdx] * self.radius - (-self.cords[0] + self.__xCollisionLine[self.collision[crIdx]]['x']) * sin(self.__bAngle[2]))
+            submergedAmt = abs(self.__multiplier[crIdx] * self.radius - (-self.cords[0] + self.__xCollisionLine[self.collision[crIdx]]) * sin(self.__bAngle[2]))
         self.__submergedVolume = capVolume(submergedAmt, self.radius)
         self.__submergedArea = capArea(submergedAmt, self.radius)
         self.__submergedRadius = submergedAmt
@@ -1200,41 +1228,36 @@ class Point:
             self.__submergedRadius = self.radius
         for axis in range(3):
             self.__liquidUpthrust[axis] = cr.density * -globalVars['gField'][axis] * self.__submergedVolume  # Upthrust = fluid density * -gravitational field strength * submerged volume
-            self.__liquidDrag[axis] = (0.5 * cr.viscosity * (self.velocity[axis] ** 2) * -getSign(
-                self.velocity[axis]) * self.__submergedArea)  # Drag = 1/2 * drag coefficient * fluid density * velocity² * -moving direction
+            self.__liquidDrag[axis] = (0.5 * cr.viscosity * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.__submergedArea)  # Drag = 1/2 * drag coefficient (viscosity) * fluid density * velocity² * -moving direction
 
     def __planeCollisionSolid(self, crIdx):
         """
         :param crIdx: index of the colliding collisionRect in the collisionRect list.
         :param cr: colliding collisionRect object
 
-        this method is used to resolve collisions between point and collisionRect planes (surfaces).
+        this method is used to resolve point<>collisionRect plane (surface) collisions.
 
         process:
-            1. get the collisionRect object from the collisionRect list.
-            2. check collisionState.
+            1. get the colliding collisionRect object from the collisionRect list.
+            2. check collisionState:
                 if it's 'y': use y = mx + c.
                 if it's 'x': use x = my + c.
                 this is done so that gradient 'm' is always <= 1 so that there's lots of decimal places available for more accurate floating point precision.
             3. teleport the point to the surface of the plane by getting the x/y coordinate of its line equation, displacing the teleportation by the point's radius.
-                a) if the point hasn't collided with a collisionRect yet, reset the apply an impulse based on the momentum of the point relative to the collisionRect plane.
+                a) if the point hasn't collided with a collisionRect yet, set colliding to True and apply an impulse based on the momentum of the point relative to the collisionRect plane.
                     imagine dropping a ball onto a slope. it won't fully stop as it hits the slope; it'll be shot down the slope! that's why an impulse is applied at the point of collision here.
-                b) if the point has already collided, only teleport the point.
-                radius is accounted for here otherwise half the point will get stuck inside the collisionRect.
+                b) also teleport the point to the collisionRect's surface about the x and y axes. if the point has already collided, only teleport the point.
+                    radius is accounted for here otherwise half the point will get stuck inside the collisionRect.
+                    for all radius displacements, 'multiplier' is used to get which direction to displace the point by, since displacement should be reversed for 'left'/'bottom'/'back' collisions.
             4. if the point is colliding with the 'front'/'back' of a collisionRect, no need for any fancy line equations.
                 just teleport the point to the surface of the plane, factoring in radius.
-
-        for all radius displacements, 'multiplier' is used to get which direction to displace the point by, since displacement should be reversed for 'left'/'bottom'/'front' collisions.
-
         """
-
-        cr = game.collisionRect[crIdx]  # get the colliding collisionRect object
-        if (self.collision[crIdx] == 'top') or (self.collision[crIdx] == 'right') or (self.collision[crIdx] == 'bottom') or (
-                self.collision[crIdx] == 'left'):  # colliding with top/right/bottom/left plane
+        cr = game.collisionRect[crIdx]  # alis for the colliding collisionRect object
+        if (self.collision[crIdx] == 'top') or (self.collision[crIdx] == 'right') or (self.collision[crIdx] == 'bottom') or (self.collision[crIdx] == 'left'):  # colliding with top/right/bottom/left plane
             if self.__collisionState == 'y':
                 if not self.colliding[crIdx]:
                     self.colliding[crIdx] = True
-                    self.cords[1] = self.__yCollisionLine[self.collision[crIdx]]['y'] + (self.__multiplier[crIdx] * self.radius / cos(self.__bAngle[2]))  # use y = mx + c where m <= 1 and y = cords[1]
+                    self.cords[1] = self.__yCollisionLine[self.collision[crIdx]] + (self.__multiplier[crIdx] * self.radius / cos(self.__bAngle[2]))  # use y = mx + c where m <= 1 and y = cords[1]
                     self.oldCords[0] = copy.deepcopy(self.cords[0])
                     self.oldCords[1] = copy.deepcopy(self.cords[1])
                     resultP = (self.mass * self.velocity[0] * cos(self.__bAngle[2])) + (self.mass * self.velocity[1] * sin(self.__bAngle[2]))
@@ -1242,11 +1265,11 @@ class Point:
                     self.__impulse[1] = resultP * physicsTime * sin(self.__bAngle[2]) * self.e
                 else:
                     self.__impulse = [0, 0, 0]
-                    self.cords[1] = self.__yCollisionLine[self.collision[crIdx]]['y'] + (self.__multiplier[crIdx] * self.radius / cos(self.__bAngle[2]))
+                    self.cords[1] = self.__yCollisionLine[self.collision[crIdx]] + (self.__multiplier[crIdx] * self.radius / cos(self.__bAngle[2]))
             elif self.__collisionState == 'x':
                 if not self.colliding[crIdx]:
                     self.colliding[crIdx] = True
-                    self.cords[0] = self.__xCollisionLine[self.collision[crIdx]]['x'] - (self.__multiplier[crIdx] * self.radius / sin(self.__bAngle[2]))  # use x = my + c where m <= 1 and x = cords[0]
+                    self.cords[0] = self.__xCollisionLine[self.collision[crIdx]] - (self.__multiplier[crIdx] * self.radius / sin(self.__bAngle[2]))  # use x = my + c where m <= 1 and x = cords[0]
                     self.oldCords[0] = copy.deepcopy(self.cords[0])
                     self.oldCords[1] = copy.deepcopy(self.cords[1])
                     resultP = (self.mass * self.velocity[0] * cos(self.__bAngle[2])) + (self.mass * self.velocity[1] * sin(self.__bAngle[2]))
@@ -1254,7 +1277,7 @@ class Point:
                     self.__impulse[1] = resultP * physicsTime * sin(self.__bAngle[2]) * self.e
                 else:
                     self.__impulse = [0, 0, 0]
-                    self.cords[0] = self.__xCollisionLine[self.collision[crIdx]]['x'] - (self.__multiplier[crIdx] * self.radius / sin(self.__bAngle[2]))
+                    self.cords[0] = self.__xCollisionLine[self.collision[crIdx]] - (self.__multiplier[crIdx] * self.radius / sin(self.__bAngle[2]))
         elif (self.collision[crIdx] == 'front') or (self.collision[crIdx] == 'back'):
             if not self.colliding[crIdx]:
                 self.colliding[crIdx] = True
