@@ -46,12 +46,12 @@ viz.vsync(0)  # disable vsync (cuz it caps off max calcs/second) to the display'
 
 
 # generalized control function to get if the 'select' button is being pressed, given a controller's index (0==left, 1==right)
-def selectP(cIdx):
+def selectP(cIdx: int):
     return buttonPressed('select', controlsConf.controllers[cIdx], cIdx)
 
 
 # this method is used to generalize slider/manual inputs with similar parameters
-def getSliderManual(xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text):
+def getSliderManual(xyz: int, referenceVar, globalDefaultVar, cords: list, length: float, maxi: int, mini: int, text) -> object:
     if mode == 'vr':
         return myGUI.Slider(xyz, referenceVar, globalDefaultVar, cords, length, maxi, mini, text, lControllerObj, rControllerObj)
     elif mode == 'k':
@@ -60,7 +60,7 @@ def getSliderManual(xyz, referenceVar, globalDefaultVar, cords, length, maxi, mi
 
 # Main class for sandbox.py
 class Main:
-    def __init__(self):
+    def __init__(self) -> None:
         self.pause = False  # stores if physics should be paused (all points have 0 velocity if True)
 
         self.points = []  # list of points for the whole program
@@ -69,14 +69,14 @@ class Main:
         self.joints = []  # list of joints for the whole program
         self.collisionRect = []  # list of collision rectangles for the whole program
 
+        """
+        this is a dictionary of all GUIs and their possible forms in the notation: variable: {type: {axes: None}}, where None is replaced with the GUI object when they are summoned.
+        for all scalar quantities, manual and slider inputs have only one axis: default ('X'). this is for two reasons:
+            1) having no axes (no direction, since it's a scalar) means that, well... there aren't any axes; only magnitude!
+            2) while slider and dial GUI types have axes regardless if a value is a vector or scalar quantity, that's only because their visuals can be affected by summoning them about different axes. manual inputs' visuals aren't affected by its axis!
+        tutorials have an empty dictionary to allow tutorials to be updated to it from the importTutorials method, allowing for the selection of all tutorials from tutorialTexts
+        """
         self.__GUI = {
-            """
-            this is a dictionary of all GUIs and their possible forms in the notation: variable: {type: {axes: None}}, where None is replaced with the GUI object when they are summoned.
-            for all scalar quantities, manual and slider inputs have only one axis: default ('X'). this is for two reasons:
-                1) having no axes (no direction, since it's a scalar) means that, well... there aren't any axes; only magnitude!
-                2) while slider and dial GUI types have axes regardless if a value is a vector or scalar quantity, that's only because their visuals can be affected by summoning them about different axes. manual inputs' visuals aren't affected by its axis!
-            tutorials have an empty dictionary to allow tutorials to be updated to it from the importTutorials method, allowing for the selection of all tutorials from tutorialTexts
-            """
             'gameSpeed': {'slider': {'X': None}, 'manual': {'X': None}},
             'gField': {'dial': {'XZ': None, 'XY': None, 'YZ': None, '3D': None}, 'slider': {'X': None, 'Y': None, 'Z': None}, 'manual': {'X': None, 'Y': None, 'Z': None}},
             'gasDensity': {'slider': {'X': None}, 'manual': {'X': None}},
@@ -109,8 +109,8 @@ class Main:
         if imports:
             self.__importData()
 
-    # this method is used to read the contents of exportData to allow the user to import their own creations from spriteCreator.py
-    def __importData(self):
+    # used to read the contents of exportData to allow the user to import their own creations from spriteCreator.py
+    def __importData(self) -> None:
         f = open('exportData', 'r')
         data = f.read().splitlines()
         formattedData = []  # the code below makes this into the form: [[points], [joints], [collisionRects]]
@@ -174,7 +174,7 @@ class Main:
             self.collisionRect.append(CollisionRect(cr[0], cr[1], cr[2], cr[3], cr[4], cr[5], cr[6], cr[7]))
 
     # identify cloths based on joints connected to a points
-    def __initCloths(self, jDat):
+    def __initCloths(self, jDat: list) -> None:
         """
         by looping through all points, if the index of both points match the point indexes of the joint (jDat), make both points have the same cloth.
         'p' and 'po' are indexes in the point list.
@@ -194,7 +194,7 @@ class Main:
                     self.points[po].cloth = self.points[p].cloth  # make both point's cloths identical (since they are connected to the same joint)
 
     # initialize all the lists that depend on the size of self.points and self.collisionRect
-    def initLists(self):
+    def initLists(self) -> None:
         for p in range(len(self.points)):
             self.__GUI.update({p: {'slider': {'radius': None, 'density': None}, 'manual': {'radius': None, 'density': None}}})  # add a radius/density GUI to the GUI dictionary for each point, with the key as the integer value of the point's index
             for _ in range(len(self.collisionRect)):  # append the below to each point for every collisionRect in the game
@@ -218,7 +218,7 @@ class Main:
         # myT.font("JetBrainsMono-2.304\\fonts\\ttf\\JetBrainsMono-Medium.ttf")
 
     # update all the lists whenever a new point or collisionRect is added for the same reasons as the 'initLists' method
-    def updateLists(self):
+    def updateLists(self) -> None:
         self.__GUI.update({len(self.points) - 1: {'slider': {'radius': None, 'density': None}, 'manual': {'radius': None, 'density': None}}})
         for _ in range(len(self.collisionRect)):
             self.points[-1].collision.append('')
@@ -236,7 +236,7 @@ class Main:
         self.__updateCloths()
 
     # put the indexes of all points into the clothData dictionary identify all points in a cloth
-    def __updateCloths(self):
+    def __updateCloths(self) -> None:
         global clothNames  # globalized to allow the clothNames dict in config.py to be updated for cloth/point selection in the GUISelector
         for p in range(len(self.points)):
             # if the point isn't a part of a cloth, make its key as its position index 'p' in the points list
@@ -251,7 +251,8 @@ class Main:
             if (self.points[p].cloth != '') and (not checkInList(self.__clothData[self.points[p].cloth], p)):
                 self.__clothData[self.points[p].cloth].append(p)
 
-    def __importTutorials(self):
+    # used to import tutorials from 'tutorialTexts.txt'
+    def __importTutorials(self) -> None:
         f = open('tutorialTexts', 'r')
         tutors = f.read().splitlines()
         tNames = []
@@ -280,7 +281,7 @@ class Main:
             self.__GUI['Tutorials']['']['Introduction'] = myGUI.Tutorial([0, 2, 4], [10, 0.2], self.__tutorialTexts['Introduction'], [], 0.3, lControllerObj, rControllerObj)
 
     # teleport a cloth, or a point that's part of a cloth, to a hand's position
-    def __tpCloth(self, cloth, cords, cIdx):
+    def __tpCloth(self, cloth: (int or str), cords: list, cIdx: int) -> None:
         """
         :param cloth: the name of a cloth/a point's index, depending on 'cloth' being a string/integer, respectively.
         :param cords: location to teleport the cloth/point to.
@@ -314,7 +315,7 @@ class Main:
         self.points[pIdx].oldCords = copy.deepcopy(cords)
 
     # the method in this class that allows the program to run and manages all other methods to calculate physics of each point and joint
-    def main(self):
+    def main(self) -> None:
         global physicsTime  # must be globalised since gameSpeed can be changed by the user from the GUI selector
         physicsTime = calcRate * (1 / globalVars['gameSpeed'])  # update the value of physicsTime based on gameSpeed, since gameSpeed can be changed in a GUI
         for c in range(controlsConf.controllerAmt):
@@ -341,7 +342,7 @@ class Main:
             if not self.pause:
                 self.joints[j].constrain()  # apply a force to each point from each joint
 
-    def __pointCollision(self, p):
+    def __pointCollision(self, p: int) -> None:
         """
         :param p: index position of the reference point to check for collisions with.
 
@@ -399,7 +400,7 @@ class Main:
                     self.points[po].cords[2] += deltaP * multiplier[2] * cos(normal[1]) * cos(normal[0]) / (self.points[po].mass * calcRate)
 
     # get if a button isn't being pressed to allow for single-click detection
-    def __getButtonReleased(self, cIdx):
+    def __getButtonReleased(self, cIdx: int) -> None:
         """
         :param cIdx: controller index value
         """
@@ -408,7 +409,7 @@ class Main:
                 self.__buttonHeld[b][cIdx] = False
 
     # summon the GUI selector if the 'GUISelector' button is pressed
-    def __summonGUISelector(self, cIdx):
+    def __summonGUISelector(self, cIdx: int) -> None:
         """
         :param cIdx: controller index value
         """
@@ -421,7 +422,7 @@ class Main:
                 removeGUI(self.__GUI['GUISelector'][''][''])
 
     # pause all point and joint physics if the 'pause' button is pressed
-    def __pauseGame(self, cIdx):
+    def __pauseGame(self, cIdx: int) -> None:
         """
         :param cIdx: controller index value
         """
@@ -429,7 +430,7 @@ class Main:
             self.__buttonHeld['pause'][cIdx] = True
             self.pause = not self.pause  # reciprocate between True and False
 
-    def render(self):
+    def render(self) -> None:
         self.__updateGUI()  # update all GUIs and their variables
         controls.main()  # runs the main function in the current control (keyboard/VR) setting
         for p in self.points:
@@ -443,7 +444,7 @@ class Main:
                         self.__GUI[g][gu][gui].draw(controls.camCords)
 
     # used to drag a point around using a hand, as well as running the animations for doing so
-    def __dragPoint(self):
+    def __dragPoint(self) -> None:
         """
         process:
             1. loop through all controllers.
@@ -471,7 +472,7 @@ class Main:
                         if self.__GUI[gVar][gType][gAxis] is not None:
                             self.__GUI[gVar][gType][gAxis].drag(c, selectP(c))  # detect GUI interactions
             for p in range(len(self.points)):
-                if detectCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):  # any point<>hand collision
+                if detectPointCollision(self.points[p].radius, controls.hand[c].radius, self.points[p].cords, controls.hand[c].cords):  # any point<>hand collision
                     self.__collP[c] = p
                     if selectP(c):
                         if not self.__buttonHeld['select'][c]:  # prevents other points from being picked up while a current point is being selected
@@ -486,7 +487,7 @@ class Main:
                             self.__dragP[c] = p
                             if self.__lastP[c] != p:  # no need to run the below if the value of lastP won't change
                                 if mode == 'vr':
-                                    if self.__lastP[c - 1] != p:  # only allow unique points to be recalled by each controller
+                                    if self.__lastP[c - 1] != p:  # prevents both controllers from recalling the same point
                                         self.__lastP[c] = p
                                 else:
                                     self.__lastP[c] = p
@@ -508,13 +509,12 @@ class Main:
                 self.__dragP[c] = None
             # recalls the last clicked point to the controller's position
             if buttonPressed('recall', controlsConf.controllers[c], c) and (self.__lastP[c] >= 0):
-                # set cords of point to user pointer/hand
-                self.points[self.__lastP[c]].cords = copy.deepcopy(controls.hand[c].cords)
+                self.points[self.__lastP[c]].cords = copy.deepcopy(controls.hand[c].cords)  # set cords of point to user pointer/hand
                 if not self.__buttonHeld['recall'][c]:
                     self.__tpCloth(self.__lastP[c], self.points[self.__lastP[c]].cords, c)
                     self.__buttonHeld['recall'][c] = True
 
-    def __setRadiusDensityGUI(self, cords, p):
+    def __setRadiusDensityGUI(self, cords: list, p: int) -> None:
         """
         :param cords: position at which the GUI should be summoned.
         :param p: index position of the clicked point in the points list.
@@ -534,7 +534,7 @@ class Main:
             self.__GUI[p]['slider']['density'] = None
 
     # animates selecting points depending on if it's being hovered over or selected
-    def __selectPointAnime(self, c):
+    def __selectPointAnime(self, c: int) -> None:
         """
         :param c: controller index value
         """
@@ -556,7 +556,7 @@ class Main:
                 controls.anim[c].setColor(self.__animeColor[c])
 
             # if the controller is not hovering over a point, return the animation to the hand
-            elif not detectCollision(self.points[self.__collP[c]].radius, controls.hand[c].radius, self.points[self.__collP[c]].cords, controls.hand[c].cords):
+            elif not detectPointCollision(self.points[self.__collP[c]].radius, controls.hand[c].radius, self.points[self.__collP[c]].cords, controls.hand[c].cords):
                 controls.anim[c].point = controls.hand[c]
                 controls.anim[c].resetScale()
                 controls.anim[c].resetColor()
@@ -569,11 +569,11 @@ class Main:
                 self.__animeScaleSpeed = 0
                 self.__animeColor[c] = [1, 0, 0]  # make the animation red
                 controls.anim[c].setScale(self.__animeScale[c])
-                controls.anim[c].setColor(self.__animeColor[c])  # make the animation red
+                controls.anim[c].setColor(self.__animeColor[c])
                 controls.anim[c].pause = False
 
     # calculate and cache the distance between every point to every other point
-    def __getDist(self):
+    def __getDist(self) -> None:
         for p in range(len(self.points)):
             for po in range(len(self.points)):
                 sumR = self.points[p].radius + self.points[po].radius
@@ -583,7 +583,7 @@ class Main:
                     self.diff[p][po] = diffDistance(disp[0], disp[1], disp[2])
 
     # add a point object to the points list
-    def addPoint(self, point):
+    def addPoint(self, point: object) -> None:
         """
         :param point: point object to add to the points list
         """
@@ -592,7 +592,7 @@ class Main:
             self.points[p].pIdx = p
 
     # draw and update all the summoned GUIs
-    def __updateGUI(self):
+    def __updateGUI(self) -> None:
         """
         this method is used to update all the summoned GUIs.
         gVar: GUI's reference variable
@@ -642,7 +642,7 @@ class Main:
         self.__selectGUIType()
 
     # summons a GUI if self.GUIType has a value, running through all the possible case scenarios and exceptions for different variables
-    def __selectGUIType(self):
+    def __selectGUIType(self) -> None:
         """
         this method is used to summon a GUI if 'GUIType' isn't None, running through all the possible case scenarios and exceptions for different variables and GUI types.
         different case scenarios cause the data returned from 'GUIType' to vary. this method also runs through all these scenarios.
@@ -709,7 +709,7 @@ class Main:
             self.__GUIType = None
 
     # set up the GUI and axes of a slider or manual GUI
-    def __setupSliderManual(self):
+    def __setupSliderManual(self) -> int:
         """
         :return: index position of the axis about which the GUI is situated.
         """
@@ -728,7 +728,7 @@ class Main:
 
 # class for spheres
 class Point:
-    def __init__(self, radius, density, show, *disabledPointCollisions):
+    def __init__(self, radius: float, density: float, show: bool, *disabledPointCollisions: list) -> None:
         self.show = show  # boolean value of whether to draw the point in the Vizard game scene
         self.radius = radius
         self.origRadius = radius
@@ -778,11 +778,11 @@ class Point:
         if len(disabledPointCollisions) > 0:
             self.disabledPointCollisions = disabledPointCollisions
 
-    # setter method that increments the size of the __multiplier list
-    def incrementMultiplier(self):
+    # setter method that increments the size of the point's 'multiplier' list
+    def incrementMultiplier(self) -> None:
         self.__multiplier.append(1)
 
-    def teleport(self, cords):
+    def teleport(self, cords: list) -> None:
         """
         :param cords: position to which this point (self) should be teleported to.
         """
@@ -790,7 +790,7 @@ class Point:
         self.oldCords = copy.deepcopy(cords)
 
     # this setter method is used to set the values for radius and density so that volume, surface area, and mass can be recalculated
-    def setRadiusDensity(self, radius, density):
+    def setRadiusDensity(self, radius: float, density: float) -> None:
         """
         :param radius: new radius of this point.
         :param density: new density of this point.
@@ -803,7 +803,7 @@ class Point:
         if self.show:
             self.sphere.setScale([self.radius, self.radius, self.radius])
 
-    def move(self):
+    def move(self) -> None:
         self.__weight = [self.mass * globalVars['gField'][0], self.mass * globalVars['gField'][1], self.mass * globalVars['gField'][2]]  # update weight of the point since gField can be changed in a GUI
 
         if not game.pause:
@@ -820,11 +820,11 @@ class Point:
             for v in range(3):
                 self.cords[v] += self.velocity[v] / physicsTime
 
-    def draw(self):
+    def draw(self) -> None:
         if self.show:
             self.sphere.setPosition(self.cords)
 
-    def __physics(self):
+    def __physics(self) -> None:
         """
         this method is used to calculate and manage all the physics for this point.
 
@@ -875,7 +875,7 @@ class Point:
         else:
             self.__movingAngle[2] = math.pi / 2
 
-    def __resolveRectCollisions(self):
+    def __resolveRectCollisions(self) -> None:
         """
         this method calculates normal reaction force and friction. the reason it's here and not in 'boxCollision' is because resultant force from all other forces must be calculated first.
 
@@ -934,7 +934,7 @@ class Point:
 
     # check this out to see how I use lines, domains, and ranges for collision detection: https://drive.google.com/file/d/1a0McNZn3RdBdNACSEkrpEFIMrSON3MYZ/view?usp=sharing
     # check this out to see how I get the formulae of the lines: https://drive.google.com/file/d/1xwD0r6H49mgiumBW7Ax1TiJFgu5GsMbu/view?usp=sharing
-    def __yCollisionPlane(self, b):  # find "y" from the mathematical formula: "y = mx + c" for each collision plane of a collisionRect
+    def __yCollisionPlane(self, b: object) -> dict:  # find "y" from the mathematical formula: "y = mx + c" for each collision plane of a collisionRect
         """
         :param b: collisionRect object.
         :return: dictionary of 'y' values for each collision plane's equation.
@@ -950,7 +950,7 @@ class Point:
             'bottom': (b.grad['x'] * self.cords[0]) + (b.vertex[7][1] - (b.grad['x'] * b.vertex[7][0])),
         }
 
-    def __xCollisionPlane(self, b):  # find "x" from the mathematical formula: "x = my + c" for each collision plane of a collisionRect
+    def __xCollisionPlane(self, b: object) -> dict:  # find "x" from the mathematical formula: "x = my + c" for each collision plane of a collisionRect
         """
         :param b: collisionRect object.
         :return: dictionary of 'x' values for each collision plane's equation.
@@ -969,7 +969,7 @@ class Point:
         }
 
     # detects and resolves collisions between spheres (points) and static cuboids (collision rects)
-    def __boxCollision(self):
+    def __boxCollision(self) -> None:
         """
         this method is used to detect and resolve collisions between spheres (points) and static cuboids (collisionRects) using my own algorithm for AABB collision detection.
 
@@ -1010,7 +1010,6 @@ class Point:
             see below for point 8 onwards.
         """
         cubeCollision = False
-        cubeSubmersion = False
         for crIdx in range(len(game.collisionRect)):
             cr = game.collisionRect[crIdx]  # alias for current collisionRect
 
@@ -1131,9 +1130,9 @@ class Point:
             self.__submergedArea = 0
             self.__submergedRadius = 0
 
-    def __getVertexDist(self, cr):
+    def __getVertexDist(self, cr: object) -> (int, (list or int)):
         """
-        :param cr:current collisionRect object.
+        :param cr: current collisionRect object.
         :return: minimum distance to the nearest vertex, and the index(es) of the nearest vertex(es)
 
         this method is used to get the distance and index(es) to the nearest vertex(es), which will be used for vertex/edge collision detection.
@@ -1180,7 +1179,7 @@ class Point:
 
         return minDist, vertexIdx
 
-    def __planeCollision(self, crIdx, cr):
+    def __planeCollision(self, crIdx: int, cr: object) -> None:
         """
         :param crIdx: index position of the colliding collisionRect.
         :param cr: colliding collisionRect object.
@@ -1206,7 +1205,7 @@ class Point:
             elif cr.type == 'l':
                 self.__planeCollisionLiquid(crIdx, cr)
 
-    def __planeCollisionLiquid(self, crIdx, cr):
+    def __planeCollisionLiquid(self, crIdx: int, cr: object) -> None:
         """
         :param crIdx: index position of the colliding collisionRect.
         :param cr: colliding collisionRect object.
@@ -1230,7 +1229,7 @@ class Point:
             self.__liquidUpthrust[axis] = cr.density * -globalVars['gField'][axis] * self.__submergedVolume  # Upthrust = fluid density * -gravitational field strength * submerged volume
             self.__liquidDrag[axis] = (0.5 * cr.viscosity * (self.velocity[axis] ** 2) * -getSign(self.velocity[axis]) * self.__submergedArea)  # Drag = 1/2 * drag coefficient (viscosity) * fluid density * velocity² * -moving direction
 
-    def __planeCollisionSolid(self, crIdx):
+    def __planeCollisionSolid(self, crIdx: int) -> None:
         """
         :param crIdx: index of the colliding collisionRect in the collisionRect list.
         :param cr: colliding collisionRect object
@@ -1289,7 +1288,7 @@ class Point:
 
 # class for cylinders (joints) connecting spheres
 class Joint:
-    def __init__(self, show, origLength, stiffness, pOne, pTwo, bounciness, maxStrain, gameObj):
+    def __init__(self, show: bool, origLength: float, stiffness: float, pOne: int, pTwo: int, bounciness: float, maxStrain: float, gameObj: object) -> None:
         self.pOne = pOne  # index of first connected point
         self.pTwo = pTwo  # index of second connected point
         self.__length = distance(gameObj.points[self.pOne].cords, gameObj.points[self.pTwo].cords)  # current size of joint
@@ -1314,19 +1313,17 @@ class Joint:
         self.__volume = math.pi * (self.radius ** 2) * self.__length
 
     # update the position and appearance of the joint
-    def update(self):
+    def update(self) -> None:
         """
-        this method is used to update the position and appearance of the joint.
-        any mention of 'length' simply means the current length of the joint.
-        any mention of 'points' refers to the points from the 'game.points' list at their specified indexes.
+        this method is used to update the position and appearance of the joint in the Vizard game scene.
 
         process:
-            1. get the difference in position from both points about each axis.
-            2. save the length from the previous frame (used in damping).
-            3. set the current length to the distance between both points, as long as this distance isn't 0. let game.diff be game.diff[pIdx0][pIdx1]:
+            1. get the difference in position between both points about each axis.
+            2. save the length from the current frame for use in calculating damping force in the next frame.
+            3. set the current length to the distance between both points, as long as this distance isn't 0. let game.diff be game.diff[pOne][pTwo]:
                 since the 'getDist' method from the game instance makes it so that pIdx0 must always be larger than pIdx1.
-                this must be used to compensate for "also don't get distance between 2 points if you already have it!" as seen in getDist() from the Main class.
-            4. update the visual radius of the joint based on its new length (since volume should always be constant).
+                this must be used to compensate for "also don't get distance between 2 points if you already have it!" as seen in getDist() from the Main class, where 'po > p'.
+            4. update the visual radius of the joint based on its new length, since volume should always remain constant (since no mass of the joint is ever lost).
                 increasing length decreases radius since radius = sqrt(volume / (π * height)).
         """
 
@@ -1342,43 +1339,39 @@ class Joint:
         self.radius = math.sqrt(self.__volume / (math.pi * self.__length))  # r = sqrt(v / πh)
         # no need to reassign volume here since it always stays constant
 
-    def draw(self):
-        """
-        this method is used to draw the joint in the Vizard game scene.
-        """
+    # used to draw the joint in the Vizard game scene. only runs if the joint is shown.
+    def draw(self) -> None:
         if self.show:
             self.cylinder.setScale([self.radius, self.__length, self.radius])  # change visual size of the joint in the Vizard game scene
             self.cords = midpoint(game.points[self.pOne], game.points[self.pTwo])
+            self.cylinder.setPosition(self.cords)  # set the position of the joint in the Vizard game scene
             self.cylinder.setEuler(getEulerAngle(game.points[self.pOne].cords, game.points[self.pTwo].cords))
 
-            self.cylinder.setPosition(self.cords)  # set the position of the joint in the Vizard game scene
-
     # constrain points connected to this joint
-    def constrain(self):
+    def constrain(self) -> None:
         """
-        this method is used to calculate the tension in each joint on connected points.
+        this method is used to calculate the constraint force (tension) in each joint on connected points.
 
         process:
             1. if there's a change in length of the joint (since there's no need to do calculations if their result isn't going to change), and its length isn't 0 (prevents dividing by 0):
                 a) calculate 'constrainForce' using F = spring constant * extension for each axis: https://drive.google.com/file/d/14lx-43spyHGvXsNz7zKPZd1ALsERDYLw/view?usp=drive_link
                     this is done by multiplying the ratio of current length to length about each axis with the extension of the joint.
-                    this ratio is calculated in 'self.diff[u] / self.length', where 'u' is the current axis index.
-                    extension is calculated in 'origLength - length'.
+                    this ratio is calculated in 'self.diff[u] / self.length', where 'u' is the current axis' index.
+                    extension is calculated for constraint force in 'origLength - length'.
                 b) calculate the damping force about each axis: https://drive.google.com/file/d/1aQkf92qq8nMDpdk53Bs-iAaJB7V96GxW/view?usp=drive_link
-                    damping force = damping constant * change in joint length from last frame * ratio of current length to length * -resultant direction of motion
-            2. apply the calculated constraint force minus the damping to each point in opposite directions (due to Newton's 3rd law)
+                    damping force = damping constant * change in joint length from last frame (lRel) * ratio of current length to length * -resultant direction of motion
+            2. apply the calculated constraint force minus the damping to each point in opposite directions (opposite due to Newton's 3rd law).
         """
         if (self.__length != self.origLength) and (self.__length != 0):
             for u in range(3):
                 self.constrainForce[u] = self.stiffness * (self.diff[u] / self.__length) * (self.origLength - self.__length)
-                self.__damping[u] = self.__dampingCoef * self.dampingConst * abs((self.diff[u] / self.__length) * (self.__oldLength - self.__length)) * physicsTime * getSign(
-                    game.points[self.pOne].velocity[u] - game.points[self.pTwo].velocity[u])
+                self.__damping[u] = self.__dampingCoef * self.dampingConst * abs((self.diff[u] / self.__length) * (self.__oldLength - self.__length)) * physicsTime * getSign(game.points[self.pOne].velocity[u] - game.points[self.pTwo].velocity[u])
         for i in range(3):
             game.points[self.pOne].constrainForce[i] += self.constrainForce[i] - self.__damping[i]
             game.points[self.pTwo].constrainForce[i] -= self.constrainForce[i] - self.__damping[i]  # negative due to Newton's 3rd law
 
     # break the joint after extending a specified distance (MASSIVE WIP)
-    def __snap(self):
+    def __snap(self) -> None:
         # radius cannot be less than 0.05 due to floating point error
         if (game.points[self.pOne].radius / 2) < minRadius:
             pointRad = minRadius
@@ -1417,7 +1410,7 @@ class Joint:
 
 
 class CollisionRect:
-    def __init__(self, size, cords, angle, density, viscosity, dragConst, transparency, rectType, *hide):
+    def __init__(self, size: list, cords: list, angle: list, density: float, viscosity: float, dragConst: float, transparency: float, rectType: str, *hide: bool) -> None:
         self.type = rectType  # solid or liquid
         self.angle = angle
         self.__vertexAngle = [0, 0, 0]
@@ -1445,14 +1438,16 @@ class CollisionRect:
         self.sf = 1
         self.update()
 
-    def update(self):
+    def update(self) -> None:
         """
         this method is used to calculate the positions of vertices and determine other properties of a collisionRect.
 
         process:
             1. set the size, position, angle, and transparency of the collisionRect in the Vizard game scene.
+                only do this if the collisionRect is drawn in the Vizard game scene!
             2. get 'sizeMultiplier' and 'multiplier' to get the relative direction to displace each vertex when updating their new positions in the next step.
             3. displace each vertex from their initial positions given the angle of the collisionRect.
+                https://drive.google.com/file/d/1XcQUu377kNwbsxM5kiE_QrgbgAowziEC/view?usp=drive_link
             4. set the x, y, or z cords for each plane depending on their facing direction.
             5. calculate gradient for y = mx + c and x = my + c, and put the results into the 'grad' dictionary.
                 despite m(x) = -1/my, using a negative reciprocal isn't accurate here due to floating point precision!
@@ -1560,20 +1555,19 @@ if not imports:
     game.points[-2].cords[0] -= 20
     game.points[-2].oldCords[0] -= 20
 
-    game.collisionRect.append(CollisionRect((100, 50, 50), [-60, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.8,
-                                            's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
-    game.collisionRect.append(CollisionRect((100, 50, 50), [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.8, 's'))
-    game.collisionRect.append(CollisionRect((50, 50, 50), [170, 0, 0], [math.radians(0), 0, math.radians(0.001)], 2000, 1, 1, 0.5, 'l'))
+    game.collisionRect.append(CollisionRect([100, 50, 50], [-60, 0, 0], [math.radians(0), math.radians(0), math.radians(0.001)], 1000, 10, 1, 0.8, 's'))  # CANNOT be negative angle or above 90 (make near-zero for an angle of 0)
+    game.collisionRect.append(CollisionRect([100, 50, 50], [60, 0, 0], [math.radians(0), math.radians(0), math.radians(30)], 1000, 10, 1, 0.8, 's'))
+    game.collisionRect.append(CollisionRect([50, 50, 50], [170, 0, 0], [math.radians(0), 0, math.radians(0.001)], 2000, 1, 1, 0.5, 'l'))
 
 # make the borders (which are hidden collisionRects). size can be changed in 'config.py'.
-game.collisionRect.append(CollisionRect((borderSize[0], 1, borderSize[2]), [0, borderHeight, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, borderSize[2] / 2], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect.append(CollisionRect((borderSize[0], borderSize[1], 1), [0, borderHeight + borderSize[1] / 2, -borderSize[2] / 2], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
-game.collisionRect.append(CollisionRect((1, borderSize[1], borderSize[2]), [-borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect([borderSize[0], 1, borderSize[2]], [0, borderHeight, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect([borderSize[0], borderSize[1], 1], [0, borderHeight + borderSize[1] / 2, borderSize[2] / 2], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect([borderSize[0], borderSize[1], 1], [0, borderHeight + borderSize[1] / 2, -borderSize[2] / 2], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect([1, borderSize[1], borderSize[2]], [borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
+game.collisionRect.append(CollisionRect([1, borderSize[1], borderSize[2]], [-borderSize[0] / 2, borderHeight + borderSize[1] / 2, 0], [0, 0, math.radians(0.001)], 1000, 10, 1, 1, 's', False))
 for cr in range(5):
     game.collisionRect[-cr - 1].sf = 4  # make points on the collisionRect stop quicker (depends on the point's surface friction as well)
 
 game.initLists()  # WARNING: must ALWAYS run this ONCE before vizact.ontimer
-vizact.ontimer(1 / calcRate, game.main)  # calculate physics game.time times each second
-vizact.ontimer(1 / renderRate, game.render)  # render objects game.render times each second
+vizact.ontimer(1 / calcRate, game.main)  # calculate physics 'calcRate' times each second
+vizact.ontimer(1 / renderRate, game.render)  # render objects 'renderRate' times each second

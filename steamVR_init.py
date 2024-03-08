@@ -23,7 +23,7 @@ controllerAmt = 2  # set this to 2 since there's 2 controllers
 
 # main class for HMD
 class Main:
-    def __init__(self):
+    def __init__(self) -> None:
         # max speed of camera
         self.camSpeed = minCamSpeed
         # camera variables
@@ -39,7 +39,7 @@ class Main:
 
         self.anim = [myGUI.CircleAnim(self.hand[0], 4, 0.1, 0.01, [100, 5, 1], True), myGUI.CircleAnim(self.hand[1], 4, 0.1, 0.01, [100, 5, 1], True)]
 
-    def main(self):
+    def main(self) -> None:
         self.hmdPos = hmd.getPosition()  # update the position of the camera by querying the HMD's new position every frame
         self.moveCam()
         self.updateHMD()
@@ -54,7 +54,7 @@ class Main:
             self.anim[c].draw()
 
     # set controller position relative to camera position
-    def updateHMD(self):
+    def updateHMD(self) -> None:
         self.camAngle = hmd.getEuler()  # update the angle of the camera by querying teh HMD's new orientation every frame
 
         # update info about both hands (position & orientation)
@@ -63,7 +63,7 @@ class Main:
             self.handAngle[c] = controllers[c].getEuler()
 
     # move camera depending on joystick position
-    def moveCam(self):
+    def moveCam(self) -> None:
         """
         the left joystick is used to control lateral position (X & Z axes), and the right joystick is used to control vertical position only (Y axis).
         when setting camVelocity[0] and camVelocity[2], the tilt of the left joystick about both its axes (since it can be tilted up/down AND left/right) are taken into account to allow full 360 degree motion.
@@ -77,7 +77,7 @@ class Main:
             self.camSpeed = minCamSpeed
 
         # if the left controller's joystick moves outside its degrees of freedom, move the camera based on current facing angle
-        if (abs(controllers[0].getThumbstick()[0]) > freedomDegrees) or (abs(controllers[0].getThumbstick()[1]) > freedomDegrees):
+        if (abs(controllers[0].getThumbstick()[0]) > freedomDegrees) or (abs(controllers[0].getThumbstick()[1]) > freedomDegrees) or (abs(controllers[0].getTrackpad()[0] > freedomDegrees)):
             self.camVelocity[0] = (controllers[0].getThumbstick()[1] * math.sin(math.radians(self.camAngle[0])) * self.camSpeed) + (controllers[0].getThumbstick()[0] * math.cos(-math.radians(self.camAngle[0])) * self.camSpeed)
             self.camVelocity[2] = (controllers[0].getThumbstick()[1] * math.cos(math.radians(self.camAngle[0])) * self.camSpeed) + (controllers[0].getThumbstick()[0] * math.sin(-math.radians(self.camAngle[0])) * self.camSpeed)
         else:  # if the left joystick isn't being tilted (within the degrees if freedom), don't move!
@@ -99,7 +99,7 @@ class Main:
 
 
 class Point:
-    def __init__(self, lr):
+    def __init__(self, lr: str) -> None:
         self.radius = handRadius
         if lr == 'l':
             self.sphere = controllers[0].addModel()  # add left controller model to the Vizard game scene

@@ -8,21 +8,23 @@ Press ' W/A/S/D ' to move around and move the mouse to look around.
 Left-click to select points while God's Hand intersects with a point. Keep left-click held to drag them around, and release left-click to throw them!
 ONLY IN SANDBOX: Press ' ###recall ' to teleport the last selected point to God's Hand, ' ###pause ' to use ZE WORLD!!! (pause the Physics simulation), and ' ###GUISelector ' to summon the GUI selector.
 All GUIs can have their values reset by pressing ' ###reset ' once. By pressing ' ###reset ' twice in quick succession, their values will be set to their global default. Manual input GUIs can be dismissed by selecting them and pressing ' enter '.
+ONLY IN SPRITECREATOR: Create joints by pressing ' ###dragJoint ' while hovering over a point. Double-clicking ' ###dragJoint ' while hovering over a point will remove all its connected joints. Press ' ###undoJoint ' to undo the most recently created joint!
 ---ControlsnewLine(VR)
 Tilt the ' left stick ' to move around, and tilt the ' right stick ' to move up/down. Press the right middle-finger trigger to gather the Olympian winds to move faster, and press the left middle-finger trigger to use ZE WORLD!!! (pause the Physics simulation)
 Press the ' ###select ' to select a point while either God's Hand intersects with one. Keep the trigger held to drag them around, and release the trigger to throw them!
 Press ' ###recall ' to teleport the last selected point to that God's Hand, ' ###pause ' to pause the Physics simulation, and ' ###GUISelector ' to summon the GUI selector.
 All GUIs can have their values reset by pressing ' ###reset ' once. By pressing ' ###reset ' twice in quick succession, their values will be set to their global default.
+ONLY IN SPRITECREATOR: Create joints by pressing ' ###dragJoint ' while hovering over a point. Double-clicking ' ###dragJoint ' while hovering over a point will remove all its connected joints. Press ' ###undoJoint ' to undo the most recently created joint!
 ---GUI Guide
 Press ' ###GUISelector ' to summon the GUI selector, where you'll be able to modify the physical quantities governing your world. ONLY IN SANDBOX: Reversed gravity? Maybe sideways? Super-stiff joints? Super-slow time? It's all yours to control.
 Once in the GUI selector, select a GUI by pressing ' ###select ' while a God's Hand is inside one of the boxes. Selecting "Slider" will allow you to modify the selected value via an interactive slider.
-This may summon another set of boxes, depending on the value selected. For example, since Gravity is directional, selecting boxes containing X, Y, and/or Z will change both its direction and size based on what was selected. If the quantity is not directional (like stiffness), then its axis selection won't be available.
+This may summon another set of boxes, depending on the value selected. For example, since Gravity is directional, selecting boxes containing X, Y, and/or Z will change both its direction and size based on what was selected. If the quantity is not directional (such as springConst), then its axis selection won't be available.
 All GUIs can have their values reset by pressing ' ###reset ' once. By pressing ' ###reset ' twice in quick succession, their values will be set to their global default.
-All GUIs have an "X" button to dismiss that GUI. Manual input GUIs on keyboard/mouse can be dismissed by selecting them and pressing ' enter '.
+All GUIs have an "X" button to dismiss that GUI. Manual input GUIs on keyboard/mouse can be dismissed by selecting them and pressing ' enter '. It's recommended to pause the simulation before using manual inputs, since just one extra zero can break everything! (Press ' ###pause ' to pause/resume)
 Tip: using your infinite strength, you can double-click ' ###select ' to change the radii and densities of individual points. ONLY IN SPRITECREATOR: The same can be done for boxes, to change their size and angle!
 ---Physics Terms
-gField: how quickly everything wants to move. gasDensity: The density of the air. friction: How much points hate moving on a surface.
-springConst: How much joints like to pull points. damping: How much joints hate moving faster. strain: Maximum relative size a joint can be before breaking. (UNDER DEVELOPMENT)
+'gField': how quickly everything wants to move. 'gasDensity': The density of the air. 'friction': How much points hate moving along a surface.
+'springConst': How much joints like to pull points. 'damping': How much joints hate moving faster. 'strain' (UNDER DEVELOPMENT) : Maximum relative size a joint can be before breaking.
 ---Tips, Bugs, andnewLineCreator Notes
 ONLY IN SANDBOX: Edge & Vertex collision resolutions are so messed up that I just made points freeze when touching them. No fancy stuff there!
 ONLY IN SPRITECREATOR: summoning both dials and slider/manual GUIs simultaneously when changing the values a box's size will cause some funni stuf to happen due to offsets being weird!

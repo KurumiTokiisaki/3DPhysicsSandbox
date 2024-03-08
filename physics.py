@@ -30,7 +30,7 @@ class Main:
                 self.points[p].cords[1] = self.points[p].oldCords[1]
             # detect collisions with other points
             for po in range(len(self.points)):
-                if detectCollision(self.points[p], self.points[po]) and (p != po):
+                if detectPointCollision(self.points[p], self.points[po]) and (p != po):
                     pass  # self.sphereCollision(p, po)
 
             self.points[p].move()

@@ -26,7 +26,7 @@ controllerAmt = 1  # set this to 1 since there's only 1 controller, which is the
 
 # main class for keyboard & mouse
 class Main:
-    def __init__(self):
+    def __init__(self) -> None:
         self.camCords = viz.MainView.getPosition()
         self.camAngle = viz.MainView.getEuler()  # [pitch, yaw, tilt]
         self.camVelocity = [0, 0, 0]
@@ -42,7 +42,7 @@ class Main:
 
         self.anim = [myGUI.CircleAnim(self.hand[0], 5, self.hand[0].radius, 0.01, [100, 10, 1], True, 10)]  # add an animation around the hand
 
-    def main(self):
+    def main(self) -> None:
         # call updateView when mouse is moved, so that the facing camera angle can be updated
         viz.callback(viz.MOUSE_MOVE_EVENT, self.updateView)
 
@@ -61,14 +61,14 @@ class Main:
         self.hand[0].sphere.setEuler(self.handAngle[0])
         self.anim[0].draw()
 
-    def updateView(self, cords):
+    def updateView(self, cords: list) -> None:
         """
         :param cords: an object with attributes 'dy' (change in y mouse pos) and 'dx' (change in x mouse pos).
         """
         self.camAngle = viz.MainView.getEuler()
         self.camAngle = [self.camAngle[0] + (cords.dx * sensitivity), self.camAngle[1] - (cords.dy * sensitivity), 0]  # update the facing angle based on CHANGE in mouse position
 
-    def updateHandPos(self):
+    def updateHandPos(self) -> None:
         vizact.onwheelup(self.addHand)  # make the hand go further away if scrolling up
         vizact.onwheeldown(self.subHand)  # make the hand come closer if scrolling down
         # check fig. 1 see the spherical coordinate geometry maths for updating the hand's position in the code below
@@ -76,13 +76,13 @@ class Main:
         self.hand[0].cords[1] = self.camCords[1] - self.handDepth * math.sin(math.radians(self.camAngle[1]))
         self.hand[0].cords[2] = self.camCords[2] + self.handDepth * math.cos(math.radians(self.camAngle[0])) * math.cos(math.radians(self.camAngle[1]))
 
-    def subHand(self):
+    def subHand(self) -> None:
         self.handDepth -= scrollSpeed
 
-    def addHand(self):
+    def addHand(self) -> None:
         self.handDepth += scrollSpeed
 
-    def getCamVelocity(self, forwardBackward, leftRight, sinCos):
+    def getCamVelocity(self, forwardBackward: int, leftRight: int, sinCos: str) -> list:
         """
         :param forwardBackward/leftRight: forwardBackward and leftRight can be positive/negative. when positive, move forwards and right, respectively. when negative, move backwards and left, respectively.
         :param sinCos: used to handle exceptions in which there is left/right movement AND forward/back movement (sin), or left/right movement and NO forward/back movement (cos).
@@ -100,7 +100,7 @@ class Main:
         elif sinCos == 'cos':
             return [self.camSpeed * forwardBackward * math.cos(-math.radians(self.camAngle[0])), self.camVelocity[1], self.camSpeed * leftRight * math.sin(-math.radians(self.camAngle[0]))]
 
-    def moveCam(self):
+    def moveCam(self) -> None:
         """
         forward & backward, left & right, and up & down movements are summed, cancelling each other out when both are pressed at the same time to result in no movement
         """
@@ -154,7 +154,7 @@ class Main:
 
 
 class Point:
-    def __init__(self):
-        self.radius = 0.1
+    def __init__(self) -> None:
+        self.radius = handRadius
         self.sphere = vizshape.addSphere(self.radius)
         self.cords = [0, 0, 0]
