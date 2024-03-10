@@ -379,7 +379,7 @@ class Dial:
                 self.closeButton.setPos([self.cords[0] + self.cRad + 0.5, self.cords[1], self.cords[2]])
                 self.closeButton.setAngle((0, 0, 0))
         else:  # draw the animation if the dial is 3D
-            self.anim = CircleAnim(self.p, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -3, 3, 5)
+            self.anim = CircleAnim(self, round(self.cRad) + 2, self.cRad, 0.04, [1, 0, 1], False, -3, 3, 5)
 
         self.cObj = [lController[0], rController[0]]
         self.cDat = [lController[1], rController[1]]

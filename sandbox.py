@@ -23,7 +23,7 @@ while True:  # if the user doesn't input 'y' or 'n', loop forever until they do 
 # Vizard window initialization
 viz.setMultiSample(4)  # FSAA (Full Screen Anti-Aliasing) resolution
 viz.fov(90)  # FoV (Field of View) (increased from the default value of 60 to 90 to allow more things to be seen by the camera at once)
-viz.go()  # initialise the Vizard game window
+viz.go()  # initialise the Vizard game windown
 
 """
 'controlsConf' will be used to query the Vizard hand objects for getting their button pressed.
@@ -1220,6 +1220,8 @@ class Point:
         self.__submergedVolume = capVolume(submergedAmt, self.radius)
         self.__submergedArea = capArea(submergedAmt, self.radius)
         self.__submergedRadius = submergedAmt
+        if abs(self.__submergedVolume) > self.__volume:
+            self.__submergedVolume = self.__volume
         if self.cubeSubmersion[crIdx]:  # if fully submerged
             self.__submergedVolume = self.__volume
         if self.__submergedRadius >= self.radius:  # if half (or more) of sphere is submerged

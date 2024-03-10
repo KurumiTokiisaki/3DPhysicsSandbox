@@ -5,12 +5,12 @@ import math
 borderSize = [500, 500, 500]  # XYZ
 borderHeight = -250  # center point of the border about the Y-axis
 
-mode = 'k'  # controller mode (keyboard/mouse or VR)
+mode = 'vr'  # controller mode (keyboard/mouse or VR)
 fullscreen = True  # ignored in VR
 handRadius = 0.1  # radius of each hand
 gFieldDirection = {'pitch': math.radians(90), 'yaw': math.radians(0)}  # direction of gravitational field
 gConst = -9.81  # gravitational field constant
-renderRate = 165  # render rate (lower for performance, should be equal to the display's refresh rate)
+renderRate = 90  # render rate (lower for performance, should be equal to the display's refresh rate)
 collisionCalcTolerance = 0.01  # change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)
 collisionTolerance = collisionCalcTolerance * 0.001  # global collision tolerance
 jointResolution = 3  # lower to increase performance
@@ -70,7 +70,7 @@ defaultGlobalVars = {
     'strain': 10,
 }
 
-calcRate = 200  # physics calculations/second (higher number means more accurate physics but lower performance). sadly, this value cannot exceed the framerate of HMDs due to their non-overridable vsync setting! a limitation of Vizard is that processes can’t be run faster than the framerate of the Vizard game scene.
+calcRate = 90  # physics calculations/second (higher number means more accurate physics but lower performance). sadly, this value cannot exceed the framerate of HMDs due to their non-overridable vsync setting! a limitation of Vizard is that processes can’t be run faster than the framerate of the Vizard game scene.
 physicsTime = calcRate / globalVars['gameSpeed']  # value for time used in all force, acceleration, velocity, and displacement calculations
 touchpad = 16  # ID of the VR controller's touchpad according to Vizard
 
