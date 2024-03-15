@@ -829,9 +829,6 @@ class VoidBox:
                             game.removeConnectedJoints(game.lastP[c])  # remove all joints connected to the dismissed point
                             game.points[game.lastP[c]].unDraw()
                             game.points.pop(game.lastP[c])
-                            game.lastP[c] = None
-                            game.dragP[c] = None
-                            game.collP[c] = None
                             # if the index position of any joint's reference point(s) is >= the index position of the dismissed point, decrease said index position(s) by 1
                             # this is done since the point object at the index position 'lastP' is popped from the points list, decreasing all subsequent objects' index positions by 1
                             for j in range(len(game.joints)):
@@ -839,6 +836,9 @@ class VoidBox:
                                     game.joints[j].pOne -= 1
                                 if game.joints[j].pTwo >= game.lastP[c]:
                                     game.joints[j].pTwo -= 1
+                            game.lastP[c] = None
+                            game.dragP[c] = None
+                            game.collP[c] = None
                     if (game.lastR[c] is not None) and game.collisionRect[game.lastR[c]].collidingController[c]:
                         game.collisionRect[game.lastR[c]].unDraw()
             else:

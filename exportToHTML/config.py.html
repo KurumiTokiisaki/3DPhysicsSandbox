@@ -1,0 +1,167 @@
+<html>
+<head>
+<title>config.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #0033b3;}
+.s1 { color: #080808;}
+.s2 { color: #8c8c8c; font-style: italic;}
+.s3 { color: #1750eb;}
+.s4 { color: #067d17;}
+.ln { color: #aeb3c2; font-weight: normal; font-style: normal; }
+</style>
+</head>
+<body bgcolor="#ffffff">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+config.py</font>
+</center></td></tr></table>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">import </span><span class="s1">viz</span>
+<a name="l2"><span class="ln">2    </span></a><span class="s0">import </span><span class="s1">math</span>
+<a name="l3"><span class="ln">3    </span></a>
+<a name="l4"><span class="ln">4    </span></a><span class="s2"># border properties</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s1">borderSize = [</span><span class="s3">500</span><span class="s1">, </span><span class="s3">500</span><span class="s1">, </span><span class="s3">500</span><span class="s1">]  </span><span class="s2"># XYZ</span>
+<a name="l6"><span class="ln">6    </span></a><span class="s1">borderHeight = -</span><span class="s3">250  </span><span class="s2"># center point of the border about the Y-axis</span>
+<a name="l7"><span class="ln">7    </span></a>
+<a name="l8"><span class="ln">8    </span></a><span class="s1">mode = </span><span class="s4">'k'  </span><span class="s2"># controller mode (keyboard/mouse or VR)</span>
+<a name="l9"><span class="ln">9    </span></a><span class="s1">fullscreen = </span><span class="s0">True  </span><span class="s2"># ignored in VR</span>
+<a name="l10"><span class="ln">10   </span></a><span class="s1">handRadius = </span><span class="s3">0.1  </span><span class="s2"># radius of each hand</span>
+<a name="l11"><span class="ln">11   </span></a><span class="s1">gFieldDirection = {</span><span class="s4">'pitch'</span><span class="s1">: math.radians(</span><span class="s3">90</span><span class="s1">), </span><span class="s4">'yaw'</span><span class="s1">: math.radians(</span><span class="s3">0</span><span class="s1">)}  </span><span class="s2"># direction of gravitational field</span>
+<a name="l12"><span class="ln">12   </span></a><span class="s1">gConst = -</span><span class="s3">9.81  </span><span class="s2"># gravitational field constant</span>
+<a name="l13"><span class="ln">13   </span></a><span class="s1">renderRate = </span><span class="s3">165  </span><span class="s2"># render rate (lower for performance, should be equal to the display's refresh rate)</span>
+<a name="l14"><span class="ln">14   </span></a><span class="s1">collisionCalcTolerance = </span><span class="s3">0.01  </span><span class="s2"># change these 2 tolerance values depending on calcRate (should be larger than collisionTolerance)</span>
+<a name="l15"><span class="ln">15   </span></a><span class="s1">collisionTolerance = collisionCalcTolerance * </span><span class="s3">0.001  </span><span class="s2"># global collision tolerance</span>
+<a name="l16"><span class="ln">16   </span></a><span class="s1">jointResolution = </span><span class="s3">3  </span><span class="s2"># lower to increase performance</span>
+<a name="l17"><span class="ln">17   </span></a><span class="s1">pointResolution = </span><span class="s3">10  </span><span class="s2"># lower to increase performance</span>
+<a name="l18"><span class="ln">18   </span></a><span class="s1">theForce = </span><span class="s0">False  </span><span class="s2"># when True, recalling points causes them to float slowly to you. currently not implemented or used.</span>
+<a name="l19"><span class="ln">19   </span></a><span class="s1">jointRadius = </span><span class="s3">0.015  </span><span class="s2"># radius of all joints</span>
+<a name="l20"><span class="ln">20   </span></a><span class="s1">animSpeed = </span><span class="s3">1 </span><span class="s1">/ renderRate  </span><span class="s2"># speed of animations</span>
+<a name="l21"><span class="ln">21   </span></a><span class="s1">minRadius = </span><span class="s3">0.05  </span><span class="s2"># minimum radius of points</span>
+<a name="l22"><span class="ln">22   </span></a><span class="s1">maxRadius = </span><span class="s3">2  </span><span class="s2"># maximum radius of points</span>
+<a name="l23"><span class="ln">23   </span></a><span class="s1">minDensity = </span><span class="s3">1  </span><span class="s2"># minimum density of points/collisionRects</span>
+<a name="l24"><span class="ln">24   </span></a><span class="s1">maxDensity = </span><span class="s3">10000  </span><span class="s2"># maximum density of points/collisionRects</span>
+<a name="l25"><span class="ln">25   </span></a>
+<a name="l26"><span class="ln">26   </span></a><span class="s2"># general GUI types available for only vector quantities</span>
+<a name="l27"><span class="ln">27   </span></a><span class="s1">GUItypes = {</span>
+<a name="l28"><span class="ln">28   </span></a>    <span class="s4">'Slider'</span><span class="s1">: {</span><span class="s4">'X'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Y'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Z'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">},</span>
+<a name="l29"><span class="ln">29   </span></a>    <span class="s4">'Dial'</span><span class="s1">: {</span><span class="s4">'2D'</span><span class="s1">: {</span><span class="s4">'XY'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'YZ'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'XZ'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">}, </span><span class="s4">'3D'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">},</span>
+<a name="l30"><span class="ln">30   </span></a>    <span class="s4">'Manual'</span><span class="s1">: {</span><span class="s4">'X'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Y'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Z'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">}</span>
+<a name="l31"><span class="ln">31   </span></a><span class="s1">}</span>
+<a name="l32"><span class="ln">32   </span></a>
+<a name="l33"><span class="ln">33   </span></a><span class="s2"># general GUI types available for scalar quantities</span>
+<a name="l34"><span class="ln">34   </span></a><span class="s1">GUItypesScalar = {</span>
+<a name="l35"><span class="ln">35   </span></a>    <span class="s4">'Slider'</span><span class="s1">: {</span><span class="s4">'X'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Y'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Z'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">},</span>
+<a name="l36"><span class="ln">36   </span></a>    <span class="s4">'Manual'</span><span class="s1">: {</span><span class="s4">'X'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Y'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'Z'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">}</span>
+<a name="l37"><span class="ln">37   </span></a><span class="s1">}</span>
+<a name="l38"><span class="ln">38   </span></a>
+<a name="l39"><span class="ln">39   </span></a><span class="s2"># special vector-only GUI types allowing only dial summons</span>
+<a name="l40"><span class="ln">40   </span></a><span class="s1">GUItypesVector = {</span>
+<a name="l41"><span class="ln">41   </span></a>    <span class="s4">'Slider'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">,</span>
+<a name="l42"><span class="ln">42   </span></a>    <span class="s4">'Dial'</span><span class="s1">: {</span><span class="s4">'2D'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">, </span><span class="s4">'3D'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">},</span>
+<a name="l43"><span class="ln">43   </span></a>    <span class="s4">'Manual'</span><span class="s1">: </span><span class="s0">None</span>
+<a name="l44"><span class="ln">44   </span></a><span class="s1">}</span>
+<a name="l45"><span class="ln">45   </span></a>
+<a name="l46"><span class="ln">46   </span></a><span class="s1">tutorialNames = {}  </span><span class="s2"># global dict containing all the names of tutorials from tutorialTexts.txt</span>
+<a name="l47"><span class="ln">47   </span></a><span class="s1">clothNames = {}  </span><span class="s2"># global dict containing all the names of cloths, which are defined as all points connected via common joints</span>
+<a name="l48"><span class="ln">48   </span></a>
+<a name="l49"><span class="ln">49   </span></a><span class="s2"># global dict containing all the global variables that are available as options for the user to change in the GUI selector</span>
+<a name="l50"><span class="ln">50   </span></a><span class="s1">globalVars = {</span>
+<a name="l51"><span class="ln">51   </span></a>    <span class="s4">'gameSpeed'</span><span class="s1">: </span><span class="s3">1</span><span class="s1">,  </span><span class="s2"># factor for all objects' velocities</span>
+<a name="l52"><span class="ln">52   </span></a>    <span class="s4">'gField'</span><span class="s1">: [gConst * math.cos(gFieldDirection[</span><span class="s4">'pitch'</span><span class="s1">]) * math.cos(gFieldDirection[</span><span class="s4">'yaw'</span><span class="s1">]), gConst * math.sin(gFieldDirection[</span><span class="s4">'pitch'</span><span class="s1">]) * math.cos(gFieldDirection[</span><span class="s4">'yaw'</span><span class="s1">]), gConst * math.sin(gFieldDirection[</span><span class="s4">'yaw'</span><span class="s1">])],  </span><span class="s2"># gravitational field strength about x, y, and z using spherical coordinate geometry</span>
+<a name="l53"><span class="ln">53   </span></a>    <span class="s4">'gasDensity'</span><span class="s1">: </span><span class="s3">1.293</span><span class="s1">,  </span><span class="s2"># density of the air</span>
+<a name="l54"><span class="ln">54   </span></a>    <span class="s4">'springConst'</span><span class="s1">: </span><span class="s3">1000</span><span class="s1">,  </span><span class="s2"># global stiffness constant of all joints (make negative to break the sandbox)</span>
+<a name="l55"><span class="ln">55   </span></a>    <span class="s4">'damping'</span><span class="s1">: </span><span class="s3">3</span><span class="s1">,  </span><span class="s2"># global damping constant of all joints</span>
+<a name="l56"><span class="ln">56   </span></a>    <span class="s4">'friction'</span><span class="s1">: </span><span class="s3">0.05</span><span class="s1">,  </span><span class="s2"># global surface frictional force coefficient</span>
+<a name="l57"><span class="ln">57   </span></a>    <span class="s4">'strain'</span><span class="s1">: </span><span class="s3">2</span><span class="s1">,  </span><span class="s2"># global maximum strain before breaking point. currently unimplemented.</span>
+<a name="l58"><span class="ln">58   </span></a>    <span class="s4">'Tutorials'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">,  </span><span class="s2"># only here for summoning tutorials</span>
+<a name="l59"><span class="ln">59   </span></a>    <span class="s4">'cloths'</span><span class="s1">: </span><span class="s0">None  </span><span class="s2"># only here for summoning cloths</span>
+<a name="l60"><span class="ln">60   </span></a><span class="s1">}</span>
+<a name="l61"><span class="ln">61   </span></a>
+<a name="l62"><span class="ln">62   </span></a><span class="s2"># global dict containing all the default values for each global variable, so they can undergo a hard reset by the user</span>
+<a name="l63"><span class="ln">63   </span></a><span class="s1">defaultGlobalVars = {</span>
+<a name="l64"><span class="ln">64   </span></a>    <span class="s4">'gameSpeed'</span><span class="s1">: </span><span class="s3">1</span><span class="s1">,</span>
+<a name="l65"><span class="ln">65   </span></a>    <span class="s4">'gField'</span><span class="s1">: [gConst * math.cos(gFieldDirection[</span><span class="s4">'pitch'</span><span class="s1">]) * math.cos(gFieldDirection[</span><span class="s4">'yaw'</span><span class="s1">]), gConst * math.sin(gFieldDirection[</span><span class="s4">'pitch'</span><span class="s1">]) * math.cos(gFieldDirection[</span><span class="s4">'yaw'</span><span class="s1">]), gConst * math.sin(gFieldDirection[</span><span class="s4">'yaw'</span><span class="s1">])],</span>
+<a name="l66"><span class="ln">66   </span></a>    <span class="s4">'gasDensity'</span><span class="s1">: </span><span class="s3">1.293</span><span class="s1">,</span>
+<a name="l67"><span class="ln">67   </span></a>    <span class="s4">'springConst'</span><span class="s1">: </span><span class="s3">1000</span><span class="s1">,</span>
+<a name="l68"><span class="ln">68   </span></a>    <span class="s4">'damping'</span><span class="s1">: </span><span class="s3">3</span><span class="s1">,</span>
+<a name="l69"><span class="ln">69   </span></a>    <span class="s4">'friction'</span><span class="s1">: </span><span class="s3">0.05</span><span class="s1">,</span>
+<a name="l70"><span class="ln">70   </span></a>    <span class="s4">'strain'</span><span class="s1">: </span><span class="s3">10</span><span class="s1">,</span>
+<a name="l71"><span class="ln">71   </span></a><span class="s1">}</span>
+<a name="l72"><span class="ln">72   </span></a>
+<a name="l73"><span class="ln">73   </span></a><span class="s1">calcRate = </span><span class="s3">200  </span><span class="s2"># physics calculations/second (higher number means more accurate physics but lower performance). sadly, this value cannot exceed the framerate of HMDs due to their non-overridable vsync setting! a limitation of Vizard is that processes can’t be run faster than the framerate of the Vizard game scene.</span>
+<a name="l74"><span class="ln">74   </span></a><span class="s1">physicsTime = calcRate / globalVars[</span><span class="s4">'gameSpeed'</span><span class="s1">]  </span><span class="s2"># value for time used in all force, acceleration, velocity, and displacement calculations</span>
+<a name="l75"><span class="ln">75   </span></a><span class="s1">touchpad = </span><span class="s3">16  </span><span class="s2"># ID of the VR controller's touchpad according to Vizard</span>
+<a name="l76"><span class="ln">76   </span></a>
+<a name="l77"><span class="ln">77   </span></a><span class="s2"># [max, min] values of all global variables for use in sliders/dials</span>
+<a name="l78"><span class="ln">78   </span></a><span class="s1">globalRanges = {</span>
+<a name="l79"><span class="ln">79   </span></a>    <span class="s4">'gameSpeed'</span><span class="s1">: [</span><span class="s3">2 </span><span class="s1">* calcRate / </span><span class="s3">100</span><span class="s1">, </span><span class="s3">0.1</span><span class="s1">],  </span><span class="s2"># limit the max. value of 'gameSpeed' linearly scaling with 'calcRate'</span>
+<a name="l80"><span class="ln">80   </span></a>    <span class="s4">'gField'</span><span class="s1">: [</span><span class="s3">15</span><span class="s1">, -</span><span class="s3">15</span><span class="s1">],</span>
+<a name="l81"><span class="ln">81   </span></a>    <span class="s4">'gasDensity'</span><span class="s1">: [</span><span class="s3">10000</span><span class="s1">, </span><span class="s3">0</span><span class="s1">],</span>
+<a name="l82"><span class="ln">82   </span></a>    <span class="s4">'springConst'</span><span class="s1">: [</span><span class="s3">10000 </span><span class="s1">* (calcRate ** </span><span class="s3">1.5</span><span class="s1">) / </span><span class="s3">2000</span><span class="s1">, </span><span class="s3">0</span><span class="s1">],  </span><span class="s2"># limit the max. value of spring stiffness constant depending on 'calcRate' on a curve</span>
+<a name="l83"><span class="ln">83   </span></a>    <span class="s4">'damping'</span><span class="s1">: [</span><span class="s3">2</span><span class="s1">, </span><span class="s3">0</span><span class="s1">],</span>
+<a name="l84"><span class="ln">84   </span></a>    <span class="s4">'strain'</span><span class="s1">: [</span><span class="s3">50</span><span class="s1">, </span><span class="s3">5</span><span class="s1">],</span>
+<a name="l85"><span class="ln">85   </span></a>    <span class="s4">'friction'</span><span class="s1">: [</span><span class="s3">1</span><span class="s1">, </span><span class="s3">0</span><span class="s1">]</span>
+<a name="l86"><span class="ln">86   </span></a><span class="s1">}</span>
+<a name="l87"><span class="ln">87   </span></a>
+<a name="l88"><span class="ln">88   </span></a><span class="s2"># display these in the GUI selector when it’s summoned in 'spriteCreator.py'</span>
+<a name="l89"><span class="ln">89   </span></a><span class="s1">spriteCreatorVars = {</span>
+<a name="l90"><span class="ln">90   </span></a>    <span class="s4">'Tutorials'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">,</span>
+<a name="l91"><span class="ln">91   </span></a>    <span class="s4">'Save &amp; Exit'</span><span class="s1">: </span><span class="s0">None</span>
+<a name="l92"><span class="ln">92   </span></a><span class="s1">}</span>
+<a name="l93"><span class="ln">93   </span></a>
+<a name="l94"><span class="ln">94   </span></a><span class="s2"># display these in the GUI selector when a collisionRect's type is to be changed by the user in 'spriteCreator.py'</span>
+<a name="l95"><span class="ln">95   </span></a><span class="s1">collisionRectTypes = {</span>
+<a name="l96"><span class="ln">96   </span></a>    <span class="s4">'Solid'</span><span class="s1">: </span><span class="s0">None</span><span class="s1">,</span>
+<a name="l97"><span class="ln">97   </span></a>    <span class="s4">'Liquid'</span><span class="s1">: </span><span class="s0">None</span>
+<a name="l98"><span class="ln">98   </span></a><span class="s1">}</span>
+<a name="l99"><span class="ln">99   </span></a>
+<a name="l100"><span class="ln">100  </span></a><span class="s2"># controls for keyboard/VR</span>
+<a name="l101"><span class="ln">101  </span></a><span class="s0">if </span><span class="s1">mode == </span><span class="s4">'k'</span><span class="s1">:</span>
+<a name="l102"><span class="ln">102  </span></a>    <span class="s2"># controls that Vizard understands for keyboard/mouse</span>
+<a name="l103"><span class="ln">103  </span></a>    <span class="s1">controls = {</span>
+<a name="l104"><span class="ln">104  </span></a>        <span class="s4">'select'</span><span class="s1">: </span><span class="s3">1</span><span class="s1">,</span>
+<a name="l105"><span class="ln">105  </span></a>        <span class="s4">'recall'</span><span class="s1">: </span><span class="s4">'r'</span><span class="s1">,</span>
+<a name="l106"><span class="ln">106  </span></a>        <span class="s4">'reset'</span><span class="s1">: viz.KEY_DELETE,</span>
+<a name="l107"><span class="ln">107  </span></a>        <span class="s4">'pause'</span><span class="s1">: </span><span class="s4">'p'</span><span class="s1">,</span>
+<a name="l108"><span class="ln">108  </span></a>        <span class="s4">'GUISelector'</span><span class="s1">: </span><span class="s4">'l'</span><span class="s1">,</span>
+<a name="l109"><span class="ln">109  </span></a>        <span class="s4">'dragJoint'</span><span class="s1">: </span><span class="s4">'j'</span><span class="s1">,</span>
+<a name="l110"><span class="ln">110  </span></a>        <span class="s4">'undoJoint'</span><span class="s1">: </span><span class="s4">'u'</span>
+<a name="l111"><span class="ln">111  </span></a>    <span class="s1">}</span>
+<a name="l112"><span class="ln">112  </span></a>    <span class="s2"># controls to display to the user in tutorial GUIs so that they know what to press for specific actions</span>
+<a name="l113"><span class="ln">113  </span></a>    <span class="s1">controlsMap = {</span>
+<a name="l114"><span class="ln">114  </span></a>        <span class="s4">'movement'</span><span class="s1">: </span><span class="s4">'W/A/S/D'</span><span class="s1">,</span>
+<a name="l115"><span class="ln">115  </span></a>        <span class="s4">'select'</span><span class="s1">: </span><span class="s4">'left-click'</span><span class="s1">,</span>
+<a name="l116"><span class="ln">116  </span></a>        <span class="s4">'recall'</span><span class="s1">: </span><span class="s4">'r'</span><span class="s1">,</span>
+<a name="l117"><span class="ln">117  </span></a>        <span class="s4">'reset'</span><span class="s1">: </span><span class="s4">'delete'</span><span class="s1">,</span>
+<a name="l118"><span class="ln">118  </span></a>        <span class="s4">'pause'</span><span class="s1">: </span><span class="s4">'p'</span><span class="s1">,</span>
+<a name="l119"><span class="ln">119  </span></a>        <span class="s4">'GUISelector'</span><span class="s1">: </span><span class="s4">'l'</span><span class="s1">,</span>
+<a name="l120"><span class="ln">120  </span></a>        <span class="s4">'dragJoint'</span><span class="s1">: </span><span class="s4">'j'</span><span class="s1">,</span>
+<a name="l121"><span class="ln">121  </span></a>        <span class="s4">'undoJoint'</span><span class="s1">: </span><span class="s4">'u'</span>
+<a name="l122"><span class="ln">122  </span></a>    <span class="s1">}</span>
+<a name="l123"><span class="ln">123  </span></a>
+<a name="l124"><span class="ln">124  </span></a><span class="s0">elif </span><span class="s1">mode == </span><span class="s4">'vr'</span><span class="s1">:</span>
+<a name="l125"><span class="ln">125  </span></a>    <span class="s2"># controls that Vizard understands for an HMD's [leftController, rightController]</span>
+<a name="l126"><span class="ln">126  </span></a>    <span class="s1">controls = {</span>
+<a name="l127"><span class="ln">127  </span></a>        <span class="s4">'select'</span><span class="s1">: [</span><span class="s3">4</span><span class="s1">, </span><span class="s3">4</span><span class="s1">],</span>
+<a name="l128"><span class="ln">128  </span></a>        <span class="s4">'recall'</span><span class="s1">: [</span><span class="s3">8</span><span class="s1">, </span><span class="s3">8</span><span class="s1">],</span>
+<a name="l129"><span class="ln">129  </span></a>        <span class="s4">'reset'</span><span class="s1">: [</span><span class="s3">1</span><span class="s1">, </span><span class="s0">None</span><span class="s1">],</span>
+<a name="l130"><span class="ln">130  </span></a>        <span class="s4">'pause'</span><span class="s1">: [</span><span class="s3">2</span><span class="s1">, </span><span class="s0">None</span><span class="s1">],</span>
+<a name="l131"><span class="ln">131  </span></a>        <span class="s4">'GUISelector'</span><span class="s1">: [</span><span class="s0">None</span><span class="s1">, </span><span class="s3">1</span><span class="s1">],</span>
+<a name="l132"><span class="ln">132  </span></a>        <span class="s4">'dragJoint'</span><span class="s1">: [</span><span class="s0">None</span><span class="s1">, </span><span class="s3">2</span><span class="s1">],</span>
+<a name="l133"><span class="ln">133  </span></a>        <span class="s4">'undoJoint'</span><span class="s1">: [</span><span class="s3">2</span><span class="s1">, </span><span class="s0">None</span><span class="s1">]</span>
+<a name="l134"><span class="ln">134  </span></a>    <span class="s1">}</span>
+<a name="l135"><span class="ln">135  </span></a>    <span class="s2"># controls to display to the user in tutorial GUIs so that they know what to press for specific actions</span>
+<a name="l136"><span class="ln">136  </span></a>    <span class="s1">controlsMap = {</span>
+<a name="l137"><span class="ln">137  </span></a>        <span class="s4">'movement'</span><span class="s1">: </span><span class="s4">'joysticks'</span><span class="s1">,</span>
+<a name="l138"><span class="ln">138  </span></a>        <span class="s4">'select'</span><span class="s1">: </span><span class="s4">'left/right trigger'</span><span class="s1">,</span>
+<a name="l139"><span class="ln">139  </span></a>        <span class="s4">'recall'</span><span class="s1">: </span><span class="s4">'left/right touchpad'</span><span class="s1">,</span>
+<a name="l140"><span class="ln">140  </span></a>        <span class="s4">'reset'</span><span class="s1">: </span><span class="s4">'left menu'</span><span class="s1">,</span>
+<a name="l141"><span class="ln">141  </span></a>        <span class="s4">'pause'</span><span class="s1">: </span><span class="s4">'left middle-finger trigger'</span><span class="s1">,</span>
+<a name="l142"><span class="ln">142  </span></a>        <span class="s4">'GUISelector'</span><span class="s1">: </span><span class="s4">'right menu'</span><span class="s1">,</span>
+<a name="l143"><span class="ln">143  </span></a>        <span class="s4">'dragJoint'</span><span class="s1">: </span><span class="s4">'right middle-finger trigger'</span><span class="s1">,</span>
+<a name="l144"><span class="ln">144  </span></a>        <span class="s4">'undoJoint'</span><span class="s1">: </span><span class="s4">'left middle-finger trigger'</span>
+<a name="l145"><span class="ln">145  </span></a>    <span class="s1">}</span>
+<a name="l146"><span class="ln">146  </span></a></pre>
+</body>
+</html>

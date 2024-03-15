@@ -715,7 +715,7 @@ class Manual:
             self.spaces -= 1  # displace the indicator since a digit is removed
         self.var = float(tempStr)
 
-    def drag(self, cIdx, selecting):
+    def drag(self, cIdx: int, selecting: bool) -> None:
         self.selecting[cIdx] = selecting
         if mode == 'vr':
             if self.selecting[cIdx]:
@@ -730,7 +730,7 @@ class Manual:
             else:
                 self.sHeld[cIdx] = False
 
-    def draw(self, camCords):
+    def draw(self, camCords: list) -> None:
         """
         :param camCords: camera position in the Vizard game scene.
         """
