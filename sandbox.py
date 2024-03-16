@@ -1513,7 +1513,7 @@ class CollisionRect:
 
 game = Main()
 
-# makes sample points, joints, and collisionRects
+# makes sample points, joints, and collisionRects if the user isn’t importing from spriteCreator.py
 if not imports:
     for ve in range(8):
         game.addPoint(Point(0.1, 1000, True))  # central point
