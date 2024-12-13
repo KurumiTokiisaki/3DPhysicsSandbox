@@ -857,8 +857,9 @@ class Point:
         for axis in range(3):
             self.__force[axis] += self.__normalForce[axis] + self.__friction[axis] + self.__impulse[axis]
             if self.mass != 0:  # only run physics if the particle's radius isn't 0 to prevent ZeroDivisionError
+                self.oldCords[axis] -= 0.5 * self.__acc[axis] / (physicsTime ** 2)  # integral of velocity with respect to time, so half before and half after
                 self.__acc[axis] = self.__force[axis] / self.mass  # F = ma, thus a = F / m
-                self.oldCords[axis] -= self.__acc[axis] / (physicsTime ** 2)  # divide by time since d(s) = a / d(f)²
+                self.oldCords[axis] -= 0.5 * self.__acc[axis] / (physicsTime ** 2)  # divide by time since d(s) = a / d(f)²
         self.constrainForce = [0, 0, 0]
 
         # direction of motion relative to each axis in the form [x:y, x:z, y:z]
